@@ -29,6 +29,7 @@ const RESERVED_USERNAMES = new Set([
   "profil",
   "prosjekt",
   "prosjekter",
+  "rediger",
   "register",
   "registrer",
   "settings",
@@ -36,6 +37,7 @@ const RESERVED_USERNAMES = new Set([
   "search",
   "support",
   "undefined",
+  "varsler",
   "vis",
 ]);
 

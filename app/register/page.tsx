@@ -30,7 +30,7 @@ export default async function RegisterPage() {
 
           {isGithubConfigured && (
             <div className="mt-8">
-              <GithubButton callbackURL="/importer" label="Registrer deg med GitHub" />
+              <GithubButton callbackURL="/ny?fra=github" label="Registrer deg med GitHub" />
               <p className="mt-6 text-center text-xs uppercase tracking-widest text-[#B8D8E3]/70">eller med e-post</p>
             </div>
           )}

@@ -1,5 +1,5 @@
 // Legger inn en eksempelbruker med prosjekter (samme data som de gamle mock-sidene),
-// så forsiden sin «Se eksempelprofil»-lenke fungerer lokalt. Kjøres med: npm run db:seed
+// så det finnes noe å se på lokalt. Kjøres med: npm run db:seed
 import { eq } from "drizzle-orm";
 
 async function main() {

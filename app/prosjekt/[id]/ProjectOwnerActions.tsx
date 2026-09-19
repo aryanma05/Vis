@@ -29,9 +29,17 @@ export default function ProjectOwnerActions({ projectId, status }: { projectId: 
   };
 
   return (
-    <div className="mt-6 rounded-2xl border border-[#174B76] bg-[#0A245E] p-4">
+    <div className={`rounded-xl border px-4 py-3 ${status === "draft" ? "border-amber-300/40 bg-amber-300/5" : "border-line"}`}>
       <div className="flex flex-wrap items-center gap-3">
-        {status === "draft" && <span className="rounded-full bg-amber-400/15 px-3 py-1 text-sm text-amber-200">Utkast – bare du ser dette</span>}
+        <p className="mr-auto text-sm text-mist">
+          {status === "draft" ? (
+            <>
+              <span className="font-medium text-amber-200">Utkast.</span> Bare du ser dette prosjektet.
+            </>
+          ) : (
+            "Dette er ditt prosjekt."
+          )}
+        </p>
         <Link href={`/prosjekt/${projectId}/rediger`} className={`${ui.secondary} py-2 text-sm`}>
           Rediger
         </Link>

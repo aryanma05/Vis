@@ -1,6 +1,6 @@
 import "server-only";
 
-import { mkdir, unlink, writeFile } from "node:fs/promises";
+import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { del, put } from "@vercel/blob";
 import { UserFacingError } from "@/lib/result";
@@ -23,7 +23,7 @@ const LOCAL_DIR = path.join(process.cwd(), "public", "uploads");
 const blobConfigured = () => Boolean(process.env.BLOB_READ_WRITE_TOKEN);
 
 // Sjekker de første bytene i filen i stedet for å stole på filnavn/MIME fra nettleseren.
-function sniffImageType(bytes: Uint8Array): ImageType | null {
+export function sniffImageType(bytes: Uint8Array): ImageType | null {
   const startsWith = (sig: number[], offset = 0) =>
     sig.every((b, i) => bytes[offset + i] === b);
 
@@ -37,6 +37,10 @@ function sniffImageType(bytes: Uint8Array): ImageType | null {
     if (brand === "avif" || brand === "avis") return "image/avif";
   }
   return null;
+}
+
+export function isPdf(bytes: Uint8Array) {
+  return bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46; // %PDF
 }
 
 export type StoredFile = { url: string; key: string };
@@ -53,8 +57,28 @@ export async function storeImage(file: File, folder: string): Promise<StoredFile
     throw new UserFacingError("Filtypen støttes ikke. Bruk JPG, PNG, WebP, GIF eller AVIF.");
   }
 
-  const name = `${folder}/${crypto.randomUUID()}.${IMAGE_TYPES[type]}`;
+  return storeBytes(bytes, type, `${folder}/${crypto.randomUUID()}.${IMAGE_TYPES[type]}`);
+}
 
+export async function storePdf(file: File, folder: string): Promise<StoredFile> {
+  if (file.size === 0) throw new UserFacingError("Filen er tom.");
+  if (file.size > MAX_IMAGE_BYTES) throw new UserFacingError("Filen er for stor (maks 4 MB).");
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  if (!isPdf(bytes)) throw new UserFacingError("Filen er ikke en PDF.");
+  return storeBytes(bytes, "application/pdf", `${folder}/${crypto.randomUUID()}.pdf`);
+}
+
+// Leser en fil vi selv har lagret (brukes f.eks. når CV-en skal tolkes på nytt).
+export async function readStoredFile(file: StoredFile): Promise<Uint8Array> {
+  if (file.key.startsWith(LOCAL_PREFIX)) {
+    return new Uint8Array(await readFile(path.join(LOCAL_DIR, file.key.slice(LOCAL_PREFIX.length))));
+  }
+  const res = await fetch(file.url, { signal: AbortSignal.timeout(15_000) });
+  if (!res.ok) throw new Error(`Kunne ikke hente ${file.key}: ${res.status}`);
+  return new Uint8Array(await res.arrayBuffer());
+}
+
+async function storeBytes(bytes: Uint8Array, type: string, name: string): Promise<StoredFile> {
   if (blobConfigured()) {
     const blob = await put(name, Buffer.from(bytes), {
       access: "public",

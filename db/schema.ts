@@ -307,3 +307,67 @@ export const cvImport = pgTable(
   },
   (t) => [index("cv_import_user_idx").on(t.userId, t.createdAt.desc())],
 );
+
+export type CvPage = { url: string; key: string; width: number; height: number };
+
+// CV-en som dokument (PDF eller bilde), vist som bilder på profilen.
+// PDF-sider gjøres om til bilder i nettleseren ved opplasting, så profilen laster raskt.
+export const cvDocument = pgTable("cv_document", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => user.id, { onDelete: "cascade" }),
+  fileUrl: text("file_url").notNull(),
+  fileKey: text("file_key").notNull(),
+  fileName: text("file_name").notNull(),
+  mimeType: text("mime_type").notNull(),
+  pages: jsonb("pages").$type<CvPage[]>().notNull().default([]),
+  isPublic: boolean("is_public").notNull().default(true),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
+/* -------------------------------------------------------------------------- */
+/*  Kommentarer og varsler                                                    */
+/* -------------------------------------------------------------------------- */
+
+export const comment = pgTable(
+  "comment",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => project.id, { onDelete: "cascade" }),
+    authorId: text("author_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    body: text("body").notNull(),
+    editedAt: timestamp("edited_at", { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index("comment_project_idx").on(t.projectId, t.createdAt),
+    index("comment_author_idx").on(t.authorId, t.createdAt.desc()),
+  ],
+);
+
+export const notificationType = pgEnum("notification_type", ["comment"]);
+
+export const notification = pgTable(
+  "notification",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    // Mottakeren.
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    actorId: text("actor_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    type: notificationType("type").notNull(),
+    projectId: uuid("project_id").references(() => project.id, { onDelete: "cascade" }),
+    commentId: uuid("comment_id").references(() => comment.id, { onDelete: "cascade" }),
+    readAt: timestamp("read_at", { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [index("notification_user_idx").on(t.userId, t.createdAt.desc())],
+);

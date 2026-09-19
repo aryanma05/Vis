@@ -7,7 +7,7 @@ import { setProjectTags } from "@/lib/tags";
 import { UserFacingError } from "@/lib/result";
 import type { ProjectInput } from "@/lib/validation";
 
-const { project, projectImage, projectTag, tag, user } = schema;
+const { comment, project, projectImage, projectTag, tag, user } = schema;
 
 export const MAX_PROJECT_IMAGES = 8;
 
@@ -32,6 +32,7 @@ export type ProjectCard = {
   status: "draft" | "published";
   projectDate: string | null;
   publishedAt: Date | null;
+  commentCount: number;
 };
 
 export type ProjectDetail = ProjectCard & {
@@ -108,9 +109,21 @@ async function loadCovers(projectIds: string[]) {
   return covers;
 }
 
+async function loadCommentCounts(projectIds: string[]) {
+  const counts = new Map<string, number>();
+  if (projectIds.length === 0) return counts;
+  const rows = await db
+    .select({ projectId: comment.projectId, count: sql<number>`count(*)::int` })
+    .from(comment)
+    .where(inArray(comment.projectId, projectIds))
+    .groupBy(comment.projectId);
+  for (const r of rows) counts.set(r.projectId, r.count);
+  return counts;
+}
+
 async function toCards(rows: CardRow[]): Promise<ProjectCard[]> {
   const ids = rows.map((r) => r.id);
-  const [tags, covers] = await Promise.all([loadTags(ids), loadCovers(ids)]);
+  const [tags, covers, comments] = await Promise.all([loadTags(ids), loadCovers(ids), loadCommentCounts(ids)]);
   return rows.map((r) => ({
     id: r.id,
     title: r.title,
@@ -120,6 +133,7 @@ async function toCards(rows: CardRow[]): Promise<ProjectCard[]> {
     publishedAt: r.publishedAt,
     coverImageUrl: covers.get(r.id) ?? null,
     tags: tags.get(r.id) ?? [],
+    commentCount: comments.get(r.id) ?? 0,
     owner: { id: r.ownerId, username: r.ownerUsername, name: r.ownerName, image: r.ownerImage },
   }));
 }
@@ -223,30 +237,67 @@ function decodeCursor(cursor: string) {
   return { publishedAt, id };
 }
 
-// Tekstsøk i tittel, ingress og beskrivelse. "reac nat" finner "React Native".
-export async function searchProjects(query: string, { limit = 24 } = {}) {
+// Tekstsøk i tittel, ingress og beskrivelse, eventuelt filtrert på en teknologi.
+// "reac nat" finner "React Native".
+export async function searchProjects(
+  query: string,
+  { tag: tagSlug, limit = 48 }: { tag?: string | null; limit?: number } = {},
+) {
   const terms = query
     .toLowerCase()
     .split(/[^\p{L}\p{N}]+/u)
     .filter(Boolean)
     .slice(0, 8);
-  if (terms.length === 0) return [];
+  if (terms.length === 0 && !tagSlug) return [];
 
+  const conditions = [eq(project.status, "published")];
   const tsQuery = terms.map((t) => `${t}:*`).join(" & ");
-  const match = sql`${project.searchVector} @@ to_tsquery('simple', ${tsQuery})`;
+  if (terms.length > 0) conditions.push(sql`${project.searchVector} @@ to_tsquery('simple', ${tsQuery})`);
+  if (tagSlug) {
+    conditions.push(
+      inArray(
+        project.id,
+        db
+          .select({ id: projectTag.projectId })
+          .from(projectTag)
+          .innerJoin(tag, eq(tag.id, projectTag.tagId))
+          .where(eq(tag.slug, tagSlug)),
+      ),
+    );
+  }
 
   const rows = await db
     .select(cardColumns)
     .from(project)
     .innerJoin(user, eq(user.id, project.ownerId))
-    .where(and(eq(project.status, "published"), match))
+    .where(and(...conditions))
     .orderBy(
-      desc(sql`ts_rank(${project.searchVector}, to_tsquery('simple', ${tsQuery}))`),
+      ...(terms.length > 0
+        ? [desc(sql`ts_rank(${project.searchVector}, to_tsquery('simple', ${tsQuery}))`)]
+        : []),
       desc(project.publishedAt),
     )
     .limit(Math.min(limit, 60));
 
   return toCards(rows);
+}
+
+// Teknologiene flest publiserte prosjekter bruker.
+export async function getPopularTags(limit = 16) {
+  return db
+    .select({ slug: tag.slug, name: tag.name, count: sql<number>`count(*)::int` })
+    .from(projectTag)
+    .innerJoin(tag, eq(tag.id, projectTag.tagId))
+    .innerJoin(project, eq(project.id, projectTag.projectId))
+    .where(eq(project.status, "published"))
+    .groupBy(tag.id)
+    .orderBy(desc(sql`count(*)`), asc(tag.name))
+    .limit(limit);
+}
+
+export async function getTagBySlug(slug: string) {
+  const [row] = await db.select({ slug: tag.slug, name: tag.name }).from(tag).where(eq(tag.slug, slug)).limit(1);
+  return row ?? null;
 }
 
 // Prosjektene på en profil. Eieren ser også utkastene sine.

@@ -3,6 +3,7 @@ import "server-only";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { getCv } from "@/lib/cv";
+import { getCvDocument } from "@/lib/cv-document";
 import { getProjectsByOwner } from "@/lib/projects";
 import type { ProfileInput } from "@/lib/validation";
 
@@ -30,7 +31,11 @@ export async function getProfileByUsername(username: string, viewerId?: string |
 
   if (!row) return null;
 
-  const [projects, cv] = await Promise.all([getProjectsByOwner(row.id, viewerId), getCv(row.id)]);
+  const [projects, cv, cvDocument] = await Promise.all([
+    getProjectsByOwner(row.id, viewerId),
+    getCv(row.id),
+    getCvDocument(row.id, viewerId),
+  ]);
 
   return {
     ...row,
@@ -38,6 +43,7 @@ export async function getProfileByUsername(username: string, viewerId?: string |
     isOwner: viewerId === row.id,
     projects,
     cv,
+    cvDocument,
   };
 }
 

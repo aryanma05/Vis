@@ -60,12 +60,18 @@ Callback-URL: `http://localhost:3000/api/auth/callback/github` (lag en egen app 
 db/schema.ts              alle tabellene
 lib/auth.ts               innlogging (Better Auth), brukernavn-regler
 lib/session.ts            getCurrentUser() / requireUser() for sider og actions
-lib/projects.ts           prosjekter: lese, opprette, endre, slette, bilder, feed, søk
+lib/projects.ts           prosjekter: lese, opprette, endre, slette, bilder, feed, søk, tagger
 lib/github.ts             GitHub-import (repoliste, README → prosjekt)
-lib/cv.ts, cv-parser.ts   CV: import fra PDF/Word, lagring og redigering
+lib/folder-import.ts      import fra lokal mappe (kjører i nettleseren, koden lastes ikke opp)
+lib/cv.ts, cv-parser.ts   strukturert CV: lagring, redigering og tolking av PDF/Word/bilde
+lib/cv-document.ts        CV-dokumentet som vises på profilen (PDF-sider som bilder)
+lib/pdf-pages.ts          gjør PDF-sider om til bilder i nettleseren (pdf.js)
+lib/comments.ts           kommentarer (og varsel til prosjekteieren)
+lib/notifications.ts      varsler
 lib/profiles.ts           profilsider
-lib/storage.ts            bildeopplasting (Vercel Blob / lokalt)
+lib/storage.ts            filopplasting (Vercel Blob / lokalt)
 app/actions/*.ts          Server Actions som skjemaene kaller
+components/               ProjectCard, ProjectCover, CvPages, kommentarer osv.
 ```
 
 Alle Server Actions returnerer `{ ok: true, data }` eller `{ ok: false, error, fieldErrors? }`,

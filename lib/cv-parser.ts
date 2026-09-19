@@ -4,6 +4,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import mammoth from "mammoth";
 import { UserFacingError } from "@/lib/result";
+import { isPdf, sniffImageType } from "@/lib/storage";
 import { parsedCv, type ParsedCv } from "@/lib/validation";
 
 export const MAX_CV_BYTES = 4 * 1024 * 1024;
@@ -31,10 +32,15 @@ Hent ut innholdet i CV-en til de strukturerte feltene.
 
 export type CvFile = { name: string; type: string; bytes: Uint8Array };
 
-// Word-filer sendes noen ganger med generisk MIME-type, så filendelsen brukes som reserve.
+const READABLE_IMAGES = ["image/jpeg", "image/png", "image/webp", "image/gif"] as const;
+type ReadableImage = (typeof READABLE_IMAGES)[number];
+
+// PDF, Word eller bilde av CV-en. Word-filer sendes noen ganger med generisk
+// MIME-type, så filendelsen brukes som reserve.
 export function detectCvType(file: { name: string; type: string }, bytes: Uint8Array) {
-  const isPdf = bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46; // %PDF
-  if (isPdf) return PDF;
+  if (isPdf(bytes)) return PDF;
+  const image = sniffImageType(bytes);
+  if (image && (READABLE_IMAGES as readonly string[]).includes(image)) return image;
   const isZip = bytes[0] === 0x50 && bytes[1] === 0x4b; // .docx er en zip-fil
   if (isZip && (file.type === DOCX || file.name.toLowerCase().endsWith(".docx"))) return DOCX;
   return null;
@@ -45,6 +51,13 @@ async function toContent(file: CvFile, type: string): Promise<Anthropic.Beta.Bet
     return {
       type: "document",
       source: { type: "base64", media_type: "application/pdf", data: Buffer.from(file.bytes).toString("base64") },
+    };
+  }
+
+  if ((READABLE_IMAGES as readonly string[]).includes(type)) {
+    return {
+      type: "image",
+      source: { type: "base64", media_type: type as ReadableImage, data: Buffer.from(file.bytes).toString("base64") },
     };
   }
 
@@ -146,7 +159,7 @@ export async function parseCv(file: CvFile): Promise<ParsedCv> {
   if (file.bytes.byteLength > MAX_CV_BYTES) throw new UserFacingError("CV-en er for stor (maks 4 MB).");
 
   const type = detectCvType(file, file.bytes);
-  if (!type) throw new UserFacingError("Last opp CV-en som PDF eller Word (.docx).");
+  if (!type) throw new UserFacingError("Last opp CV-en som PDF, Word (.docx) eller bilde (JPG/PNG).");
 
   const response = await requestParse(file, type);
 
