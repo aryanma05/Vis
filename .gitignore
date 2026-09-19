@@ -22,6 +22,9 @@
 
 # misc
 .DS_Store
+
+# lokale opplastinger når Vercel Blob ikke er satt opp
+/public/uploads
 *.pem
 
 # debug
@@ -32,6 +35,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel

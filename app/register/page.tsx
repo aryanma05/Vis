@@ -1,6 +1,14 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import GithubButton from "@/components/GithubButton";
+import { isGithubConfigured } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/session";
+import RegisterForm from "./RegisterForm";
 
-export default function RegisterPage() {
+export default async function RegisterPage() {
+  const user = await getCurrentUser();
+  if (user) redirect(`/@${user.username}`);
+
   return (
     <main className="min-h-screen bg-[#071A52] px-6 py-10 text-white">
       <div className="mx-auto w-full max-w-md">
@@ -20,60 +28,18 @@ export default function RegisterPage() {
             Opprett profilen din og vis frem arbeid, prosjekter og erfaring.
           </p>
 
-          <form className="mt-8 space-y-4">
-            <div>
-              <label htmlFor="name" className="mb-2 block text-sm font-medium">
-                Navn
-              </label>
-
-              <input
-                id="name"
-                type="text"
-                placeholder="Ditt navn"
-                className="w-full rounded-lg border border-[#174B76] bg-[#071A52] px-4 py-3 text-white outline-none placeholder:text-[#B8D8E3]/60 focus:border-[#C7F9FF] focus:ring-2 focus:ring-[#C7F9FF]/20"
-              />
+          {isGithubConfigured && (
+            <div className="mt-8">
+              <GithubButton callbackURL="/ny?fra=github" label="Registrer deg med GitHub" />
+              <p className="mt-6 text-center text-xs uppercase tracking-widest text-[#B8D8E3]/70">eller med e-post</p>
             </div>
+          )}
 
-            <div>
-              <label htmlFor="email" className="mb-2 block text-sm font-medium">
-                E-post
-              </label>
-
-              <input
-                id="email"
-                type="email"
-                placeholder="navn@eksempel.no"
-                className="w-full rounded-lg border border-[#174B76] bg-[#071A52] px-4 py-3 text-white outline-none placeholder:text-[#B8D8E3]/60 focus:border-[#C7F9FF] focus:ring-2 focus:ring-[#C7F9FF]/20"
-              />
-            </div>
-
-            <div>
-              <label
-                htmlFor="password"
-                className="mb-2 block text-sm font-medium"
-              >
-                Passord
-              </label>
-
-              <input
-                id="password"
-                type="password"
-                placeholder="Minst 8 tegn"
-                className="w-full rounded-lg border border-[#174B76] bg-[#071A52] px-4 py-3 text-white outline-none placeholder:text-[#B8D8E3]/60 focus:border-[#C7F9FF] focus:ring-2 focus:ring-[#C7F9FF]/20"
-              />
-            </div>
-
-            <button
-              type="button"
-              className="mt-2 w-full rounded-lg bg-[#C7F9FF] px-4 py-3 font-semibold text-[#071A52] transition hover:bg-white"
-            >
-              Opprett konto
-            </button>
-          </form>
+          <RegisterForm />
 
           <p className="mt-6 text-center text-sm text-[#B8D8E3]">
             Har du allerede konto?{" "}
-            <Link href="/login" className="font-medium text-white underline">
+            <Link href="/logg-inn" className="font-medium text-white underline">
               Logg inn
             </Link>
           </p>
