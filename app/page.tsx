@@ -1,10 +1,38 @@
-import Link from "next/link";
-import GradientWaves from "@/components/GradientWaves";
+"use client";
 
-export default function Home() {
+import React from "react";
+import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
+import GradientWaves from "@/components/GradientWaves";
+import HeroPreviewParallax from "@/components/HeroPreviewParallax";
+import Sidebar from "@/components/Sidebar";
+import { useTheme } from "@/components/ThemeProvider";
+import MutedText from "@/components/MutedText";
+
+export default function HomePage() {
+  const router = useRouter();
+  const { theme } = useTheme();
+
+  const mainThemeClasses =
+    theme === "midnight"
+      ? "bg-[#071A52] text-white"
+      : theme === "dark"
+      ? "bg-[#050816] text-[#E5F0FF]"
+      : "bg-[#F5F7FB] text-[#071A52]";
+
+  const brandAccentClasses =
+    theme === "light" ? "text-[#086788]" : "text-[#C7F9FF]";
+
+  const primaryButtonClasses =
+    theme === "light"
+      ? "bg-[#071A52] text-white hover:bg-[#0A245E]"
+      : "bg-[#C7F9FF] text-[#071A52] hover:bg-white";
+
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#1b1035] text-white">
-      <div className="absolute inset-0">
+    <main
+      className={`relative min-h-screen ${mainThemeClasses} transition-colors duration-300`}
+    >
+      <div className="pointer-events-none absolute inset-0">
         <GradientWaves
           horizonColor="#071A52"
           waveColor="#086788"
@@ -26,41 +54,57 @@ export default function Home() {
           parallaxStrength={0.5}
           grain
           grainIntensity={0.05}
+          className="w-full h-full"
         />
       </div>
 
-      <section className="relative z-10 mx-auto flex min-h-screen max-w-6xl flex-col items-center justify-center px-6 text-center">
-        <div className="rounded-full border border-white/25 bg-black/15 px-4 py-2 text-sm text-white/85 backdrop-blur">
-          For utviklere, designere og digitale skapere
+      <div className="relative z-10 flex min-h-screen">
+        <Sidebar />
+
+        {/* Hero + parallax-preview */}
+        <div className="flex-1 flex items-center justify-center px-6 py-10 md:pl-28">
+          <div className="grid w-full max-w-6xl gap-8 lg:grid-cols-2">
+            {/* Tekst / CTA */}
+            <div className="flex flex-col justify-center">
+              <p className={`text-xs font-medium uppercase tracking-[0.2em] ${brandAccentClasses}`}>
+                vis
+              </p>
+
+              <h1 className="mt-4 text-3xl font-bold tracking-tight lg:text-4xl">
+                Vis deg selv.
+                <br />
+                Vis dine verk.
+              </h1>
+
+              <MutedText className="mt-4 text-sm leading-7">
+                vis er en visuell porteføljeplattform for utviklere, designere
+                og digitale skapere. Samle CV, prosjekter og din digitale
+                identitet i én moderne profil.
+              </MutedText>
+
+              <div className="mt-6 flex flex-wrap gap-3">
+                <motion.button
+                  onClick={() => router.push("/register")}
+                  className={`rounded-lg px-5 py-3 text-sm font-semibold shadow-md shadow-black/30 transition ${primaryButtonClasses}`}
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  transition={{
+                    type: "spring",
+                    stiffness: 260,
+                    damping: 20,
+                  }}
+                >
+                  Kom i gang
+                </motion.button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-center">
+              <HeroPreviewParallax />
+            </div>
+          </div>
         </div>
-
-        <h1 className="mt-6 max-w-4xl text-5xl font-bold tracking-tight md:text-7xl">
-          Vis ditt verk.
-          <br />
-          Vis deg selv.
-        </h1>
-
-        <p className="mt-6 max-w-2xl text-lg text-white/85">
-          Vis samler din CV, dine prosjekter og digitale identitet i en visuell
-          profil.
-        </p>
-
-        <div className="mt-8 flex flex-wrap justify-center gap-3">
-          <Link
-            href="/register"
-            className="rounded-lg bg-white px-6 py-3 font-medium text-black transition hover:bg-gray-200"
-          >
-            Kom i gang
-          </Link>
-
-          <Link
-            href="/profil/aryan"
-            className="rounded-lg border border-white/35 bg-black/15 px-6 py-3 font-medium text-white backdrop-blur transition hover:bg-white/10"
-          >
-            Se eksempelprofil
-          </Link>
-        </div>
-      </section>
+      </div>
     </main>
   );
 }

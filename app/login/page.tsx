@@ -7,7 +7,7 @@ import MobileNav from "@/components/MobileNav";
 import { useTheme } from "@/components/ThemeProvider";
 import { themeStyles } from "@/components/ThemeStyles";
 
-export default function RegisterPage() {
+export default function LoginPage() {
   const { theme } = useTheme();
   const styles = themeStyles[theme];
 
@@ -23,22 +23,16 @@ export default function RegisterPage() {
     setError("");
 
     const formData = new FormData(event.currentTarget);
-    const name = String(formData.get("name") ?? "").trim();
     const email = String(formData.get("email") ?? "").trim();
     const password = String(formData.get("password") ?? "");
-
-    if (name.length < 2) {
-      setError("Skriv inn navnet ditt.");
-      return;
-    }
 
     if (!email || !email.includes("@")) {
       setError("Skriv inn en gyldig e-postadresse.");
       return;
     }
 
-    if (password.length < 8) {
-      setError("Passordet må inneholde minst 8 tegn.");
+    if (!password) {
+      setError("Skriv inn passordet ditt.");
       return;
     }
 
@@ -47,7 +41,7 @@ export default function RegisterPage() {
     window.setTimeout(() => {
       setIsLoading(false);
       setMessage(
-        "Dette er foreløpig en demo. Registrering kobles til backend senere."
+        "Dette er foreløpig en demo. Innlogging kobles til backend senere."
       );
     }, 800);
   }
@@ -70,34 +64,18 @@ export default function RegisterPage() {
             <section
               className={`rounded-2xl border p-7 shadow-xl shadow-black/10 ${styles.card}`}
             >
-              <p className={`text-sm font-medium ${styles.accent}`}>VIS</p>
+              <p className={`text-sm font-medium ${styles.accent}`}>
+                Din profil · vis
+              </p>
 
-              <h1 className="mt-3 text-3xl font-bold">Kom i gang</h1>
+              <h1 className="mt-3 text-3xl font-bold">Logg inn</h1>
 
               <p className={`mt-2 text-sm leading-7 ${styles.muted}`}>
-                Opprett profilen din og vis frem arbeid, prosjekter og
-                erfaring.
+                Logg inn for å se og redigere profilen din, prosjekter og
+                innstillinger.
               </p>
 
               <form onSubmit={handleSubmit} className="mt-8 space-y-4">
-                <div>
-                  <label
-                    htmlFor="name"
-                    className="mb-2 block text-sm font-medium"
-                  >
-                    Navn
-                  </label>
-
-                  <input
-                    id="name"
-                    name="name"
-                    type="text"
-                    autoComplete="name"
-                    placeholder="Ditt navn"
-                    className={`w-full rounded-lg border px-4 py-3 outline-none focus:border-[#086788] focus:ring-2 focus:ring-[#086788]/20 ${styles.input}`}
-                  />
-                </div>
-
                 <div>
                   <label
                     htmlFor="email"
@@ -129,8 +107,8 @@ export default function RegisterPage() {
                       id="password"
                       name="password"
                       type={showPassword ? "text" : "password"}
-                      autoComplete="new-password"
-                      placeholder="Minst 8 tegn"
+                      autoComplete="current-password"
+                      placeholder="Ditt passord"
                       className={`w-full rounded-lg border px-4 py-3 pr-20 outline-none focus:border-[#086788] focus:ring-2 focus:ring-[#086788]/20 ${styles.input}`}
                     />
 
@@ -167,17 +145,17 @@ export default function RegisterPage() {
                   disabled={isLoading}
                   className={`mt-2 w-full rounded-lg px-4 py-3 font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${styles.button}`}
                 >
-                  {isLoading ? "Oppretter konto..." : "Opprett konto"}
+                  {isLoading ? "Logger inn..." : "Logg inn"}
                 </button>
               </form>
 
               <p className={`mt-6 text-center text-sm ${styles.muted}`}>
-                Har du allerede konto?{" "}
+                Har du ikke konto?{" "}
                 <Link
-                  href="/login"
+                  href="/register"
                   className={`font-medium underline ${styles.accent}`}
                 >
-                  Logg inn
+                  Opprett profil
                 </Link>
               </p>
             </section>
