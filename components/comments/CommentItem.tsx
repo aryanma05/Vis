@@ -40,7 +40,7 @@ export default function CommentItem({ comment, isProjectOwner }: { comment: Proj
       </Link>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-baseline gap-x-2 text-sm">
-          <Link href={`/@${comment.author.username}`} className="font-medium text-white hover:text-ice">
+          <Link href={`/@${comment.author.username}`} className="font-medium text-fg hover:text-ice">
             {comment.author.name}
           </Link>
           {isProjectOwner && (
@@ -61,14 +61,14 @@ export default function CommentItem({ comment, isProjectOwner }: { comment: Proj
               onChange={(e) => setBody(e.target.value)}
               rows={3}
               maxLength={2000}
-              className="w-full rounded-xl border border-line bg-surface/60 px-4 py-3 text-white outline-none focus:border-ice"
+              className="w-full rounded-xl border border-line bg-surface/60 px-4 py-3 text-fg outline-none focus:border-primary"
             />
             <div className="mt-2 flex gap-2">
               <button
                 type="button"
                 onClick={save}
                 disabled={pending || !body.trim()}
-                className="rounded-lg bg-ice px-3 py-1.5 text-sm font-semibold text-ink disabled:opacity-50"
+                className="rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-ink disabled:opacity-50"
               >
                 Lagre
               </button>
@@ -78,7 +78,7 @@ export default function CommentItem({ comment, isProjectOwner }: { comment: Proj
                   setEditing(false);
                   setBody(comment.body);
                 }}
-                className="rounded-lg px-3 py-1.5 text-sm text-mist hover:text-white"
+                className="rounded-lg px-3 py-1.5 text-sm text-mist hover:text-fg"
               >
                 Avbryt
               </button>
@@ -91,7 +91,7 @@ export default function CommentItem({ comment, isProjectOwner }: { comment: Proj
         {!editing && (comment.canEdit || comment.canDelete) && (
           <div className="mt-2 flex gap-4 text-xs text-mist/60">
             {comment.canEdit && (
-              <button type="button" onClick={() => setEditing(true)} className="hover:text-white">
+              <button type="button" onClick={() => setEditing(true)} className="hover:text-fg">
                 Rediger
               </button>
             )}

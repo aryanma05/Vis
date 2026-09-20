@@ -72,7 +72,7 @@ export default function ProfileForm({ initial, image }: { initial: Values; image
               type="button"
               onClick={() => fileRef.current?.click()}
               disabled={uploading}
-              className="rounded-lg border border-line px-4 py-2 text-sm font-medium transition hover:border-ice disabled:opacity-60"
+              className="rounded-lg border border-line px-4 py-2 text-sm font-medium transition hover:border-primary disabled:opacity-60"
             >
               {uploading ? "Laster opp…" : "Last opp nytt"}
             </button>
@@ -187,7 +187,7 @@ export default function ProfileForm({ initial, image }: { initial: Values; image
         <button
           type="submit"
           disabled={pending || !dirty}
-          className="rounded-lg bg-ice px-5 py-2.5 font-semibold text-ink transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-lg bg-primary px-5 py-2.5 font-semibold text-ink transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
         >
           {pending ? "Lagrer…" : "Lagre endringer"}
         </button>

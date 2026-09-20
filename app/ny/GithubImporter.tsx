@@ -37,8 +37,8 @@ export default function GithubImporter() {
   }
 
   if (error && !repos) return <p className={ui.error}>{error}</p>;
-  if (!repos) return <p className="text-[#B8D8E3]">Henter repoene dine fra GitHub…</p>;
-  if (repos.length === 0) return <p className="text-[#B8D8E3]">Fant ingen offentlige repoer på GitHub-kontoen din.</p>;
+  if (!repos) return <p className="text-mist">Henter repoene dine fra GitHub…</p>;
+  if (repos.length === 0) return <p className="text-mist">Fant ingen offentlige repoer på GitHub-kontoen din.</p>;
 
   return (
     <div>
@@ -51,21 +51,21 @@ export default function GithubImporter() {
       />
       {error && <p className={`${ui.error} mt-3`}>{error}</p>}
 
-      <ul className="mt-4 divide-y divide-[#174B76] overflow-hidden rounded-xl border border-[#174B76]">
+      <ul className="mt-4 divide-y divide-line overflow-hidden rounded-xl border border-line">
         {filtered.map((repo) => (
-          <li key={repo.id} className="flex items-center justify-between gap-4 bg-[#071A52] px-4 py-3">
+          <li key={repo.id} className="flex items-center justify-between gap-4 bg-ink px-4 py-3">
             <div className="min-w-0">
               <p className="truncate font-medium">
                 {repo.fullName}
-                {repo.fork && <span className="ml-2 text-xs text-[#B8D8E3]">fork</span>}
-                {repo.archived && <span className="ml-2 text-xs text-[#B8D8E3]">arkivert</span>}
+                {repo.fork && <span className="ml-2 text-xs text-mist">fork</span>}
+                {repo.archived && <span className="ml-2 text-xs text-mist">arkivert</span>}
               </p>
-              <p className="truncate text-sm text-[#B8D8E3]">
+              <p className="truncate text-sm text-mist">
                 {[repo.language, repo.stars > 0 ? `★ ${repo.stars}` : null, repo.description].filter(Boolean).join(" · ")}
               </p>
             </div>
             {repo.alreadyImported ? (
-              <span className="shrink-0 text-sm text-[#B8D8E3]">Importert</span>
+              <span className="shrink-0 text-sm text-mist">Importert</span>
             ) : (
               <button
                 type="button"

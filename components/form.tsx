@@ -1,6 +1,6 @@
 // Små byggeklosser for skjemaene i redigeringssidene.
 export const inputClass =
-  "w-full rounded-lg border border-line bg-ink px-3.5 py-2.5 text-white outline-none transition placeholder:text-mist/40 focus:border-ice focus:ring-2 focus:ring-ice/15";
+  "w-full rounded-lg border border-line bg-ink px-3.5 py-2.5 text-fg outline-none transition placeholder:text-mist/40 focus:border-primary focus:ring-2 focus:ring-ice/15";
 
 export function Field({
   label,
@@ -17,7 +17,7 @@ export function Field({
 }) {
   return (
     <label className={`block ${className}`}>
-      <span className="mb-1.5 block text-sm font-medium text-white">{label}</span>
+      <span className="mb-1.5 block text-sm font-medium text-fg">{label}</span>
       {children}
       {hint && !error && <span className="mt-1.5 block text-xs text-mist/60">{hint}</span>}
       {error && <span className="mt-1.5 block text-xs text-red-300">{error}</span>}

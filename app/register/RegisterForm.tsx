@@ -79,8 +79,8 @@ export default function RegisterForm() {
         <label htmlFor="username" className={ui.label}>
           Brukernavn
         </label>
-        <div className="flex items-center rounded-lg border border-[#174B76] bg-[#071A52] focus-within:border-[#C7F9FF] focus-within:ring-2 focus-within:ring-[#C7F9FF]/20">
-          <span className="pl-4 text-[#B8D8E3]">vis.no/@</span>
+        <div className="flex items-center rounded-lg border border-line bg-ink focus-within:border-ice focus-within:ring-2 focus-within:ring-ice/20">
+          <span className="pl-4 text-mist">vis.no/@</span>
           <input
             id="username"
             name="username"
@@ -93,7 +93,7 @@ export default function RegisterForm() {
               setUsernameStatus("idle");
             }}
             onBlur={() => checkUsername(username)}
-            className="w-full bg-transparent py-3 pr-4 text-white outline-none"
+            className="w-full bg-transparent py-3 pr-4 text-fg outline-none"
           />
         </div>
         {usernameStatus === "free" && <p className="mt-1 text-sm text-emerald-300">Ledig!</p>}

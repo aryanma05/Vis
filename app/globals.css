@@ -1,87 +1,190 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* -------------------------------------------------------------------------- */
+/*  Temaer                                                                    */
+/*  ThemeProvider setter data-theme på <html>. Alle farger er variabler, så   */
+/*  både klientkomponenter og server-sider bytter tema sammen.                */
+/* -------------------------------------------------------------------------- */
+
+:root,
+:root[data-theme="midnight"] {
+  --ink: #071a52; /* sidebakgrunn */
+  --surface: #0a245e; /* kort og felter */
+  --line: #174b76; /* streker og rammer */
+  --mist: #b8d8e3; /* dempet tekst */
+  --fg: #ffffff; /* hovedtekst */
+  --ice: #c7f9ff; /* aksent på tekst og lenker */
+  --primary: #c7f9ff; /* knapper */
+  --on-primary: #071a52; /* tekst på knapper */
+  --sea: #086788;
+}
+
+:root[data-theme="dark"] {
+  --ink: #050816;
+  --surface: #0b1220;
+  --line: #1f2937;
+  --mist: #94a3b8;
+  --fg: #e5f0ff;
+  --ice: #7dd3fc;
+  --primary: #7dd3fc;
+  --on-primary: #050816;
+  --sea: #0ea5e9;
+}
+
+:root[data-theme="light"] {
+  --ink: #f5f7fb;
+  --surface: #ffffff;
+  --line: #d0d7e2;
+  --mist: #475569;
+  --fg: #071a52;
+  --ice: #086788;
+  --primary: #071a52;
+  --on-primary: #ffffff;
+  --sea: #086788;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-ink: var(--ink);
+  --color-surface: var(--surface);
+  --color-line: var(--line);
+  --color-mist: var(--mist);
+  --color-fg: var(--fg);
+  --color-ice: var(--ice);
+  --color-primary: var(--primary);
+  --color-on-primary: var(--on-primary);
+  --color-sea: var(--sea);
 
-  /* Vis-paletten */
-  --color-ink: #071a52;
-  --color-surface: #0a245e;
-  --color-line: #174b76;
-  --color-mist: #b8d8e3;
-  --color-ice: #c7f9ff;
-  --color-sea: #086788;
+  --font-sans: var(--font-inter);
+  --font-display: var(--font-space-grotesk);
+  --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+html {
+  overflow-y: scroll;
+  overflow-x: hidden;
+}
+
+@supports (scrollbar-gutter: stable) {
+  html {
+    overflow-y: auto;
+    scrollbar-gutter: stable;
   }
 }
 
 body {
-  background: #071a52;
-  color: #fff;
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  background: var(--ink);
+  color: var(--fg);
+  font-family: var(--font-inter), system-ui, sans-serif;
+  overflow-x: hidden;
+  transition:
+    background-color 300ms,
+    color 300ms;
 }
 
 ::selection {
-  background: #c7f9ff;
-  color: #071a52;
+  background: var(--ice);
+  color: var(--on-primary);
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 /* README-visning på prosjektsiden (components/Markdown.tsx). */
 .markdown {
-  color: #b8d8e3;
+  color: var(--mist);
   line-height: 1.75;
   overflow-wrap: anywhere;
 }
-.markdown > * + * { margin-top: 1rem; }
-.markdown h1, .markdown h2, .markdown h3, .markdown h4 {
-  color: #fff;
+.markdown > * + * {
+  margin-top: 1rem;
+}
+.markdown h1,
+.markdown h2,
+.markdown h3,
+.markdown h4 {
+  color: var(--fg);
   font-weight: 700;
   line-height: 1.3;
   margin-top: 2rem;
 }
-.markdown h1 { font-size: 1.75rem; }
-.markdown h2 { font-size: 1.4rem; border-bottom: 1px solid #174b76; padding-bottom: 0.4rem; }
-.markdown h3 { font-size: 1.15rem; }
-.markdown a { color: #c7f9ff; text-decoration: underline; text-underline-offset: 3px; }
-.markdown ul { list-style: disc; padding-left: 1.5rem; }
-.markdown ol { list-style: decimal; padding-left: 1.5rem; }
-.markdown li + li { margin-top: 0.25rem; }
-.markdown img { display: inline-block; max-width: 100%; height: auto; border-radius: 0.75rem; }
+.markdown h1 {
+  font-size: 1.75rem;
+}
+.markdown h2 {
+  font-size: 1.4rem;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 0.4rem;
+}
+.markdown h3 {
+  font-size: 1.15rem;
+}
+.markdown a {
+  color: var(--ice);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.markdown ul {
+  list-style: disc;
+  padding-left: 1.5rem;
+}
+.markdown ol {
+  list-style: decimal;
+  padding-left: 1.5rem;
+}
+.markdown li + li {
+  margin-top: 0.25rem;
+}
+.markdown img {
+  display: inline-block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.75rem;
+}
 .markdown code {
   font-family: var(--font-geist-mono), monospace;
   font-size: 0.875em;
-  background: #0a245e;
-  border: 1px solid #174b76;
+  background: var(--surface);
+  border: 1px solid var(--line);
   border-radius: 0.375rem;
   padding: 0.1rem 0.35rem;
 }
 .markdown pre {
-  background: #0a245e;
-  border: 1px solid #174b76;
+  background: var(--surface);
+  border: 1px solid var(--line);
   border-radius: 0.75rem;
   padding: 1rem;
   overflow-x: auto;
 }
-.markdown pre code { background: none; border: 0; padding: 0; }
-.markdown blockquote { border-left: 3px solid #174b76; padding-left: 1rem; }
-.markdown table { width: 100%; border-collapse: collapse; display: block; overflow-x: auto; }
-.markdown th, .markdown td { border: 1px solid #174b76; padding: 0.4rem 0.75rem; text-align: left; }
-.markdown hr { border-color: #174b76; }
-.markdown [align="center"] { text-align: center; }
-
-@keyframes fade {
-  from { opacity: 0; }
-  to { opacity: 1; }
+.markdown pre code {
+  background: none;
+  border: 0;
+  padding: 0;
+}
+.markdown blockquote {
+  border-left: 3px solid var(--line);
+  padding-left: 1rem;
+}
+.markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  display: block;
+  overflow-x: auto;
+}
+.markdown th,
+.markdown td {
+  border: 1px solid var(--line);
+  padding: 0.4rem 0.75rem;
+  text-align: left;
+}
+.markdown hr {
+  border-color: var(--line);
+}
+.markdown [align="center"] {
+  text-align: center;
 }

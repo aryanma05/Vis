@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import SiteHeader from "@/components/SiteHeader";
 import ProjectForm from "@/components/ProjectForm";
 import { getProjectById, MAX_PROJECT_IMAGES } from "@/lib/projects";
 import { requireUser } from "@/lib/session";
@@ -13,8 +12,7 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
   if (!project?.isOwner) notFound();
 
   return (
-    <main className="min-h-screen bg-[#071A52] text-white">
-      <SiteHeader />
+    <main className="min-h-screen pb-28 md:pb-16 md:pl-28 md:pr-10">
       <section className="mx-auto max-w-3xl px-6 py-12">
         <h1 className="text-3xl font-bold">Rediger prosjekt</h1>
         <div className="mt-8">

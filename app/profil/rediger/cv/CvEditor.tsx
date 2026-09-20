@@ -66,13 +66,13 @@ function EntryShell({
           {period && <span className="block font-mono text-xs text-mist/70">{period}</span>}
         </button>
         <div className="flex shrink-0 items-center text-mist">
-          <button type="button" onClick={onUp} aria-label="Flytt opp" className="rounded px-2 py-1 hover:bg-white/5 hover:text-white">
+          <button type="button" onClick={onUp} aria-label="Flytt opp" className="rounded px-2 py-1 hover:bg-white/5 hover:text-fg">
             ↑
           </button>
-          <button type="button" onClick={onDown} aria-label="Flytt ned" className="rounded px-2 py-1 hover:bg-white/5 hover:text-white">
+          <button type="button" onClick={onDown} aria-label="Flytt ned" className="rounded px-2 py-1 hover:bg-white/5 hover:text-fg">
             ↓
           </button>
-          <button type="button" onClick={onToggle} className="rounded px-2 py-1 text-sm hover:bg-white/5 hover:text-white">
+          <button type="button" onClick={onToggle} className="rounded px-2 py-1 text-sm hover:bg-white/5 hover:text-fg">
             {open ? "Lukk" : "Rediger"}
           </button>
           <button type="button" onClick={onRemove} aria-label="Fjern" className="rounded px-2 py-1 hover:bg-white/5 hover:text-red-300">
@@ -113,7 +113,7 @@ function PeriodFields({
           type="checkbox"
           checked={current}
           onChange={(e) => onChange({ current: e.target.checked, endDate: e.target.checked ? "" : end })}
-          className="h-4 w-4 accent-[#C7F9FF]"
+          className="h-4 w-4 accent-[var(--primary)]"
         />
         {currentLabel}
       </label>
@@ -132,7 +132,7 @@ function SkillsInput({ skills, onChange }: { skills: string[]; onChange: (skills
   };
 
   return (
-    <div className="rounded-xl border border-line bg-ink p-2 focus-within:border-ice">
+    <div className="rounded-xl border border-line bg-ink p-2 focus-within:border-primary">
       <ul className="flex flex-wrap gap-2">
         {skills.map((s) => (
           <li key={s} className="inline-flex items-center gap-1.5 rounded-md border border-line bg-surface/60 py-1 pl-2.5 pr-1 text-sm">
@@ -160,7 +160,7 @@ function SkillsInput({ skills, onChange }: { skills: string[]; onChange: (skills
             }}
             onBlur={() => draft.trim() && add(draft)}
             placeholder={skills.length ? "Legg til…" : "F.eks. React, Figma, SQL – trykk Enter"}
-            className="w-full bg-transparent px-2 py-1 text-sm text-white outline-none placeholder:text-mist/40"
+            className="w-full bg-transparent px-2 py-1 text-sm text-fg outline-none placeholder:text-mist/40"
           />
         </li>
       </ul>

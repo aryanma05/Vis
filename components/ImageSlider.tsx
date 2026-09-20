@@ -43,7 +43,7 @@ export default function ImageSlider({ images, title }: { images: Image[]; title:
               type="button"
               onClick={() => go(-1)}
               aria-label="Forrige bilde"
-              className="absolute left-4 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-ink/70 text-white opacity-0 backdrop-blur transition hover:bg-ink focus-visible:opacity-100 group-hover:opacity-100"
+              className="absolute left-4 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-ink/70 text-fg opacity-0 backdrop-blur transition hover:bg-ink focus-visible:opacity-100 group-hover:opacity-100"
             >
               ←
             </button>
@@ -51,7 +51,7 @@ export default function ImageSlider({ images, title }: { images: Image[]; title:
               type="button"
               onClick={() => go(1)}
               aria-label="Neste bilde"
-              className="absolute right-4 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-ink/70 text-white opacity-0 backdrop-blur transition hover:bg-ink focus-visible:opacity-100 group-hover:opacity-100"
+              className="absolute right-4 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-ink/70 text-fg opacity-0 backdrop-blur transition hover:bg-ink focus-visible:opacity-100 group-hover:opacity-100"
             >
               →
             </button>
@@ -72,7 +72,7 @@ export default function ImageSlider({ images, title }: { images: Image[]; title:
               aria-label={`Vis bilde ${i + 1}`}
               aria-current={i === index}
               className={`relative aspect-[16/10] w-28 shrink-0 overflow-hidden rounded-lg border transition ${
-                i === index ? "border-ice" : "border-line opacity-60 hover:opacity-100"
+                i === index ? "border-primary" : "border-line opacity-60 hover:opacity-100"
               }`}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}

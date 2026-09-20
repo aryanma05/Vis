@@ -6,7 +6,7 @@ export default function EditNav({ active, username }: { active: "profil" | "cv";
     <Link
       href={href}
       className={`-mb-px border-b-2 pb-4 text-sm font-medium transition ${
-        isActive ? "border-ice text-white" : "border-transparent text-mist hover:text-white"
+        isActive ? "border-primary text-fg" : "border-transparent text-mist hover:text-fg"
       }`}
     >
       {label}
@@ -23,7 +23,7 @@ export default function EditNav({ active, username }: { active: "profil" | "cv";
           </div>
           <Link
             href={`/@${username}${active === "cv" ? "?fane=cv" : ""}`}
-            className="group mb-1 inline-flex items-center gap-2 text-sm text-mist hover:text-white"
+            className="group mb-1 inline-flex items-center gap-2 text-sm text-mist hover:text-fg"
           >
             Se profilen <ArrowIcon className="h-4 w-4 transition group-hover:translate-x-0.5" />
           </Link>

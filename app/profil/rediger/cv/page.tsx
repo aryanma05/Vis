@@ -1,4 +1,3 @@
-import SiteHeader from "@/components/SiteHeader";
 import { getCv } from "@/lib/cv";
 import { getCvDocument } from "@/lib/cv-document";
 import { requireUser } from "@/lib/session";
@@ -12,8 +11,7 @@ export default async function EditCvPage() {
   const [cv, doc] = await Promise.all([getCv(user.id), getCvDocument(user.id, user.id)]);
 
   return (
-    <main className="min-h-screen bg-ink text-white">
-      <SiteHeader />
+    <main className="min-h-screen pb-28 md:pb-16 md:pl-28 md:pr-10">
       <EditNav active="cv" username={user.username} />
       <div className="mx-auto max-w-5xl px-6">
         <CvStudio

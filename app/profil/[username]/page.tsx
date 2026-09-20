@@ -5,7 +5,6 @@ import Avatar from "@/components/Avatar";
 import CvPages from "@/components/CvPages";
 import CvTimeline from "@/components/CvTimeline";
 import { ProjectGrid } from "@/components/ProjectCard";
-import SiteHeader from "@/components/SiteHeader";
 import { ArrowIcon, DownloadIcon } from "@/components/icons";
 import { getProfileByUsername } from "@/lib/profiles";
 import { getCurrentUser } from "@/lib/session";
@@ -47,12 +46,11 @@ export default async function ProfilePage({ params, searchParams }: Props) {
 
   const tabClass = (active: boolean) =>
     `-mb-px border-b-2 pb-4 text-sm font-medium transition ${
-      active ? "border-ice text-white" : "border-transparent text-mist hover:text-white"
+      active ? "border-primary text-fg" : "border-transparent text-mist hover:text-fg"
     }`;
 
   return (
-    <main className="min-h-screen bg-ink text-white">
-      <SiteHeader />
+    <main className="min-h-screen pb-28 md:pb-16 md:pl-28 md:pr-10">
 
       <section className="border-b border-line">
         <div className="mx-auto max-w-7xl px-6 pt-14 md:pt-20">
@@ -71,14 +69,14 @@ export default async function ProfilePage({ params, searchParams }: Props) {
             {user.isOwner && (
               <Link
                 href="/profil/rediger"
-                className="self-start rounded-lg border border-line px-4 py-2 text-sm font-medium transition hover:border-ice md:self-auto"
+                className="self-start rounded-lg border border-line px-4 py-2 text-sm font-medium transition hover:border-primary md:self-auto"
               >
                 Rediger profil
               </Link>
             )}
           </div>
 
-          {user.headline && <p className="mt-10 max-w-3xl text-2xl leading-snug text-white md:text-3xl">{user.headline}</p>}
+          {user.headline && <p className="mt-10 max-w-3xl text-2xl leading-snug text-fg md:text-3xl">{user.headline}</p>}
           {user.bio && <p className="mt-5 max-w-2xl whitespace-pre-line leading-7 text-mist">{user.bio}</p>}
 
           {(user.websiteUrl || user.links.length > 0) && (
@@ -125,7 +123,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
               {user.isOwner && (
                 <>
                   <p className="mt-2 text-mist">Del noe du har laget, fra GitHub, en mappe eller for hånd.</p>
-                  <Link href="/ny" className="mt-6 inline-flex rounded-lg bg-ice px-5 py-3 font-semibold text-ink transition hover:bg-white">
+                  <Link href="/ny" className="mt-6 inline-flex rounded-lg bg-primary px-5 py-3 font-semibold text-ink transition hover:bg-white">
                     Del et prosjekt
                   </Link>
                 </>
@@ -136,7 +134,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
           <div className="rounded-xl border border-dashed border-line px-6 py-20 text-center">
             <p className="text-xl font-semibold">Ingen CV ennå.</p>
             <p className="mt-2 text-mist">Last opp CV-en som PDF eller bilde, så vises den her i full oppløsning.</p>
-            <Link href="/profil/rediger/cv" className="mt-6 inline-flex rounded-lg bg-ice px-5 py-3 font-semibold text-ink transition hover:bg-white">
+            <Link href="/profil/rediger/cv" className="mt-6 inline-flex rounded-lg bg-primary px-5 py-3 font-semibold text-ink transition hover:bg-white">
               Legg til CV
             </Link>
           </div>
@@ -152,12 +150,12 @@ export default async function ProfilePage({ params, searchParams }: Props) {
                   download
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-2 rounded-lg bg-ice px-4 py-2.5 text-sm font-semibold text-ink transition hover:bg-white"
+                  className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-ink transition hover:bg-white"
                 >
                   <DownloadIcon /> Last ned CV
                 </a>
                 {user.isOwner && (
-                  <Link href="/profil/rediger/cv" className="rounded-lg border border-line px-4 py-2.5 text-sm font-medium transition hover:border-ice">
+                  <Link href="/profil/rediger/cv" className="rounded-lg border border-line px-4 py-2.5 text-sm font-medium transition hover:border-primary">
                     Rediger
                   </Link>
                 )}
@@ -176,7 +174,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
           <div className="max-w-4xl">
             {user.isOwner && (
               <div className="mb-10 flex justify-end">
-                <Link href="/profil/rediger/cv" className="rounded-lg border border-line px-4 py-2.5 text-sm font-medium transition hover:border-ice">
+                <Link href="/profil/rediger/cv" className="rounded-lg border border-line px-4 py-2.5 text-sm font-medium transition hover:border-primary">
                   Rediger CV
                 </Link>
               </div>

@@ -11,7 +11,7 @@ vis brings your CV, projects and digital identity together in one visual profile
 - Next.js
 - TypeScript
 - Tailwind CSS
-- OGL
+- OGL (bølgene på forsiden) og lucide-react (ikoner)
 - Postgres (Neon på Vercel) + Drizzle ORM
 - Better Auth (e-post/passord + GitHub)
 - Vercel Blob (bilder)
@@ -77,6 +77,29 @@ components/               ProjectCard, ProjectCover, CvPages, kommentarer osv.
 Alle Server Actions returnerer `{ ok: true, data }` eller `{ ok: false, error, fieldErrors? }`,
 så skjemaer kan vise feilmeldinger uten try/catch. Alt som endrer data sjekker at brukeren
 er logget inn og eier det som endres.
+
+## Tema og navigasjon
+
+Appen har tre temaer: `midnight` (standard), `dark` og `light`. `ThemeProvider` setter
+`data-theme` på `<html>`, og alle farger er CSS-variabler i `app/globals.css`. Derfor bytter
+både klientkomponenter og server-sider farge sammen. Bruk disse klassene i ny kode:
+
+| Klasse | Brukes til |
+| --- | --- |
+| `bg-ink` | sidebakgrunn |
+| `bg-surface` | kort, felter og menyer |
+| `border-line` | streker og rammer |
+| `text-fg` | vanlig tekst |
+| `text-mist` | dempet tekst |
+| `text-ice` | aksent på tekst og lenker |
+| `bg-primary text-on-primary` | knapper |
+
+`components/Sidebar.tsx` (desktop) og `components/MobileNav.tsx` (mobil) ligger i
+`app/layout.tsx`, så alle sider får navigasjon automatisk. Menyvalgene endrer seg etter om
+man er logget inn. Sider legger inn `md:pl-28` for å gi plass til sidemenyen.
+
+Rutene heter `/sok`, `/logg-inn`, `/ny` og `/varsler`. `/explore` og `/login` sender videre
+til de to første, så gamle lenker fortsatt virker.
 
 ## Deploy på Vercel
 

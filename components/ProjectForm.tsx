@@ -222,14 +222,14 @@ export default function ProjectForm({
         {(images.length > 0 || newFiles.length > 0) && (
           <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4">
             {images.map((img, i) => (
-              <div key={img.id} className="overflow-hidden rounded-xl border border-[#174B76] bg-[#071A52]">
+              <div key={img.id} className="overflow-hidden rounded-xl border border-line bg-ink">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={img.url} alt={img.alt ?? ""} className="aspect-video w-full object-cover" />
                 <div className="flex justify-between gap-2 p-2 text-xs">
                   {i === 0 ? (
-                    <span className="text-[#C7F9FF]">Forsidebilde</span>
+                    <span className="text-ice">Forsidebilde</span>
                   ) : (
-                    <button type="button" onClick={() => makeCover(img.id)} disabled={pending} className="text-[#B8D8E3] hover:text-white">
+                    <button type="button" onClick={() => makeCover(img.id)} disabled={pending} className="text-mist hover:text-fg">
                       Gjør til forside
                     </button>
                   )}
@@ -240,11 +240,11 @@ export default function ProjectForm({
               </div>
             ))}
             {newFiles.map((file, i) => (
-              <div key={`${file.name}-${i}`} className="overflow-hidden rounded-xl border border-dashed border-[#174B76] bg-[#071A52]">
+              <div key={`${file.name}-${i}`} className="overflow-hidden rounded-xl border border-dashed border-line bg-ink">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={URL.createObjectURL(file)} alt="" className="aspect-video w-full object-cover opacity-80" />
                 <div className="flex justify-between gap-2 p-2 text-xs">
-                  <span className="truncate text-[#B8D8E3]">Ny</span>
+                  <span className="truncate text-mist">Ny</span>
                   <button
                     type="button"
                     onClick={() => setNewFiles((prev) => prev.filter((_, j) => j !== i))}
@@ -268,7 +268,7 @@ export default function ProjectForm({
               pickFiles(e.target.files);
               e.target.value = "";
             }}
-            className="mt-3 block w-full text-sm text-[#B8D8E3] file:mr-4 file:rounded-lg file:border-0 file:bg-[#C7F9FF] file:px-4 file:py-2 file:font-semibold file:text-[#071A52]"
+            className="mt-3 block w-full text-sm text-mist file:mr-4 file:rounded-lg file:border-0 file:bg-primary file:px-4 file:py-2 file:font-semibold file:text-on-primary"
           />
         )}
       </div>

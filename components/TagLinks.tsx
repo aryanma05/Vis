@@ -14,7 +14,7 @@ export default function TagLinks({ tags, active }: { tags: Tag[]; active?: strin
             key={t.slug}
             href={isActive ? "/sok" : `/sok?tag=${encodeURIComponent(t.slug)}`}
             className={`shrink-0 rounded-md border px-3 py-1.5 font-mono text-xs transition ${
-              isActive ? "border-ice bg-ice text-ink" : "border-line text-mist hover:border-mist/60 hover:text-white"
+              isActive ? "border-primary bg-primary text-ink" : "border-line text-mist hover:border-mist/60 hover:text-fg"
             }`}
           >
             {t.name}
