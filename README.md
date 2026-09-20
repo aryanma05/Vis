@@ -20,9 +20,9 @@ vis brings your CV, projects and digital identity together in one visual profile
 
 ```bash
 npm install
-cp .env.example .env.local   # fyll inn verdiene, se under
-npm run db:migrate           # lager tabellene
-npm run db:seed              # valgfritt: eksempelbrukeren @aryan (passord123)
+cp .env.example .env.local   
+npm run db:migrate       
+npm run db:seed             
 npm run dev
 ```
 
