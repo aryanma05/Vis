@@ -34,7 +34,7 @@ export default function ProjectFeed({ initial, cursor }: { initial: Card[]; curs
             type="button"
             onClick={loadMore}
             disabled={pending}
-            className="rounded-lg border border-line px-6 py-3 text-sm font-medium text-white transition hover:border-ice hover:text-ice disabled:opacity-60"
+            className="rounded-lg border border-line px-6 py-3 text-sm font-medium text-fg transition hover:border-primary hover:text-ice disabled:opacity-60"
           >
             {pending ? "Henter flere…" : "Vis flere prosjekter"}
           </button>

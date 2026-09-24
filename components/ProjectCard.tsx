@@ -4,13 +4,18 @@ import ProjectCover from "@/components/ProjectCover";
 import { CommentIcon } from "@/components/icons";
 import type { ProjectCard as Card } from "@/lib/projects";
 
+// Bildet er hovedsaken på kortet. Prosjekter uten bilder får et generert cover.
 export default function ProjectCard({ project, showOwner = true }: { project: Card; showOwner?: boolean }) {
   const href = `/prosjekt/${project.id}`;
   const tech = project.tags.slice(0, 3).map((t) => t.name);
 
   return (
     <article className="group">
-      <Link href={href} className="block overflow-hidden rounded-xl border border-line bg-surface">
+      <Link
+        href={href}
+        aria-label={`Åpne prosjektet ${project.title}`}
+        className="block overflow-hidden rounded-2xl border border-line bg-surface transition duration-300 hover:-translate-y-1 hover:border-ice hover:shadow-xl hover:shadow-black/20 focus:outline-none focus:ring-2 focus:ring-ice"
+      >
         <div className="relative aspect-[4/3] overflow-hidden">
           {project.coverImageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -40,13 +45,13 @@ export default function ProjectCard({ project, showOwner = true }: { project: Ca
           </Link>
         )}
         <div className="min-w-0 flex-1">
-          <Link href={href} className="block truncate font-medium text-white transition group-hover:text-ice">
+          <Link href={href} className="block truncate font-medium text-fg transition group-hover:text-ice">
             {project.title}
           </Link>
-          <p className="mt-0.5 truncate text-sm text-mist/80">
+          <p className="mt-0.5 truncate text-sm text-mist">
             {showOwner && (
               <>
-                <Link href={`/@${project.owner.username}`} className="transition hover:text-white">
+                <Link href={`/@${project.owner.username}`} className="transition hover:text-fg">
                   {project.owner.name}
                 </Link>
                 {tech.length > 0 && <span className="mx-1.5 text-mist/40">/</span>}
@@ -56,7 +61,10 @@ export default function ProjectCard({ project, showOwner = true }: { project: Ca
           </p>
         </div>
         {project.commentCount > 0 && (
-          <span className="mt-1 flex shrink-0 items-center gap-1 text-xs text-mist/70" title={`${project.commentCount} kommentarer`}>
+          <span
+            className="mt-1 flex shrink-0 items-center gap-1 text-xs text-mist"
+            title={`${project.commentCount} kommentarer`}
+          >
             <CommentIcon className="h-3.5 w-3.5" />
             {project.commentCount}
           </span>

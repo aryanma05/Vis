@@ -153,7 +153,7 @@ export default function CvDocumentPanel({
             if (file) handleFile(file);
           }}
           className={`flex w-full flex-col items-center justify-center rounded-2xl border border-dashed px-6 py-16 text-center transition ${
-            dragging ? "border-ice bg-ice/5" : "border-line hover:border-mist/60"
+            dragging ? "border-primary bg-primary/5" : "border-line hover:border-mist/60"
           }`}
         >
           {busy ? (
@@ -201,7 +201,7 @@ export default function CvDocumentPanel({
           onClick={toggleVisibility}
           className="mr-2 inline-flex items-center gap-3 text-sm"
         >
-          <span className={`relative h-6 w-11 rounded-full transition ${doc.isPublic ? "bg-ice" : "bg-line"}`}>
+          <span className={`relative h-6 w-11 rounded-full transition ${doc.isPublic ? "bg-primary" : "bg-line"}`}>
             <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-ink transition-all ${doc.isPublic ? "left-[22px]" : "left-0.5"}`} />
           </span>
           {doc.isPublic ? "Synlig på profilen" : "Skjult for andre"}
@@ -210,11 +210,11 @@ export default function CvDocumentPanel({
           type="button"
           onClick={onAutofill}
           disabled={autofilling}
-          className="rounded-lg bg-ice px-4 py-2 text-sm font-semibold text-ink transition hover:bg-white disabled:opacity-60"
+          className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-ink transition hover:bg-white disabled:opacity-60"
         >
           {autofilling ? "Leser CV-en…" : "Fyll ut feltene fra CV-en"}
         </button>
-        <button type="button" onClick={() => inputRef.current?.click()} className="rounded-lg border border-line px-4 py-2 text-sm transition hover:border-ice">
+        <button type="button" onClick={() => inputRef.current?.click()} className="rounded-lg border border-line px-4 py-2 text-sm transition hover:border-primary">
           Bytt fil
         </button>
         <button type="button" onClick={remove} className="rounded-lg px-3 py-2 text-sm text-mist hover:text-red-300">

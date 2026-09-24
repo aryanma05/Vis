@@ -1,3 +1,4 @@
+import { TechTag } from "@/components/TechTag";
 import { formatPeriod } from "@/lib/format";
 import type { Cv } from "@/lib/cv";
 
@@ -16,7 +17,7 @@ export default function CvTimeline({ cv, wide = false }: { cv: Cv; wide?: boolea
               <li key={e.id} className={`py-5 ${row}`}>
                 <p className="font-mono text-xs text-mist/70 md:pt-1">{formatPeriod(e.startDate, e.endDate)}</p>
                 <div>
-                  <p className="font-medium text-white">{e.title}</p>
+                  <p className="font-medium text-fg">{e.title}</p>
                   <p className="text-sm text-ice">
                     {e.organization}
                     {e.location && <span className="text-mist/60"> · {e.location}</span>}
@@ -37,7 +38,7 @@ export default function CvTimeline({ cv, wide = false }: { cv: Cv; wide?: boolea
               <li key={e.id} className={`py-5 ${row}`}>
                 <p className="font-mono text-xs text-mist/70 md:pt-1">{formatPeriod(e.startDate, e.endDate)}</p>
                 <div>
-                  <p className="font-medium text-white">{e.institution}</p>
+                  <p className="font-medium text-fg">{e.institution}</p>
                   {(e.degree || e.fieldOfStudy) && (
                     <p className="text-sm text-ice">{[e.degree, e.fieldOfStudy].filter(Boolean).join(", ")}</p>
                   )}
@@ -52,14 +53,11 @@ export default function CvTimeline({ cv, wide = false }: { cv: Cv; wide?: boolea
       {cv.skills.length > 0 && (
         <section>
           <h3 className={heading}>Ferdigheter</h3>
-          <p className="mt-5 leading-8 text-mist">
-            {cv.skills.map((s, i) => (
-              <span key={s}>
-                <span className="text-white">{s}</span>
-                {i < cv.skills.length - 1 && <span className="mx-2 text-mist/40">/</span>}
-              </span>
+          <div className="mt-5 flex flex-wrap gap-2">
+            {cv.skills.map((skill) => (
+              <TechTag key={skill} label={skill} size="sm" />
             ))}
-          </p>
+          </div>
         </section>
       )}
     </div>

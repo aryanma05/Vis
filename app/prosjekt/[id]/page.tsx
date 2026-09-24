@@ -6,7 +6,7 @@ import Comments from "@/components/comments/Comments";
 import ImageSlider from "@/components/ImageSlider";
 import Markdown from "@/components/Markdown";
 import ProjectCover from "@/components/ProjectCover";
-import SiteHeader from "@/components/SiteHeader";
+import { TechTag } from "@/components/TechTag";
 import { ExternalIcon, GithubIcon } from "@/components/icons";
 import { formatYearMonth } from "@/lib/format";
 import { getProjectById } from "@/lib/projects";
@@ -30,7 +30,7 @@ function Meta({ label, children }: { label: string; children: React.ReactNode })
   return (
     <div className="border-t border-line py-4">
       <dt className="font-mono text-[11px] uppercase tracking-[0.18em] text-mist/60">{label}</dt>
-      <dd className="mt-1.5 text-sm text-white">{children}</dd>
+      <dd className="mt-1.5 text-sm text-fg">{children}</dd>
     </div>
   );
 }
@@ -45,8 +45,7 @@ export default async function ProjectPage({ params }: Props) {
   const date = formatYearMonth(project.projectDate);
 
   return (
-    <main className="min-h-screen bg-ink text-white">
-      <SiteHeader />
+    <main className="min-h-screen pb-28 md:pb-16 md:pl-28 md:pr-10">
 
       <div className="mx-auto max-w-6xl px-6 pb-24 pt-10">
         {project.isOwner && <ProjectOwnerActions projectId={project.id} status={project.status} />}
@@ -54,7 +53,7 @@ export default async function ProjectPage({ params }: Props) {
         <header className="mt-8 max-w-4xl">
           <Link
             href={`/@${project.owner.username}`}
-            className="inline-flex items-center gap-2.5 text-sm text-mist transition hover:text-white"
+            className="inline-flex items-center gap-2.5 text-sm text-mist transition hover:text-fg"
           >
             <Avatar name={project.owner.name} image={project.owner.image} size={26} />
             {project.owner.name}
@@ -71,7 +70,7 @@ export default async function ProjectPage({ params }: Props) {
                   href={project.demoUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-2 rounded-lg bg-ice px-5 py-3 font-semibold text-ink transition hover:bg-white"
+                  className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-3 font-semibold text-ink transition hover:bg-white"
                 >
                   Åpne demo <ExternalIcon />
                 </a>
@@ -81,7 +80,7 @@ export default async function ProjectPage({ params }: Props) {
                   href={project.repoUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-2 rounded-lg border border-line px-5 py-3 font-semibold text-white transition hover:border-ice"
+                  className="inline-flex items-center gap-2 rounded-lg border border-line px-5 py-3 font-semibold text-fg transition hover:border-primary"
                 >
                   <GithubIcon /> Se koden
                 </a>
@@ -99,9 +98,9 @@ export default async function ProjectPage({ params }: Props) {
                 {project.isOwner && (
                   <Link
                     href={`/prosjekt/${project.id}/rediger`}
-                    className="absolute inset-0 flex flex-col items-center justify-center text-center transition hover:bg-ice/5"
+                    className="absolute inset-0 flex flex-col items-center justify-center text-center transition hover:bg-primary/5"
                   >
-                    <span className="text-lg font-medium text-white">Legg til skjermbilder</span>
+                    <span className="text-lg font-medium text-fg">Legg til skjermbilder</span>
                     <span className="mt-1 text-sm text-mist">Prosjekter med bilder får langt mer oppmerksomhet.</span>
                   </Link>
                 )}
@@ -120,7 +119,7 @@ export default async function ProjectPage({ params }: Props) {
               project.isOwner && (
                 <p className="rounded-xl border border-dashed border-line p-6 text-mist">
                   Ingen beskrivelse ennå.{" "}
-                  <Link href={`/prosjekt/${project.id}/rediger`} className="text-white underline underline-offset-4">
+                  <Link href={`/prosjekt/${project.id}/rediger`} className="text-fg underline underline-offset-4">
                     Fortell hva prosjektet handler om
                   </Link>
                   .
@@ -135,11 +134,11 @@ export default async function ProjectPage({ params }: Props) {
             <dl>
               {project.tags.length > 0 && (
                 <Meta label="Laget med">
-                  <ul className="flex flex-wrap gap-x-3 gap-y-1.5">
+                  <ul className="flex flex-wrap gap-2">
                     {project.tags.map((t) => (
                       <li key={t.slug}>
-                        <Link href={`/sok?tag=${encodeURIComponent(t.slug)}`} className="text-mist transition hover:text-ice">
-                          {t.name}
+                        <Link href={`/sok?tag=${encodeURIComponent(t.slug)}`} aria-label={`Se flere prosjekter med ${t.name}`}>
+                          <TechTag label={t.name} size="sm" />
                         </Link>
                       </li>
                     ))}

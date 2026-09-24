@@ -237,18 +237,19 @@ function decodeCursor(cursor: string) {
   return { publishedAt, id };
 }
 
-// Tekstsøk i tittel, ingress og beskrivelse, eventuelt filtrert på en teknologi.
-// "reac nat" finner "React Native".
+// Tekstsøk i tittel, ingress og beskrivelse, med valgfritt teknologifilter og
+// sortering. "reac nat" finner "React Native". Tom søketekst gir nyeste prosjekter.
+export type ProjectSort = "newest" | "az" | "za";
+
 export async function searchProjects(
   query: string,
-  { tag: tagSlug, limit = 48 }: { tag?: string | null; limit?: number } = {},
+  { tag: tagSlug, sort = "newest", limit = 48 }: { tag?: string | null; sort?: ProjectSort; limit?: number } = {},
 ) {
   const terms = query
     .toLowerCase()
     .split(/[^\p{L}\p{N}]+/u)
     .filter(Boolean)
     .slice(0, 8);
-  if (terms.length === 0 && !tagSlug) return [];
 
   const conditions = [eq(project.status, "published")];
   const tsQuery = terms.map((t) => `${t}:*`).join(" & ");
@@ -266,17 +267,24 @@ export async function searchProjects(
     );
   }
 
+  const orderBy =
+    sort === "az"
+      ? [asc(sql`lower(${project.title})`)]
+      : sort === "za"
+        ? [desc(sql`lower(${project.title})`)]
+        : [
+            ...(terms.length > 0
+              ? [desc(sql`ts_rank(${project.searchVector}, to_tsquery('simple', ${tsQuery}))`)]
+              : []),
+            desc(project.publishedAt),
+          ];
+
   const rows = await db
     .select(cardColumns)
     .from(project)
     .innerJoin(user, eq(user.id, project.ownerId))
     .where(and(...conditions))
-    .orderBy(
-      ...(terms.length > 0
-        ? [desc(sql`ts_rank(${project.searchVector}, to_tsquery('simple', ${tsQuery}))`)]
-        : []),
-      desc(project.publishedAt),
-    )
+    .orderBy(...orderBy)
     .limit(Math.min(limit, 60));
 
   return toCards(rows);

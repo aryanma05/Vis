@@ -131,7 +131,7 @@ export default function FolderImport() {
             if (item) analyze(entriesFromDrop(item));
           }}
           className={`flex flex-col items-center justify-center rounded-2xl border border-dashed px-6 py-20 text-center transition ${
-            dragging ? "border-ice bg-ice/5" : "border-line"
+            dragging ? "border-primary bg-primary/5" : "border-line"
           }`}
         >
           {status ? (
@@ -149,7 +149,7 @@ export default function FolderImport() {
               <button
                 type="button"
                 onClick={choose}
-                className="mt-6 rounded-lg border border-line px-4 py-2 text-sm font-medium transition hover:border-ice"
+                className="mt-6 rounded-lg border border-line px-4 py-2 text-sm font-medium transition hover:border-primary"
               >
                 Velg mappe
               </button>
@@ -174,7 +174,7 @@ export default function FolderImport() {
           Leste {draft.fileCount.toLocaleString("nb-NO")} filer
           {draft.description ? " · fant README" : " · fant ingen README"}
         </span>
-        <button type="button" onClick={() => setDraft(null)} className="text-mist hover:text-white">
+        <button type="button" onClick={() => setDraft(null)} className="text-mist hover:text-fg">
           Velg en annen mappe
         </button>
       </div>
@@ -222,7 +222,7 @@ export default function FolderImport() {
                       return next;
                     })
                   }
-                  className={`group relative overflow-hidden rounded-lg border text-left transition ${on ? "border-ice" : "border-line opacity-50"}`}
+                  className={`group relative overflow-hidden rounded-lg border text-left transition ${on ? "border-primary" : "border-line opacity-50"}`}
                   aria-pressed={on}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -230,7 +230,7 @@ export default function FolderImport() {
                   <span className="block truncate px-2 py-1.5 font-mono text-[10px] text-mist">{img.path}</span>
                   <span
                     className={`absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full text-xs ${
-                      on ? "bg-ice text-ink" : "bg-ink/80 text-mist"
+                      on ? "bg-primary text-ink" : "bg-ink/80 text-mist"
                     }`}
                   >
                     {on ? "✓" : ""}
@@ -258,7 +258,7 @@ export default function FolderImport() {
           type="button"
           onClick={create}
           disabled={status !== null || !draft.title.trim()}
-          className="rounded-lg bg-ice px-5 py-3 font-semibold text-ink transition hover:bg-white disabled:opacity-60"
+          className="rounded-lg bg-primary px-5 py-3 font-semibold text-ink transition hover:bg-white disabled:opacity-60"
         >
           {status ?? "Opprett prosjekt som utkast"}
         </button>

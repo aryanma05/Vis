@@ -37,7 +37,7 @@ export default async function Comments({
           <CommentForm projectId={projectId} viewer={{ name: viewer.name, image: viewer.image ?? null }} />
         ) : (
           <p className="text-mist">
-            <Link href="/logg-inn" className="font-medium text-white underline underline-offset-4">
+            <Link href="/logg-inn" className="font-medium text-fg underline underline-offset-4">
               Logg inn
             </Link>{" "}
             for å kommentere.

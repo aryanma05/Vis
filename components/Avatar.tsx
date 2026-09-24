@@ -27,7 +27,7 @@ export default function Avatar({
     <span
       aria-hidden="true"
       style={style}
-      className={`flex shrink-0 items-center justify-center rounded-full bg-ice font-semibold text-ink ${className}`}
+      className={`flex shrink-0 items-center justify-center rounded-full bg-primary font-semibold text-ink ${className}`}
     >
       {initials(name)}
     </span>

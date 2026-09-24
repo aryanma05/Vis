@@ -169,20 +169,20 @@ export default function CvStudio({ cv, doc, username }: { cv: Cv; doc: DocState;
         description="Erfaring, utdanning og ferdigheter vises ved siden av CV-dokumentet, og gjør deg lettere å finne."
       >
         {draft && (
-          <div className="mb-8 rounded-xl border border-ice/40 bg-ice/5 p-5">
+          <div className="mb-8 rounded-xl border border-primary/40 bg-primary/5 p-5">
             <p className="font-medium">
               Vi fant {draft.parsed.experience.length} erfaringer, {draft.parsed.education.length} utdanninger og{" "}
               {draft.parsed.skills.length} ferdigheter.
             </p>
             <p className="mt-1 text-sm text-mist">Du har allerede fylt ut noe. Hva vil du gjøre?</p>
             <div className="mt-4 flex flex-wrap gap-3">
-              <button type="button" onClick={() => applyDraft(draft, "replace")} className="rounded-lg bg-ice px-4 py-2 text-sm font-semibold text-ink">
+              <button type="button" onClick={() => applyDraft(draft, "replace")} className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-ink">
                 Erstatt
               </button>
-              <button type="button" onClick={() => applyDraft(draft, "merge")} className="rounded-lg border border-line px-4 py-2 text-sm hover:border-ice">
+              <button type="button" onClick={() => applyDraft(draft, "merge")} className="rounded-lg border border-line px-4 py-2 text-sm hover:border-primary">
                 Legg til
               </button>
-              <button type="button" onClick={() => setDraft(null)} className="px-2 text-sm text-mist hover:text-white">
+              <button type="button" onClick={() => setDraft(null)} className="px-2 text-sm text-mist hover:text-fg">
                 Avbryt
               </button>
             </div>
@@ -218,14 +218,14 @@ export default function CvStudio({ cv, doc, username }: { cv: Cv; doc: DocState;
           <p className={`mr-auto text-sm ${message.type === "ok" ? "text-emerald-300" : "text-red-300"}`}>{message.text}</p>
         )}
         {!message && dirty && <p className="mr-auto text-sm text-mist">Du har endringer som ikke er lagret.</p>}
-        <a href={`/@${username}?fane=cv`} className="text-sm text-mist hover:text-white">
+        <a href={`/@${username}?fane=cv`} className="text-sm text-mist hover:text-fg">
           Se CV-en
         </a>
         <button
           type="button"
           onClick={save}
           disabled={saving || (!dirty && !applied)}
-          className="rounded-lg bg-ice px-5 py-2.5 font-semibold text-ink transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-lg bg-primary px-5 py-2.5 font-semibold text-ink transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
         >
           {saving ? "Lagrer…" : "Lagre CV"}
         </button>

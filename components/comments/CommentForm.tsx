@@ -47,14 +47,14 @@ export default function CommentForm({
           rows={3}
           maxLength={MAX}
           placeholder="Skriv en kommentar – hva likte du, eller har du et tips?"
-          className="w-full resize-y rounded-xl border border-line bg-surface/60 px-4 py-3 text-white outline-none transition placeholder:text-mist/50 focus:border-ice"
+          className="w-full resize-y rounded-xl border border-line bg-surface/60 px-4 py-3 text-fg outline-none transition placeholder:text-mist/50 focus:border-primary"
         />
         <div className="mt-2 flex items-center justify-between gap-4">
           <p className="text-xs text-mist/60">{body.length > MAX - 200 ? `${MAX - body.length} tegn igjen` : "⌘ + Enter for å sende"}</p>
           <button
             type="submit"
             disabled={pending || !body.trim()}
-            className="rounded-lg bg-ice px-4 py-2 text-sm font-semibold text-ink transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-ink transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
           >
             {pending ? "Sender…" : "Kommenter"}
           </button>

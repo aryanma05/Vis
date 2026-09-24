@@ -72,7 +72,7 @@ export default function CvPages({ pages, fileUrl, name }: { pages: Page[]; fileU
               Side {open + 1} av {pages.length}
             </span>
             <div className="flex items-center gap-2">
-              <button type="button" onClick={() => setZoomed((z) => !z)} className="rounded-lg px-3 py-1.5 text-mist hover:bg-white/5 hover:text-white">
+              <button type="button" onClick={() => setZoomed((z) => !z)} className="rounded-lg px-3 py-1.5 text-mist hover:bg-white/5 hover:text-fg">
                 {zoomed ? "Tilpass skjermen" : "Full størrelse"}
               </button>
               <a
@@ -80,7 +80,7 @@ export default function CvPages({ pages, fileUrl, name }: { pages: Page[]; fileU
                 download
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-mist hover:bg-white/5 hover:text-white"
+                className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-mist hover:bg-white/5 hover:text-fg"
               >
                 <DownloadIcon /> Last ned
               </a>
@@ -88,7 +88,7 @@ export default function CvPages({ pages, fileUrl, name }: { pages: Page[]; fileU
                 type="button"
                 onClick={close}
                 aria-label="Lukk"
-                className="ml-2 flex h-9 w-9 items-center justify-center rounded-lg text-xl text-mist hover:bg-white/5 hover:text-white"
+                className="ml-2 flex h-9 w-9 items-center justify-center rounded-lg text-xl text-mist hover:bg-white/5 hover:text-fg"
               >
                 ×
               </button>
@@ -118,7 +118,7 @@ export default function CvPages({ pages, fileUrl, name }: { pages: Page[]; fileU
                 onClick={() => go(-1)}
                 disabled={open === 0}
                 aria-label="Forrige side"
-                className="absolute left-4 top-1/2 flex h-12 w-12 items-center justify-center rounded-full bg-surface text-white disabled:opacity-30"
+                className="absolute left-4 top-1/2 flex h-12 w-12 items-center justify-center rounded-full bg-surface text-fg disabled:opacity-30"
               >
                 ←
               </button>
@@ -127,7 +127,7 @@ export default function CvPages({ pages, fileUrl, name }: { pages: Page[]; fileU
                 onClick={() => go(1)}
                 disabled={open === pages.length - 1}
                 aria-label="Neste side"
-                className="absolute right-4 top-1/2 flex h-12 w-12 items-center justify-center rounded-full bg-surface text-white disabled:opacity-30"
+                className="absolute right-4 top-1/2 flex h-12 w-12 items-center justify-center rounded-full bg-surface text-fg disabled:opacity-30"
               >
                 →
               </button>

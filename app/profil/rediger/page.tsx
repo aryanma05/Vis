@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import SiteHeader from "@/components/SiteHeader";
 import { getOwnProfile } from "@/lib/profiles";
 import { requireUser } from "@/lib/session";
 import EditNav from "./EditNav";
@@ -13,8 +12,7 @@ export default async function EditProfilePage() {
   if (!profile) notFound();
 
   return (
-    <main className="min-h-screen bg-ink text-white">
-      <SiteHeader />
+    <main className="min-h-screen pb-28 md:pb-16 md:pl-28 md:pr-10">
       <EditNav active="profil" username={user.username} />
       <div className="mx-auto max-w-5xl px-6">
         <ProfileForm

@@ -1,7 +1,6 @@
 import Link from "next/link";
 import GithubButton from "@/components/GithubButton";
 import ProjectForm from "@/components/ProjectForm";
-import SiteHeader from "@/components/SiteHeader";
 import { FolderIcon, GithubIcon, PencilIcon } from "@/components/icons";
 import { isGithubConfigured } from "@/lib/auth";
 import { hasGithubAccount } from "@/lib/github";
@@ -27,8 +26,7 @@ export default async function NewProjectPage({ searchParams }: { searchParams: P
   const githubLinked = source === "github" ? await hasGithubAccount(user.id) : false;
 
   return (
-    <main className="min-h-screen bg-ink text-white">
-      <SiteHeader />
+    <main className="min-h-screen pb-28 md:pb-16 md:pl-28 md:pr-10">
       <div className="mx-auto max-w-4xl px-6 py-14">
         <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-mist/70">Nytt prosjekt</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight md:text-5xl">Hva vil du vise frem?</h1>
@@ -42,7 +40,7 @@ export default async function NewProjectPage({ searchParams }: { searchParams: P
                 href={`/ny?fra=${key}`}
                 scroll={false}
                 aria-current={active}
-                className={`rounded-xl border p-4 transition ${active ? "border-ice bg-ice/5" : "border-line hover:border-mist/60"}`}
+                className={`rounded-xl border p-4 transition ${active ? "border-primary bg-primary/5" : "border-line hover:border-mist/60"}`}
               >
                 <Icon className={`h-5 w-5 ${active ? "text-ice" : "text-mist"}`} />
                 <p className="mt-3 font-medium">{label}</p>
