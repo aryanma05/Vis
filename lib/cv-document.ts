@@ -5,7 +5,16 @@ import { db, schema } from "@/db";
 import type { CvPage } from "@/db/schema";
 import { importCv } from "@/lib/cv";
 import { UserFacingError } from "@/lib/result";
-import { deleteStoredFiles, readStoredFile, sniffImageType, storeImage, storePdf, isPdf } from "@/lib/storage";
+import {
+  deleteStoredFiles,
+  isPdf,
+  readStoredFile,
+  setStoredFilesPrivate,
+  type StoredFile,
+  sniffImageType,
+  storeImage,
+  storePdf,
+} from "@/lib/storage";
 
 const { cvDocument } = schema;
 
@@ -50,25 +59,27 @@ export async function uploadCvDocument(
 ) {
   const head = new Uint8Array(await file.slice(0, 16).arrayBuffer());
   const folder = `cv/${userId}`;
+  const [previous] = await db.select().from(cvDocument).where(eq(cvDocument.userId, userId)).limit(1);
+  // En ny CV arver synligheten til den forrige (ny CV er synlig som standard).
+  const options = { ownerId: userId, isPrivate: previous ? !previous.isPublic : false };
 
-  let stored: { url: string; key: string };
+  let stored: StoredFile;
   let pages: CvPage[] = [];
   let mimeType: string;
 
   if (isPdf(head)) {
-    stored = await storePdf(file, folder);
+    stored = await storePdf(file, folder, options);
     mimeType = "application/pdf";
   } else if (sniffImageType(head)) {
-    stored = await storeImage(file, folder);
-    mimeType = sniffImageType(head)!;
+    stored = await storeImage(file, folder, options);
+    // Bildet er gjort om (se lib/storage.ts), så typen kan være en annen enn originalen.
+    mimeType = stored.contentType ?? sniffImageType(head)!;
     pages = [
       { url: stored.url, key: stored.key, width: clampSize(imageSize?.width ?? 1600), height: clampSize(imageSize?.height ?? 2263) },
     ];
   } else {
     throw new UserFacingError("Last opp CV-en som PDF eller bilde (JPG, PNG, WebP).");
   }
-
-  const [previous] = await db.select().from(cvDocument).where(eq(cvDocument.userId, userId)).limit(1);
 
   const values = {
     fileUrl: stored.url,
@@ -94,7 +105,7 @@ export async function addCvPage(userId: string, index: number, file: File, size:
     throw new UserFacingError(`Vi viser maks ${MAX_CV_PAGES} sider.`);
   }
 
-  const stored = await storeImage(file, `cv/${userId}`);
+  const stored = await storeImage(file, `cv/${userId}`, { ownerId: userId, isPrivate: !row.isPublic });
   const page = { url: stored.url, key: stored.key, width: clampSize(size.width), height: clampSize(size.height) };
 
   const pages = [...row.pages];
@@ -106,7 +117,13 @@ export async function addCvPage(userId: string, index: number, file: File, size:
 }
 
 export async function setCvDocumentVisibility(userId: string, isPublic: boolean) {
-  await db.update(cvDocument).set({ isPublic }).where(eq(cvDocument.userId, userId));
+  const [row] = await db
+    .update(cvDocument)
+    .set({ isPublic })
+    .where(eq(cvDocument.userId, userId))
+    .returning({ fileKey: cvDocument.fileKey, pages: cvDocument.pages });
+  // En skjult CV skal heller ikke kunne åpnes med en gammel lenke til filen.
+  if (row) await setStoredFilesPrivate(allKeys(row), !isPublic);
 }
 
 export async function deleteCvDocument(userId: string) {

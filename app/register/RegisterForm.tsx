@@ -7,6 +7,7 @@ import { authClient } from "@/lib/auth-client";
 import { authError, type AuthField } from "@/lib/auth-errors";
 import { emailError, emailSuggestion } from "@/lib/email";
 import { toUsernameBase, usernameError } from "@/lib/username";
+import CheckEmail from "@/components/CheckEmail";
 import PasswordInput from "@/components/PasswordInput";
 import UsernameField, { useUsernameCheck } from "@/components/UsernameField";
 import { ui } from "@/components/ui";
@@ -24,6 +25,8 @@ export default function RegisterForm() {
   const [errors, setErrors] = useState<Errors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  // Satt når kontoen er laget og e-posten må bekreftes før man kan logge inn.
+  const [sentTo, setSentTo] = useState<string | null>(null);
   const check = useUsernameCheck(username, { name });
 
   const nameRef = useRef<HTMLInputElement>(null);
@@ -72,6 +75,8 @@ export default function RegisterForm() {
         password,
         // Tomt felt: serveren lager et brukernavn (se lib/auth.ts).
         ...(username ? { username } : {}),
+        // Hit kommer man etter å ha trykket på lenken i e-posten.
+        callbackURL: "/epost-bekreftet",
       });
 
       if (error) {
@@ -96,6 +101,13 @@ export default function RegisterForm() {
         return;
       }
 
+      // Uten innlogging (token) må e-posten bekreftes først.
+      if (!data?.token) {
+        setSentTo(trimmedEmail);
+        setPending(false);
+        return;
+      }
+
       const created = (data?.user as { username?: string } | undefined)?.username;
       router.push(created ? `/@${created}` : "/");
       router.refresh();
@@ -104,6 +116,8 @@ export default function RegisterForm() {
       setPending(false);
     }
   }
+
+  if (sentTo) return <CheckEmail email={sentTo} />;
 
   return (
     <form onSubmit={onSubmit} noValidate className="mt-8 space-y-5">
@@ -223,6 +237,14 @@ export default function RegisterForm() {
       <button type="submit" disabled={pending} className={`${ui.primary} mt-2 w-full`}>
         {pending ? "Oppretter konto…" : "Opprett konto"}
       </button>
+
+      <p className="text-center text-xs leading-5 text-mist/80">
+        Navnet, brukernavnet og det du legger ut er offentlig. E-posten din vises aldri.{" "}
+        <Link href="/personvern" className="underline underline-offset-2 hover:text-fg">
+          Slik tar vi vare på dataene dine
+        </Link>
+        .
+      </p>
     </form>
   );
 }

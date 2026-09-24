@@ -58,10 +58,3 @@ export async function renderPdfPages(
     port.terminate();
   }
 }
-
-export async function imageSize(file: File) {
-  const bitmap = await createImageBitmap(file);
-  const size = { width: bitmap.width, height: bitmap.height };
-  bitmap.close();
-  return size;
-}

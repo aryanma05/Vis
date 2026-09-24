@@ -22,6 +22,13 @@ const tsvector = customType<{ data: string }>({
   },
 });
 
+// Binærdata (filinnhold). postgres.js gir og tar imot Buffer.
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({
+  dataType() {
+    return "bytea";
+  },
+});
+
 const createdAt = () =>
   timestamp("created_at", { withTimezone: true }).notNull().defaultNow();
 
@@ -370,4 +377,25 @@ export const notification = pgTable(
     createdAt: createdAt(),
   },
   (t) => [index("notification_user_idx").on(t.userId, t.createdAt.desc())],
+);
+
+/* -------------------------------------------------------------------------- */
+/*  Filer                                                                     */
+/* -------------------------------------------------------------------------- */
+
+// Bilder og CV-er lagres her når Vercel Blob ikke er satt opp (se lib/storage.ts), og
+// serveres fra /filer/<key>. Filene slettes sammen med brukeren som eier dem.
+export const storedFile = pgTable(
+  "stored_file",
+  {
+    key: text("key").primaryKey(),
+    ownerId: text("owner_id").references(() => user.id, { onDelete: "cascade" }),
+    contentType: text("content_type").notNull(),
+    size: integer("size").notNull(),
+    // Private filer (f.eks. en skjult CV) vises bare for eieren.
+    isPrivate: boolean("is_private").notNull().default(false),
+    data: bytea("data").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index("stored_file_owner_idx").on(t.ownerId)],
 );

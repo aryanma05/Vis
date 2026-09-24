@@ -14,7 +14,7 @@ vis brings your CV, projects and digital identity together in one visual profile
 - OGL (bølgene på forsiden) og lucide-react (ikoner)
 - Postgres (Neon på Vercel) + Drizzle ORM
 - Better Auth (e-post/passord + GitHub)
-- Vercel Blob (bilder)
+- Bilder og CV-filer i databasen, eller Vercel Blob hvis det er satt opp
 
 ## Kjør lokalt
 
@@ -39,7 +39,9 @@ med `DATABASE_URL=postgres://localhost:5432/vis`, eller en egen Neon-database/-b
 | `BETTER_AUTH_SECRET` | Tilfeldig hemmelighet, `openssl rand -base64 32` | Ja |
 | `BETTER_AUTH_URL` | `http://localhost:3000` lokalt, domenet i produksjon | Ja |
 | `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | GitHub OAuth-app, for innlogging og repo-import | Nei, knappen skjules uten |
-| `BLOB_READ_WRITE_TOKEN` | Vercel Blob. Uten den lagres bilder i `public/uploads` | Nei |
+| `BLOB_READ_WRITE_TOKEN` | Vercel Blob. Uten den lagres bilder og CV-er i databasen (`/filer/...`) | Nei |
+| `BREVO_API_KEY` eller `RESEND_API_KEY`, og `EMAIL_FROM` | E-post for bekreftelse og nytt passord. Uten dem skrives e-postene til terminalen under utvikling, og i produksjon er e-postbekreftelse av | Nei |
+| `CONTACT_EMAIL` | Kontaktadresse som vises på /personvern | Nei |
 | `ANTHROPIC_API_KEY` | Språkmodellen som leser CV-er | Nei, bare for CV-import |
 
 GitHub OAuth-app: github.com/settings/developers → New OAuth App.
@@ -71,7 +73,11 @@ lib/pdf-pages.ts          gjør PDF-sider om til bilder i nettleseren (pdf.js)
 lib/comments.ts           kommentarer (og varsel til prosjekteieren)
 lib/notifications.ts      varsler
 lib/profiles.ts           profilsider
-lib/storage.ts            filopplasting (Vercel Blob / lokalt)
+lib/storage.ts            filopplasting (Vercel Blob / databasen), krymper bilder og fjerner EXIF/GPS
+lib/prepare-image.ts      krymper bilder i nettleseren før opplasting
+lib/mailer.ts             e-post (Brevo/Resend) og innholdet i e-postene
+lib/account.ts            kontosiden: dataeksport og sletting av filer
+app/filer/[...key]        serverer filer lagret i databasen (skjult CV bare for eieren)
 app/actions/*.ts          Server Actions som skjemaene kaller
 components/               ProjectCard, ProjectCover, CvPages, kommentarer osv.
 ```
@@ -127,9 +133,23 @@ Under *Connect* finnes to strenger: den med *Connection pooling* på (verten inn
 
 Miljøvariabler: `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, `BETTER_AUTH_SECRET`,
 `BETTER_AUTH_URL` (Render-adressen, f.eks. `https://vis.onrender.com`), `NODE_VERSION=22`,
-`BLOB_READ_WRITE_TOKEN`, og valgfritt GitHub-nøklene og `ANTHROPIC_API_KEY`.
+og valgfritt `BREVO_API_KEY` + `EMAIL_FROM`, GitHub-nøklene og `ANTHROPIC_API_KEY`.
 Ikke sett `NODE_ENV`: da hopper `npm ci` over devDependencies som bygget trenger.
 
-Migreringene kjøres automatisk i hvert bygg. Bilder lagres i Vercel Blob også når appen
-kjører på Render (Render sin disk tømmes ved hver omstart). Lag en Blob-store på vercel.com
-under Storage og kopier `BLOB_READ_WRITE_TOKEN`.
+Migreringene kjøres automatisk i hvert bygg. Uten `BLOB_READ_WRITE_TOKEN` lagres bilder og
+CV-er i Neon-databasen (Render sin disk tømmes ved hver omstart). Bildene krympes til maks
+2400 px WebP, så de tar lite plass. Neon sitt gratisnivå har 0,5 GB; blir det trangt, sett
+`BLOB_READ_WRITE_TOKEN` fra en Blob-store på vercel.com, så havner nye filer der.
+
+### E-post (bekreftelse og glemt passord)
+
+Render sin gratisversjon blokkerer SMTP, så e-post sendes via HTTP-API-et til Brevo:
+
+1. Lag en gratis konto på brevo.com (300 e-poster/dag).
+2. *Senders, Domains & Dedicated IPs* → *Senders* → legg til og bekreft avsenderadressen.
+3. *SMTP & API* → *API Keys* → lag en nøkkel.
+4. På Render: `BREVO_API_KEY=<nøkkelen>` og `EMAIL_FROM=Vis <adressen du bekreftet>`.
+
+Når dette er satt, må nye brukere bekrefte e-posten før de kan logge inn, og «Glemt
+passordet?» vises på innloggingen. Eksisterende brukere får en bekreftelseslenke første
+gang de logger inn.

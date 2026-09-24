@@ -8,7 +8,8 @@ import {
   setCvVisibilityAction,
   uploadCvDocumentAction,
 } from "@/app/actions/cv";
-import { imageSize, renderPdfPages } from "@/lib/pdf-pages";
+import { renderPdfPages } from "@/lib/pdf-pages";
+import { imageDimensions, prepareImage } from "@/lib/prepare-image";
 
 export type DocState = {
   fileUrl: string;
@@ -19,7 +20,7 @@ export type DocState = {
 } | null;
 
 const MAX_BYTES = 4 * 1024 * 1024;
-const ACCEPT = "application/pdf,image/jpeg,image/png,image/webp";
+const ACCEPT = "application/pdf,image/*";
 
 export default function CvDocumentPanel({
   initial,
@@ -40,10 +41,11 @@ export default function CvDocumentPanel({
 
   async function handleFile(file: File) {
     setError(null);
-    if (file.size > MAX_BYTES) return setError("Filen er større enn 4 MB. Prøv å eksportere PDF-en på nytt med lavere kvalitet.");
     const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
-    const isImage = /^image\/(jpeg|png|webp)$/.test(file.type);
+    const isImage = file.type.startsWith("image/") || /\.hei[cf]$/i.test(file.name);
     if (!isPdf && !isImage) return setError("Last opp en PDF eller et bilde (JPG, PNG, WebP).");
+    // Bilder krympes før opplasting, så grensen gjelder bare PDF-er.
+    if (isPdf && file.size > MAX_BYTES) return setError("PDF-en er større enn 4 MB. Prøv å eksportere den på nytt med lavere kvalitet.");
 
     try {
       if (isPdf) {
@@ -74,10 +76,12 @@ export default function CvDocumentPanel({
         setDoc({ fileUrl: uploaded.data.url, fileName: file.name, mimeType: "application/pdf", pages: stored, isPublic: doc?.isPublic ?? true });
         if (totalPages > pages.length) setError(`Vi viser de ${pages.length} første sidene av ${totalPages}.`);
       } else {
+        setStatus("Gjør klar bildet…");
+        const prepared = await prepareImage(file);
+        const size = await imageDimensions(prepared);
         setStatus("Laster opp…");
-        const size = await imageSize(file);
         const fd = new FormData();
-        fd.append("file", file);
+        fd.append("file", prepared);
         fd.append("width", String(size.width));
         fd.append("height", String(size.height));
         const uploaded = await uploadCvDocumentAction(fd);
@@ -85,7 +89,7 @@ export default function CvDocumentPanel({
         setDoc({
           fileUrl: uploaded.data.url,
           fileName: file.name,
-          mimeType: file.type,
+          mimeType: prepared.type,
           pages: [{ url: uploaded.data.url, ...size }],
           isPublic: doc?.isPublic ?? true,
         });
@@ -164,7 +168,7 @@ export default function CvDocumentPanel({
           ) : (
             <>
               <span className="text-lg font-medium">Slipp CV-en her</span>
-              <span className="mt-1.5 text-sm text-mist">eller klikk for å velge. PDF eller bilde, maks 4 MB.</span>
+              <span className="mt-1.5 text-sm text-mist">eller klikk for å velge. PDF (maks 4 MB) eller bilde.</span>
             </>
           )}
         </button>

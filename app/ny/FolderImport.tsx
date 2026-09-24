@@ -79,12 +79,18 @@ export default function FolderImport() {
 
       const chosen = draft.images.filter((img) => selected.has(img.path));
       const uploaded = new Map<string, string>();
+      let failed = 0;
       for (const [i, img] of chosen.entries()) {
         setStatus(`Laster opp bilde ${i + 1} av ${chosen.length}…`);
-        const fd = new FormData();
-        fd.append("images", await prepareImage(img.file));
-        const result = await uploadProjectImagesAction(id, fd);
-        if (result.ok && result.data[0]) uploaded.set(img.path, result.data[0].url);
+        try {
+          const fd = new FormData();
+          fd.append("images", await prepareImage(img.file));
+          const result = await uploadProjectImagesAction(id, fd);
+          if (result.ok && result.data[0]) uploaded.set(img.path, result.data[0].url);
+          else failed++;
+        } catch {
+          failed++;
+        }
       }
 
       // README-bilder peker nå på de opplastede filene.
@@ -93,7 +99,8 @@ export default function FolderImport() {
         await updateProjectAction(id, projectForm(draft, rewriteReadmeImages(draft.description, draft.readmeDir, uploaded)));
       }
 
-      router.push(`/prosjekt/${id}`);
+      // Noen bilder feilet: åpne redigeringen, så de kan legges til på nytt.
+      router.push(failed > 0 ? `/prosjekt/${id}/rediger?bildefeil=${failed}` : `/prosjekt/${id}`);
     } catch (e) {
       setError((e as Error).message || "Noe gikk galt.");
       setStatus(null);

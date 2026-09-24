@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 import { authErrorMessage } from "@/lib/auth-errors";
 import PasswordInput from "@/components/PasswordInput";
 import { ui } from "@/components/ui";
 
-export default function LoginForm() {
+export default function LoginForm({ canResetPassword }: { canResetPassword: boolean }) {
   const router = useRouter();
   const next = useSearchParams().get("neste");
   const [error, setError] = useState<string | null>(null);
@@ -67,9 +68,16 @@ export default function LoginForm() {
       </div>
 
       <div>
-        <label htmlFor="password" className={ui.label}>
-          Passord
-        </label>
+        <div className="flex items-baseline justify-between gap-3">
+          <label htmlFor="password" className={ui.label}>
+            Passord
+          </label>
+          {canResetPassword && (
+            <Link href="/glemt-passord" className="text-sm text-mist hover:text-fg hover:underline">
+              Glemt passordet?
+            </Link>
+          )}
+        </div>
         <PasswordInput id="password" name="password" required autoComplete="current-password" />
       </div>
 

@@ -448,7 +448,13 @@ export async function addProjectImages(ownerId: string, projectId: string, files
   }
 
   // Last opp alle først, så vi ikke ender med halvveis lagrede prosjekter.
-  const stored = await Promise.all(files.map((f) => storeImage(f, `projects/${projectId}`)));
+  const results = await Promise.allSettled(files.map((f) => storeImage(f, `projects/${projectId}`, { ownerId })));
+  const stored = results.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
+  const failed = results.find((r) => r.status === "rejected");
+  if (failed) {
+    await deleteStoredFiles(stored.map((s) => s.key));
+    throw failed.reason;
+  }
   let position = await nextImagePosition(projectId);
 
   try {

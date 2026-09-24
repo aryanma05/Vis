@@ -56,6 +56,9 @@ export default function CvPages({ pages, fileUrl, name }: { pages: Page[]; fileU
               height={page.height}
               sizes="(min-width: 1280px) 820px, (min-width: 1024px) 60vw, 100vw"
               priority={i === 0}
+              // Filer fra /filer/ er allerede optimalisert, og en skjult CV kan bare hentes
+              // med eierens innlogging (som bildeoptimaliseringen ikke har).
+              unoptimized={page.url.startsWith("/filer/")}
               className="h-auto w-full"
             />
             <span className="pointer-events-none absolute bottom-4 right-4 rounded-md bg-ink/80 px-2.5 py-1 font-mono text-[11px] text-mist opacity-0 backdrop-blur transition group-hover:opacity-100">

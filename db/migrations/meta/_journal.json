@@ -15,6 +15,13 @@
       "when": 1789849548696,
       "tag": "0001_cv_document_comments",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790264979169,
+      "tag": "0002_stored_files",
+      "breakpoints": true
     }
   ]
 }
