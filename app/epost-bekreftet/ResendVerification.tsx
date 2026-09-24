@@ -1,13 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import CheckEmail from "@/components/CheckEmail";
-import { ui } from "@/components/ui";
+import { useRouter } from "next/navigation";
+import { resendEmailCodeAction } from "@/app/actions/auth";
+import VerifyEmailCode from "@/components/auth/VerifyEmailCode";
+import { Button } from "@/components/ui/button";
+import { inputClass, labelClass } from "@/components/ui/field";
 import { emailError } from "@/lib/email";
-import { authClient } from "@/lib/auth-client";
-import { authErrorMessage } from "@/lib/auth-errors";
 
-export default function ResendVerification() {
+// Ber om en ny kode og lar brukeren skrive den inn her.
+export default function ResendVerification({ devHint }: { devHint: boolean }) {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -20,18 +23,32 @@ export default function ResendVerification() {
     if (problem) return setError(problem);
     setPending(true);
     setError(null);
-    const { error } = await authClient.sendVerificationEmail({ email: trimmed, callbackURL: "/epost-bekreftet" });
+    const result = await resendEmailCodeAction(trimmed);
     setPending(false);
-    if (error) return setError(authErrorMessage(error));
+    if (!result.ok) return setError(result.error);
     setSentTo(trimmed);
   }
 
-  if (sentTo) return <CheckEmail email={sentTo} />;
+  if (sentTo) {
+    return (
+      <VerifyEmailCode
+        identifier={sentTo}
+        email={sentTo}
+        devHint={devHint}
+        initialCooldown={45}
+        onVerified={() => {
+          router.push("/velkommen");
+          router.refresh();
+        }}
+        onBack={() => setSentTo(null)}
+      />
+    );
+  }
 
   return (
     <form onSubmit={onSubmit} noValidate className="mt-6 space-y-4">
       <div>
-        <label htmlFor="email" className={ui.label}>
+        <label htmlFor="email" className={labelClass}>
           E-post
         </label>
         <input
@@ -42,17 +59,13 @@ export default function ResendVerification() {
           autoCapitalize="none"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className={ui.input}
+          className={inputClass}
         />
       </div>
-      {error && (
-        <p role="alert" className={ui.error}>
-          {error}
-        </p>
-      )}
-      <button type="submit" disabled={pending} className={`${ui.primary} w-full`}>
-        {pending ? "Sender…" : "Send ny lenke"}
-      </button>
+      {error && <p role="alert" className="text-sm text-danger">{error}</p>}
+      <Button type="submit" loading={pending} className="w-full">
+        Send ny kode
+      </Button>
     </form>
   );
 }

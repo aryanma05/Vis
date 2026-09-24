@@ -1,8 +1,10 @@
 import { sql } from "drizzle-orm";
 import {
+  type AnyPgColumn,
   bigint,
   boolean,
   customType,
+  date,
   index,
   integer,
   jsonb,
@@ -15,6 +17,16 @@ import {
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
+// Relativ sti: drizzle-kit leser denne filen uten Next sine stialiaser.
+import {
+  type CvTemplate,
+  type OpenTo,
+  REACTION_TYPES,
+  type ReactionType,
+  REPORT_REASONS,
+} from "../lib/constants";
+
+export type { CvTemplate, OpenTo, ReactionType };
 
 const tsvector = customType<{ data: string }>({
   dataType() {
@@ -51,6 +63,12 @@ export const user = pgTable("user", {
   // Settes alltid ved opprettelse (se lib/auth.ts), brukes i /@brukernavn.
   username: text("username").notNull().unique(),
   displayUsername: text("display_username"),
+  // Moderering (feltene admin-pluginen i Better Auth forventer). role "admin" gir
+  // tilgang til /admin. En utestengt bruker kan ikke logge inn.
+  role: text("role"),
+  banned: boolean("banned").default(false),
+  banReason: text("ban_reason"),
+  banExpires: timestamp("ban_expires", { withTimezone: true }),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });
@@ -66,6 +84,7 @@ export const session = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
+    impersonatedBy: text("impersonated_by"),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -127,6 +146,17 @@ export const rateLimit = pgTable("rate_limit", {
 
 export type SocialLink = { label: string; url: string };
 
+// Egne seksjoner på profilen, f.eks. «Utmerkelser» eller «Publikasjoner». Markdown.
+export type ProfileSection = { id: string; title: string; body: string };
+
+// Hvilke hendelser brukeren vil ha e-post om. In-app-varsler kommer alltid.
+export type NotificationPrefs = {
+  comment: boolean;
+  reply: boolean;
+  mention: boolean;
+  follow: boolean;
+};
+
 // Én rad per bruker, opprettes første gang profilen lagres.
 export const profile = pgTable("profile", {
   userId: text("user_id")
@@ -137,6 +167,16 @@ export const profile = pgTable("profile", {
   location: text("location"),
   websiteUrl: text("website_url"),
   links: jsonb("links").$type<SocialLink[]>().notNull().default([]),
+  // Lengre «README» om personen, full markdown. Vises under Oversikt på profilen.
+  readme: text("readme"),
+  // «Hva jeg ser etter», fritekst.
+  lookingFor: text("looking_for"),
+  openTo: jsonb("open_to").$type<OpenTo[]>().notNull().default([]),
+  customSections: jsonb("custom_sections").$type<ProfileSection[]>().notNull().default([]),
+  // Aksentfarge på profilen (en av fargene i lib/profile-theme.ts).
+  accentColor: text("accent_color"),
+  cvTemplate: text("cv_template").$type<CvTemplate>().notNull().default("klassisk"),
+  notificationPrefs: jsonb("notification_prefs").$type<NotificationPrefs>(),
   updatedAt: updatedAt(),
 });
 
@@ -161,9 +201,19 @@ export const project = pgTable(
     description: text("description").notNull().default(""),
     repoUrl: text("repo_url"),
     demoUrl: text("demo_url"),
+    // Video eller prototype (YouTube, Vimeo, Loom, Figma). Vises innebygd på prosjektsiden.
+    videoUrl: text("video_url"),
+    // Hva eieren gjorde i prosjektet, f.eks. «Design og frontend».
+    role: text("role"),
     // "YYYY-MM" eller "YYYY".
     projectDate: varchar("project_date", { length: 7 }),
     status: projectStatus("status").notNull().default("published"),
+    // Festet øverst på profilen (maks seks).
+    pinned: boolean("pinned").notNull().default(false),
+    viewCount: integer("view_count").notNull().default(0),
+    // Fjernet av en moderator. Bare eieren (og admin) ser prosjektet da.
+    removedAt: timestamp("removed_at", { withTimezone: true }),
+    removedReason: text("removed_reason"),
     source: projectSource("source").notNull().default("manual"),
     githubRepoId: bigint("github_repo_id", { mode: "number" }),
     githubFullName: text("github_full_name"),
@@ -347,6 +397,8 @@ export const comment = pgTable(
     authorId: text("author_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
+    // Svar på en annen kommentar (ett nivå). Svarene slettes sammen med kommentaren.
+    parentId: uuid("parent_id").references((): AnyPgColumn => comment.id, { onDelete: "cascade" }),
     body: text("body").notNull(),
     editedAt: timestamp("edited_at", { withTimezone: true }),
     createdAt: createdAt(),
@@ -354,10 +406,17 @@ export const comment = pgTable(
   (t) => [
     index("comment_project_idx").on(t.projectId, t.createdAt),
     index("comment_author_idx").on(t.authorId, t.createdAt.desc()),
+    index("comment_parent_idx").on(t.parentId),
   ],
 );
 
-export const notificationType = pgEnum("notification_type", ["comment"]);
+export const notificationType = pgEnum("notification_type", [
+  "comment",
+  "reply",
+  "mention",
+  "follow",
+  "reaction",
+]);
 
 export const notification = pgTable(
   "notification",
@@ -373,10 +432,116 @@ export const notification = pgTable(
     type: notificationType("type").notNull(),
     projectId: uuid("project_id").references(() => project.id, { onDelete: "cascade" }),
     commentId: uuid("comment_id").references(() => comment.id, { onDelete: "cascade" }),
+    // Ekstra detaljer, f.eks. hvilken reaksjon det gjelder.
+    data: jsonb("data").$type<{ reaction?: ReactionType }>(),
     readAt: timestamp("read_at", { withTimezone: true }),
     createdAt: createdAt(),
   },
   (t) => [index("notification_user_idx").on(t.userId, t.createdAt.desc())],
+);
+
+/* -------------------------------------------------------------------------- */
+/*  Sosialt: følging, reaksjoner og visninger                                 */
+/* -------------------------------------------------------------------------- */
+
+export const follow = pgTable(
+  "follow",
+  {
+    followerId: text("follower_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    followingId: text("following_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.followerId, t.followingId] }),
+    index("follow_following_idx").on(t.followingId, t.createdAt.desc()),
+  ],
+);
+
+export const reactionType = pgEnum("reaction_type", REACTION_TYPES);
+
+// Én rad per bruker, prosjekt og type. Man kan gi flere typer til samme prosjekt.
+export const reaction = pgTable(
+  "reaction",
+  {
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => project.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    type: reactionType("type").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.projectId, t.userId, t.type] }),
+    index("reaction_project_idx").on(t.projectId, t.createdAt.desc()),
+    index("reaction_user_idx").on(t.userId),
+  ],
+);
+
+// Visninger telles per dag, uten å lagre hvem som så på (se lib/views.ts).
+export const projectViewDay = pgTable(
+  "project_view_day",
+  {
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => project.id, { onDelete: "cascade" }),
+    day: date("day").notNull(),
+    views: integer("views").notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.projectId, t.day] })],
+);
+
+export const profileViewDay = pgTable(
+  "profile_view_day",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    day: date("day").notNull(),
+    views: integer("views").notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.day] })],
+);
+
+/* -------------------------------------------------------------------------- */
+/*  Moderering                                                                */
+/* -------------------------------------------------------------------------- */
+
+export const reportTarget = pgEnum("report_target", ["project", "comment", "user"]);
+export const reportReason = pgEnum("report_reason", REPORT_REASONS);
+export const reportStatus = pgEnum("report_status", ["open", "resolved", "dismissed"]);
+
+export const report = pgTable(
+  "report",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    // Beholdes selv om den som rapporterte sletter kontoen.
+    reporterId: text("reporter_id").references(() => user.id, { onDelete: "set null" }),
+    targetType: reportTarget("target_type").notNull(),
+    targetId: text("target_id").notNull(),
+    // Et øyeblikksbilde av det som ble rapportert, så moderatoren ser det selv om
+    // innholdet endres eller slettes etterpå.
+    targetLabel: text("target_label"),
+    targetUrl: text("target_url"),
+    excerpt: text("excerpt"),
+    targetOwnerId: text("target_owner_id").references(() => user.id, { onDelete: "set null" }),
+    reason: reportReason("reason").notNull(),
+    details: text("details"),
+    status: reportStatus("status").notNull().default("open"),
+    resolution: text("resolution"),
+    resolvedById: text("resolved_by_id").references(() => user.id, { onDelete: "set null" }),
+    resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index("report_status_idx").on(t.status, t.createdAt.desc()),
+    index("report_target_idx").on(t.targetType, t.targetId),
+  ],
 );
 
 /* -------------------------------------------------------------------------- */

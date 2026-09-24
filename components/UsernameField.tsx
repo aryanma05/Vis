@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { authClient } from "@/lib/auth-client";
 import { usernameAlternatives, usernameError } from "@/lib/username";
-import { ui } from "@/components/ui";
+import { FieldError, Hint, labelClass } from "@/components/ui/field";
 
 export type UsernameStatus = "idle" | "checking" | "free" | "taken" | "invalid" | "error" | "current";
 
@@ -73,18 +73,18 @@ export default function UsernameField({
 }) {
   const invalid = Boolean(error) || check.status === "invalid" || check.status === "taken";
 
-  let message: React.ReactNode = <p className={ui.hint}>{hint}</p>;
-  if (error) message = <p className={ui.fieldError}>{error}</p>;
-  else if (check.status === "checking") message = <p className={ui.hint}>Sjekker om det er ledig …</p>;
-  else if (check.status === "free") message = <p className="mt-1 text-sm text-ice">✓ vis.no/@{value} er ledig</p>;
-  else if (check.status === "current") message = <p className={ui.hint}>Dette er brukernavnet ditt nå.</p>;
-  else if (check.status === "invalid") message = <p className={ui.fieldError}>{check.problem}</p>;
+  let message: React.ReactNode = <Hint>{hint}</Hint>;
+  if (error) message = <FieldError>{error}</FieldError>;
+  else if (check.status === "checking") message = <Hint>Sjekker om det er ledig …</Hint>;
+  else if (check.status === "free") message = <p className="mt-1.5 text-[13px] font-medium text-success">✓ vis.no/@{value} er ledig</p>;
+  else if (check.status === "current") message = <Hint>Dette er brukernavnet ditt nå.</Hint>;
+  else if (check.status === "invalid") message = <FieldError>{check.problem}</FieldError>;
   else if (check.status === "error") {
-    message = <p className={ui.hint}>Fikk ikke sjekket om navnet er ledig akkurat nå. Du kan prøve likevel.</p>;
+    message = <Hint>Fikk ikke sjekket om navnet er ledig akkurat nå. Du kan prøve likevel.</Hint>;
   } else if (check.status === "taken") {
     message = (
-      <div className="mt-1 text-sm">
-        <p className="text-red-400">@{value} er tatt.</p>
+      <div className="mt-1.5 text-[13px]">
+        <p className="text-danger">@{value} er tatt.</p>
         {check.suggestions && check.suggestions.length > 0 && (
           <p className="mt-2 flex flex-wrap items-center gap-2 text-mist">
             Ledige:
@@ -93,7 +93,7 @@ export default function UsernameField({
                 key={s}
                 type="button"
                 onClick={() => onChange(s)}
-                className="rounded-md border border-line px-2 py-0.5 font-mono text-xs text-fg transition hover:border-ice"
+                className="rounded-md border border-line px-2 py-0.5 font-mono text-xs text-fg transition hover:border-ice hover:text-ice"
               >
                 {s}
               </button>
@@ -106,15 +106,15 @@ export default function UsernameField({
 
   return (
     <div>
-      <label htmlFor="handle" className={ui.label}>
+      <label htmlFor="handle" className={labelClass}>
         Brukernavn
       </label>
       <div
-        className={`flex items-center rounded-lg border bg-ink focus-within:ring-2 ${
-          invalid ? "border-red-500/60 focus-within:ring-red-500/20" : "border-line focus-within:border-ice focus-within:ring-ice/20"
+        className={`flex items-center rounded-xl border bg-ink-2/50 transition focus-within:ring-4 ${
+          invalid ? "border-danger/70 focus-within:ring-danger/10" : "border-line hover:border-mist/35 focus-within:border-ice/70 focus-within:ring-ice/10"
         }`}
       >
-        <span className="select-none pl-4 text-mist">vis.no/@</span>
+        <span className="select-none pl-4 text-[15px] text-mist/80">vis.no/@</span>
         <input
           ref={inputRef}
           id="handle"
@@ -130,7 +130,7 @@ export default function UsernameField({
           aria-invalid={invalid}
           aria-describedby="handle-status"
           onChange={(e) => onChange(e.target.value.replace(/\s/g, "").replace(/^@/, ""))}
-          className="w-full min-w-0 bg-transparent py-3 pr-4 text-fg outline-none"
+          className="w-full min-w-0 bg-transparent py-2.5 pr-4 text-[15px] text-fg outline-none"
         />
       </div>
       <div id="handle-status" aria-live="polite">

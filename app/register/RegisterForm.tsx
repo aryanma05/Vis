@@ -3,18 +3,30 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import VerifyEmailCode from "@/components/auth/VerifyEmailCode";
+import PasswordInput from "@/components/PasswordInput";
+import UsernameField, { useUsernameCheck } from "@/components/UsernameField";
+import { Button } from "@/components/ui/button";
+import { FieldError, Hint, inputClass, labelClass } from "@/components/ui/field";
 import { authClient } from "@/lib/auth-client";
 import { authError, type AuthField } from "@/lib/auth-errors";
 import { emailError, emailSuggestion } from "@/lib/email";
 import { toUsernameBase, usernameError } from "@/lib/username";
-import CheckEmail from "@/components/CheckEmail";
-import PasswordInput from "@/components/PasswordInput";
-import UsernameField, { useUsernameCheck } from "@/components/UsernameField";
-import { ui } from "@/components/ui";
 
 type Errors = Partial<Record<AuthField, React.ReactNode>>;
 
-export default function RegisterForm() {
+// Hvor sterkt passordet er, grovt anslått (lengde og variasjon).
+function passwordStrength(pw: string) {
+  if (!pw) return 0;
+  let score = pw.length >= 8 ? 1 : 0;
+  if (pw.length >= 12) score++;
+  if (/[A-ZÆØÅ]/.test(pw) && /[a-zæøå]/.test(pw)) score++;
+  if (/\d/.test(pw) && /[^A-Za-z0-9æøåÆØÅ]/.test(pw)) score++;
+  return Math.min(score, 4);
+}
+const STRENGTH = ["For kort", "Svakt", "Greit", "Bra", "Sterkt"];
+
+export default function RegisterForm({ devHint }: { devHint: boolean }) {
   const router = useRouter();
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
@@ -25,7 +37,7 @@ export default function RegisterForm() {
   const [errors, setErrors] = useState<Errors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  // Satt når kontoen er laget og e-posten må bekreftes før man kan logge inn.
+  // Satt når kontoen er laget og e-posten må bekreftes med kode.
   const [sentTo, setSentTo] = useState<string | null>(null);
   const check = useUsernameCheck(username, { name });
 
@@ -35,6 +47,7 @@ export default function RegisterForm() {
   const passwordRef = useRef<HTMLInputElement>(null);
 
   const clearError = (field: AuthField) => setErrors((e) => (e[field] ? { ...e, [field]: undefined } : e));
+  const strength = passwordStrength(password);
 
   function showErrors(next: Errors) {
     setErrors(next);
@@ -74,9 +87,7 @@ export default function RegisterForm() {
         email: trimmedEmail,
         password,
         // Tomt felt: serveren lager et brukernavn (se lib/auth.ts).
-        ...(username ? { username } : {}),
-        // Hit kommer man etter å ha trykket på lenken i e-posten.
-        callbackURL: "/epost-bekreftet",
+        ...(username ? { username, displayUsername: username } : {}),
       });
 
       if (error) {
@@ -101,15 +112,14 @@ export default function RegisterForm() {
         return;
       }
 
-      // Uten innlogging (token) må e-posten bekreftes først.
+      // Uten innlogging (token) må e-posten bekreftes med koden først.
       if (!data?.token) {
         setSentTo(trimmedEmail);
         setPending(false);
         return;
       }
 
-      const created = (data?.user as { username?: string } | undefined)?.username;
-      router.push(created ? `/@${created}` : "/");
+      router.push("/velkommen");
       router.refresh();
     } catch {
       setFormError(authError({}).message);
@@ -117,12 +127,25 @@ export default function RegisterForm() {
     }
   }
 
-  if (sentTo) return <CheckEmail email={sentTo} />;
+  if (sentTo) {
+    return (
+      <VerifyEmailCode
+        identifier={sentTo}
+        email={sentTo}
+        devHint={devHint}
+        onVerified={() => {
+          router.push("/velkommen");
+          router.refresh();
+        }}
+        onBack={() => setSentTo(null)}
+      />
+    );
+  }
 
   return (
-    <form onSubmit={onSubmit} noValidate className="mt-8 space-y-5">
+    <form onSubmit={onSubmit} noValidate className="space-y-5">
       <div>
-        <label htmlFor="name" className={ui.label}>
+        <label htmlFor="name" className={labelClass}>
           Navn
         </label>
         <input
@@ -131,7 +154,7 @@ export default function RegisterForm() {
           name="name"
           type="text"
           autoComplete="name"
-          placeholder="Ditt navn"
+          placeholder="Fornavn Etternavn"
           maxLength={100}
           value={name}
           aria-invalid={Boolean(errors.name)}
@@ -140,9 +163,9 @@ export default function RegisterForm() {
             clearError("name");
             if (!usernameTouched) setUsername(e.target.value.trim() ? toUsernameBase(e.target.value) : "");
           }}
-          className={`${ui.input} ${errors.name ? "border-red-500/60" : ""}`}
+          className={inputClass}
         />
-        {errors.name && <p className={ui.fieldError}>{errors.name}</p>}
+        {errors.name && <FieldError>{errors.name}</FieldError>}
       </div>
 
       <UsernameField
@@ -159,7 +182,7 @@ export default function RegisterForm() {
       />
 
       <div>
-        <label htmlFor="email" className={ui.label}>
+        <label htmlFor="email" className={labelClass}>
           E-post
         </label>
         <input
@@ -180,11 +203,11 @@ export default function RegisterForm() {
             clearError("email");
           }}
           onBlur={() => setSuggestedEmail(emailSuggestion(email.trim()))}
-          className={`${ui.input} ${errors.email ? "border-red-500/60" : ""}`}
+          className={inputClass}
         />
-        {errors.email && <p className={ui.fieldError}>{errors.email}</p>}
+        {errors.email && <FieldError>{errors.email}</FieldError>}
         {suggestedEmail && (
-          <p className="mt-1 text-sm text-mist">
+          <p className="mt-1.5 text-sm text-mist">
             Mente du{" "}
             <button
               type="button"
@@ -203,7 +226,7 @@ export default function RegisterForm() {
       </div>
 
       <div>
-        <label htmlFor="password" className={ui.label}>
+        <label htmlFor="password" className={labelClass}>
           Passord
         </label>
         <PasswordInput
@@ -221,30 +244,47 @@ export default function RegisterForm() {
           }}
         />
         {errors.password ? (
-          <p className={ui.fieldError}>{errors.password}</p>
-        ) : (
-          password.length > 0 &&
-          password.length < 8 && <p className={ui.hint}>{8 - password.length} tegn til.</p>
-        )}
+          <FieldError>{errors.password}</FieldError>
+        ) : password.length > 0 ? (
+          <div className="mt-2 flex items-center gap-3" aria-live="polite">
+            <div className="grid flex-1 grid-cols-4 gap-1" aria-hidden="true">
+              {[1, 2, 3, 4].map((i) => (
+                <span
+                  key={i}
+                  className={`h-1 rounded-full transition ${
+                    i <= strength ? (strength <= 1 ? "bg-danger" : strength === 2 ? "bg-warn" : "bg-success") : "bg-line"
+                  }`}
+                />
+              ))}
+            </div>
+            <span className="w-16 text-right text-xs text-mist">
+              {password.length < 8 ? `${8 - password.length} tegn til` : STRENGTH[strength]}
+            </span>
+          </div>
+        ) : null}
       </div>
 
       {formError && (
-        <p role="alert" className={ui.error}>
+        <p role="alert" className="rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
           {formError}
         </p>
       )}
 
-      <button type="submit" disabled={pending} className={`${ui.primary} mt-2 w-full`}>
-        {pending ? "Oppretter konto…" : "Opprett konto"}
-      </button>
+      <Button type="submit" loading={pending} className="w-full" size="lg">
+        {pending ? "Oppretter profilen …" : "Lag profilen min"}
+      </Button>
 
-      <p className="text-center text-xs leading-5 text-mist/80">
-        Navnet, brukernavnet og det du legger ut er offentlig. E-posten din vises aldri.{" "}
-        <Link href="/personvern" className="underline underline-offset-2 hover:text-fg">
-          Slik tar vi vare på dataene dine
+      <Hint className="text-center leading-5">
+        Navnet, brukernavnet og det du legger ut er offentlig. E-posten vises aldri. Ved å lage en profil godtar du{" "}
+        <Link href="/vilkar" className="underline underline-offset-2 hover:text-fg">
+          vilkårene
+        </Link>{" "}
+        og{" "}
+        <Link href="/retningslinjer" className="underline underline-offset-2 hover:text-fg">
+          retningslinjene
         </Link>
         .
-      </p>
+      </Hint>
     </form>
   );
 }

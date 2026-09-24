@@ -1,11 +1,12 @@
-import Link from "next/link";
+import type { Metadata } from "next";
 import AuthCard from "@/components/AuthCard";
+import { ButtonLink } from "@/components/ui/button";
 import ResetPasswordForm from "./ResetPasswordForm";
 
-export const metadata = { title: "Nytt passord – vis" };
+export const metadata: Metadata = { title: "Nytt passord", robots: { index: false } };
 
-// Lenken i e-posten går via /api/auth/reset-password/<token>, som sender hit med
-// ?token=… (eller ?error=INVALID_TOKEN hvis lenken er brukt eller utløpt).
+// Eldre lenker for nytt passord går via /api/auth/reset-password/<token>, som sender
+// hit med ?token=… (eller ?error=INVALID_TOKEN). Nye forespørsler bruker kode.
 export default async function ResetPasswordPage({ searchParams }: { searchParams: Promise<{ token?: string; error?: string }> }) {
   const { token, error } = await searchParams;
 
@@ -14,11 +15,9 @@ export default async function ResetPasswordPage({ searchParams }: { searchParams
       {token && !error ? (
         <ResetPasswordForm token={token} />
       ) : (
-        <div className="mt-4 space-y-4 text-mist">
-          <p>Lenken er ugyldig eller har gått ut. Lenker for nytt passord virker i én time, og bare én gang.</p>
-          <Link href="/glemt-passord" className="inline-block font-medium text-fg underline">
-            Be om en ny lenke
-          </Link>
+        <div className="space-y-5 text-mist">
+          <p>Lenken er ugyldig eller har gått ut. Be om en kode i stedet, det går raskt.</p>
+          <ButtonLink href="/glemt-passord">Få en kode på e-post</ButtonLink>
         </div>
       )}
     </AuthCard>

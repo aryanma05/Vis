@@ -39,7 +39,10 @@ const nextConfig: NextConfig = {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
   async rewrites() {
-    return [{ source: "/@:username", destination: "/profil/:username" }];
+    return [
+      { source: "/@:username", destination: "/profil/:username" },
+      { source: "/@:username/:path*", destination: "/profil/:username/:path*" },
+    ];
   },
 };
 

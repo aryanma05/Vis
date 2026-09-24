@@ -3,16 +3,27 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { authClient } from "@/lib/auth-client";
-import { authErrorMessage } from "@/lib/auth-errors";
+import VerifyEmailCode from "@/components/auth/VerifyEmailCode";
 import PasswordInput from "@/components/PasswordInput";
-import { ui } from "@/components/ui";
+import { Button } from "@/components/ui/button";
+import { inputClass, labelClass } from "@/components/ui/field";
+import { authClient } from "@/lib/auth-client";
+import { authError } from "@/lib/auth-errors";
 
-export default function LoginForm({ canResetPassword }: { canResetPassword: boolean }) {
+export default function LoginForm({ canResetPassword, devHint }: { canResetPassword: boolean; devHint: boolean }) {
   const router = useRouter();
   const next = useSearchParams().get("neste");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  // Satt når e-posten ikke er bekreftet: da sendes en kode, og man skriver den inn her.
+  const [verify, setVerify] = useState<{ identifier: string; email: string | null } | null>(null);
+
+  // Bare interne stier, så lenken ikke kan sende brukeren til en annen side.
+  const safeNext = next?.startsWith("/") && !next.startsWith("//") ? next : null;
+  const done = (username: string | null) => {
+    router.push(safeNext ?? (username ? `/@${username}` : "/"));
+    router.refresh();
+  };
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -36,22 +47,35 @@ export default function LoginForm({ canResetPassword }: { canResetPassword: bool
     const { data, error } = result;
 
     if (error) {
-      setError(authErrorMessage(error, "login"));
+      const info = authError(error, "login");
       setPending(false);
+      if (info.code === "EMAIL_NOT_VERIFIED") {
+        setVerify({ identifier, email: isEmail ? identifier : null });
+        return;
+      }
+      setError(info.message);
       return;
     }
 
-    const username = (data?.user as { username?: string } | undefined)?.username;
-    // Bare interne stier, så lenken ikke kan sende brukeren til en annen side.
-    const safeNext = next?.startsWith("/") && !next.startsWith("//") ? next : null;
-    router.push(safeNext ?? (username ? `/@${username}` : "/"));
-    router.refresh();
+    done((data?.user as { username?: string } | undefined)?.username ?? null);
+  }
+
+  if (verify) {
+    return (
+      <VerifyEmailCode
+        identifier={verify.identifier}
+        email={verify.email}
+        devHint={devHint}
+        onVerified={done}
+        onBack={() => setVerify(null)}
+      />
+    );
   }
 
   return (
-    <form onSubmit={onSubmit} className="mt-8 space-y-4">
+    <form onSubmit={onSubmit} className="space-y-5" noValidate>
       <div>
-        <label htmlFor="identifier" className={ui.label}>
+        <label htmlFor="identifier" className={labelClass}>
           E-post eller brukernavn
         </label>
         <input
@@ -63,17 +87,18 @@ export default function LoginForm({ canResetPassword }: { canResetPassword: bool
           autoCapitalize="none"
           autoCorrect="off"
           spellCheck={false}
-          className={ui.input}
+          placeholder="navn@eksempel.no"
+          className={inputClass}
         />
       </div>
 
       <div>
-        <div className="flex items-baseline justify-between gap-3">
-          <label htmlFor="password" className={ui.label}>
+        <div className="mb-2 flex items-baseline justify-between gap-3">
+          <label htmlFor="password" className="text-sm font-medium text-fg">
             Passord
           </label>
           {canResetPassword && (
-            <Link href="/glemt-passord" className="text-sm text-mist hover:text-fg hover:underline">
+            <Link href="/glemt-passord" className="text-sm text-mist transition hover:text-fg">
               Glemt passordet?
             </Link>
           )}
@@ -82,14 +107,14 @@ export default function LoginForm({ canResetPassword }: { canResetPassword: bool
       </div>
 
       {error && (
-        <p role="alert" className={ui.error}>
+        <p role="alert" className="rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
           {error}
         </p>
       )}
 
-      <button type="submit" disabled={pending} className={`${ui.primary} mt-2 w-full`}>
-        {pending ? "Logger inn…" : "Logg inn"}
-      </button>
+      <Button type="submit" loading={pending} className="w-full" size="lg">
+        {pending ? "Logger inn …" : "Logg inn"}
+      </Button>
     </form>
   );
 }

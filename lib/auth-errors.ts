@@ -22,14 +22,20 @@ const ERRORS: Record<string, { message: string; field?: AuthField }> = {
   // Adressen i nettleseren stemmer ikke med BETTER_AUTH_URL på serveren.
   INVALID_ORIGIN: { message: "Innlogging er feilkonfigurert på serveren (BETTER_AUTH_URL). Si fra til oss." },
   MISSING_OR_NULL_ORIGIN: { message: "Innlogging er feilkonfigurert på serveren (BETTER_AUTH_URL). Si fra til oss." },
-  EMAIL_NOT_VERIFIED: { message: "Du må bekrefte e-posten din før du logger inn. Vi har sendt deg en ny lenke." },
+  EMAIL_NOT_VERIFIED: { message: "Du må bekrefte e-posten din før du logger inn. Vi har sendt deg en ny kode." },
   EMAIL_ALREADY_VERIFIED: { message: "E-posten er allerede bekreftet. Du kan logge inn." },
-  INVALID_TOKEN: { message: "Lenken er ugyldig eller allerede brukt. Be om en ny." },
+  INVALID_TOKEN: { message: "Lenken eller koden er ugyldig eller allerede brukt. Be om en ny." },
   TOKEN_EXPIRED: { message: "Lenken har gått ut. Be om en ny." },
   SESSION_EXPIRED: { message: "Av sikkerhetshensyn må du logge inn på nytt før du gjør dette." },
   CREDENTIAL_ACCOUNT_NOT_FOUND: { field: "password", message: "Kontoen din har ikke passord (du logger inn med GitHub)." },
-  SOCIAL_ACCOUNT_ALREADY_LINKED: { message: "Denne GitHub-kontoen er allerede koblet til en annen Vis-konto." },
-  LINKED_ACCOUNT_ALREADY_EXISTS: { message: "GitHub er allerede koblet til kontoen din." },
+  SOCIAL_ACCOUNT_ALREADY_LINKED: { message: "Denne kontoen er allerede koblet til en annen Vis-konto." },
+  LINKED_ACCOUNT_ALREADY_EXISTS: { message: "Kontoen er allerede koblet til Vis-kontoen din." },
+  // Sekssifrede koder (emailOTP).
+  INVALID_OTP: { message: "Koden stemmer ikke. Sjekk sifrene og prøv igjen." },
+  OTP_EXPIRED: { message: "Koden har gått ut. Be om en ny." },
+  TOO_MANY_ATTEMPTS: { message: "For mange feil forsøk. Be om en ny kode." },
+  USER_NOT_FOUND: { message: "Fant ingen konto med den e-posten." },
+  BANNED_USER: { message: "Kontoen din er stengt av en moderator. Ta kontakt hvis du mener det er feil." },
 };
 
 // Better Auth gir VALIDATION_ERROR med meldinger som "[body.email] Invalid email address".

@@ -8,6 +8,7 @@ import {
   deleteProject,
   deleteProjectImage,
   reorderProjectImages,
+  setProjectPinned,
   setProjectStatus,
   updateImageAlt,
   updateProject,
@@ -23,6 +24,8 @@ function readProjectForm(formData: FormData) {
     description: formData.get("description"),
     repoUrl: formData.get("repoUrl"),
     demoUrl: formData.get("demoUrl"),
+    videoUrl: formData.get("videoUrl"),
+    role: formData.get("role"),
     projectDate: formData.get("projectDate"),
     tags: formData.getAll("tags").length > 1 ? formData.getAll("tags") : formData.get("tags"),
     status: formData.get("status") ?? undefined,
@@ -81,6 +84,14 @@ export async function setProjectStatusAction(projectId: string, status: "draft" 
   });
 }
 
+export async function setProjectPinnedAction(projectId: string, pinned: boolean) {
+  return runAction(async () => {
+    const user = await requireUserForAction();
+    await setProjectPinned(user.id, projectId, Boolean(pinned));
+    revalidateProject(projectId, user.username);
+  }, "project.pin");
+}
+
 export async function deleteProjectAction(projectId: string) {
   return runAction(async () => {
     const user = await requireUserForAction();
@@ -103,8 +114,8 @@ export async function uploadProjectImagesAction(projectId: string, formData: For
 export async function deleteProjectImageAction(imageId: string) {
   return runAction(async () => {
     const user = await requireUserForAction();
-    await deleteProjectImage(user.id, imageId);
-    revalidatePath("/", "layout");
+    const projectId = await deleteProjectImage(user.id, imageId);
+    revalidateProject(projectId, user.username);
   });
 }
 

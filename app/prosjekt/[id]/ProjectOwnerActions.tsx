@@ -1,56 +1,115 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { deleteProjectAction, setProjectStatusAction } from "@/app/actions/projects";
-import { ui } from "@/components/ui";
+import { BarChart3, Eye, EyeOff, PenLine, Pin, PinOff, Trash2 } from "lucide-react";
+import { deleteProjectAction, setProjectPinnedAction, setProjectStatusAction } from "@/app/actions/projects";
+import Dialog from "@/components/ui/dialog";
+import { Button, ButtonLink } from "@/components/ui/button";
+import { toast } from "@/components/ui/toast";
 
-export default function ProjectOwnerActions({ projectId, status }: { projectId: string; status: "draft" | "published" }) {
+// Verktøylinjen eieren ser på sitt eget prosjekt.
+export default function ProjectOwnerActions({
+  projectId,
+  status,
+  pinned,
+  removed,
+  username,
+}: {
+  projectId: string;
+  status: "draft" | "published";
+  pinned: boolean;
+  removed: boolean;
+  username: string;
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
-  const togglePublish = () =>
+  const run = (fn: () => Promise<{ ok: boolean; error?: string }>, success?: string) =>
     startTransition(async () => {
-      const result = await setProjectStatusAction(projectId, status === "draft" ? "published" : "draft");
-      if (!result.ok) setError(result.error);
+      const result = await fn();
+      if (!result.ok) {
+        toast.error(result.error ?? "Noe gikk galt.");
+        return;
+      }
+      if (success) toast.success(success);
       router.refresh();
     });
 
-  const remove = () => {
-    if (!confirm("Slette prosjektet? Dette kan ikke angres.")) return;
+  const remove = () =>
     startTransition(async () => {
       const result = await deleteProjectAction(projectId);
-      if (!result.ok) return setError(result.error);
-      router.push("/");
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success("Prosjektet er slettet");
+      router.push(`/@${username}?fane=prosjekter`);
       router.refresh();
     });
-  };
+
+  const draft = status === "draft";
 
   return (
-    <div className={`rounded-xl border px-4 py-3 ${status === "draft" ? "border-amber-300/40 bg-amber-300/5" : "border-line"}`}>
-      <div className="flex flex-wrap items-center gap-3">
-        <p className="mr-auto text-sm text-mist">
-          {status === "draft" ? (
-            <>
-              <span className="font-medium text-amber-200">Utkast.</span> Bare du ser dette prosjektet.
-            </>
-          ) : (
-            "Dette er ditt prosjekt."
-          )}
-        </p>
-        <Link href={`/prosjekt/${projectId}/rediger`} className={`${ui.secondary} py-2 text-sm`}>
-          Rediger
-        </Link>
-        <button type="button" onClick={togglePublish} disabled={pending} className={`${ui.primary} py-2 text-sm`}>
-          {status === "draft" ? "Publiser" : "Gjør til utkast"}
-        </button>
-        <button type="button" onClick={remove} disabled={pending} className={ui.danger}>
-          Slett
-        </button>
-      </div>
-      {error && <p className={`${ui.error} mt-3`}>{error}</p>}
+    <div
+      className={`flex flex-wrap items-center gap-2 rounded-2xl border px-3 py-2.5 ${
+        removed ? "border-danger/40 bg-danger/[0.07]" : draft ? "border-warn/40 bg-warn/[0.07]" : "border-line bg-surface/40"
+      }`}
+    >
+      <p className="mr-auto px-1 text-sm text-mist">
+        {removed ? (
+          <span className="font-medium text-danger">Fjernet av en moderator. Bare du ser prosjektet.</span>
+        ) : draft ? (
+          <>
+            <span className="font-medium text-warn">Utkast.</span> Bare du ser dette prosjektet.
+          </>
+        ) : (
+          "Ditt prosjekt"
+        )}
+      </p>
+      <ButtonLink href={`/prosjekt/${projectId}/rediger`} variant="secondary" size="sm">
+        <PenLine className="size-4" /> Rediger
+      </ButtonLink>
+      {!draft && !removed && (
+        <Button
+          variant="secondary"
+          size="sm"
+          disabled={pending}
+          onClick={() => run(() => setProjectPinnedAction(projectId, !pinned), pinned ? "Løsnet fra profilen" : "Festet på profilen")}
+        >
+          {pinned ? <PinOff className="size-4" /> : <Pin className="size-4" />}
+          {pinned ? "Løsne" : "Fest på profilen"}
+        </Button>
+      )}
+      <ButtonLink href="/innsikt" variant="ghost" size="sm" aria-label="Innsikt">
+        <BarChart3 className="size-4" />
+      </ButtonLink>
+      {!removed && (
+        <Button
+          size="sm"
+          variant={draft ? "primary" : "secondary"}
+          disabled={pending}
+          onClick={() => run(() => setProjectStatusAction(projectId, draft ? "published" : "draft"), draft ? "Prosjektet er publisert 🎉" : "Gjort om til utkast")}
+        >
+          {draft ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
+          {draft ? "Publiser" : "Gjør til utkast"}
+        </Button>
+      )}
+      <Button variant="ghost" size="icon-sm" aria-label="Slett prosjektet" onClick={() => setConfirmDelete(true)} className="hover:text-danger">
+        <Trash2 className="size-4" />
+      </Button>
+
+      <Dialog open={confirmDelete} onClose={() => setConfirmDelete(false)} title="Slette prosjektet?" description="Bildene, kommentarene og reaksjonene forsvinner også. Dette kan ikke angres." size="sm">
+        <div className="flex justify-end gap-3">
+          <Button variant="ghost" onClick={() => setConfirmDelete(false)}>
+            Avbryt
+          </Button>
+          <Button variant="danger" loading={pending} onClick={remove}>
+            <Trash2 className="size-4" /> Slett for godt
+          </Button>
+        </div>
+      </Dialog>
     </div>
   );
 }
