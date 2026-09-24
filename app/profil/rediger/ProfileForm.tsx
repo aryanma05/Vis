@@ -5,6 +5,7 @@ import { useRef, useState, useTransition } from "react";
 import { updateProfileAction, uploadAvatarAction } from "@/app/actions/profile";
 import Avatar from "@/components/Avatar";
 import { Field, inputClass, Section } from "@/components/form";
+import { prepareImage } from "@/lib/prepare-image";
 
 type Link = { label: string; url: string };
 type Values = {
@@ -30,15 +31,23 @@ export default function ProfileForm({ initial, image }: { initial: Values; image
   const dirty = JSON.stringify(values) !== JSON.stringify(initial);
 
   async function uploadAvatar(file: File) {
-    if (file.size > 4 * 1024 * 1024) return setMessage({ type: "error", text: "Bildet er større enn 4 MB." });
     setUploading(true);
-    const fd = new FormData();
-    fd.append("avatar", file);
-    const result = await uploadAvatarAction(fd);
-    setUploading(false);
-    if (!result.ok) return setMessage({ type: "error", text: result.error });
-    setAvatar(result.data.url);
-    router.refresh();
+    setMessage(null);
+    try {
+      // Et profilbilde vises aldri større enn noen hundre piksler.
+      const prepared = await prepareImage(file, { maxSide: 800 });
+      const fd = new FormData();
+      fd.append("avatar", prepared);
+      const result = await uploadAvatarAction(fd);
+      if (!result.ok) return setMessage({ type: "error", text: result.error });
+      setAvatar(result.data.url);
+      setMessage({ type: "ok", text: "Profilbildet er oppdatert." });
+      router.refresh();
+    } catch (e) {
+      setMessage({ type: "error", text: (e as Error).message || "Opplastingen feilet. Prøv igjen." });
+    } finally {
+      setUploading(false);
+    }
   }
 
   const save = () =>
@@ -64,7 +73,7 @@ export default function ProfileForm({ initial, image }: { initial: Values; image
         save();
       }}
     >
-      <Section title="Profilbilde" description="Et tydelig bilde av deg, eller en logo. Maks 4 MB.">
+      <Section title="Profilbilde" description="Et tydelig bilde av deg, eller en logo.">
         <div className="flex items-center gap-6">
           <Avatar name={values.name || "?"} image={avatar} size={88} className="rounded-2xl" />
           <div className="flex gap-3">
@@ -80,7 +89,7 @@ export default function ProfileForm({ initial, image }: { initial: Values; image
           <input
             ref={fileRef}
             type="file"
-            accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
+            accept="image/*"
             className="hidden"
             onChange={(e) => {
               const file = e.target.files?.[0];

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import GithubButton from "@/components/GithubButton";
 import ProjectForm from "@/components/ProjectForm";
-import { FolderIcon, GithubIcon, PencilIcon } from "@/components/icons";
+import { FolderIcon, GithubIcon, ImageIcon } from "@/components/icons";
 import { isGithubConfigured } from "@/lib/auth";
 import { hasGithubAccount } from "@/lib/github";
 import { MAX_PROJECT_IMAGES } from "@/lib/projects";
@@ -11,10 +11,11 @@ import GithubImporter from "./GithubImporter";
 
 export const metadata = { title: "Del prosjekt – vis" };
 
+// Bilder først: det er det folk ser på.
 const SOURCES = [
+  { key: "manuell", label: "Last opp bilder", text: "Dra inn bilder og gi prosjektet et navn.", Icon: ImageIcon },
   { key: "mappe", label: "Fra en mappe", text: "Dra inn prosjektmappen fra maskinen din.", Icon: FolderIcon },
   { key: "github", label: "Fra GitHub", text: "Velg blant de offentlige repoene dine.", Icon: GithubIcon },
-  { key: "manuell", label: "Skriv selv", text: "Fyll inn tittel, beskrivelse og bilder.", Icon: PencilIcon },
 ] as const;
 
 type Source = (typeof SOURCES)[number]["key"];
@@ -22,12 +23,12 @@ type Source = (typeof SOURCES)[number]["key"];
 export default async function NewProjectPage({ searchParams }: { searchParams: Promise<{ fra?: string }> }) {
   const user = await requireUser();
   const { fra } = await searchParams;
-  const source: Source = fra === "github" || fra === "manuell" ? fra : "mappe";
+  const source: Source = fra === "github" || fra === "mappe" ? fra : "manuell";
   const githubLinked = source === "github" ? await hasGithubAccount(user.id) : false;
 
   return (
     <main className="min-h-screen pb-28 md:pb-16 md:pl-28 md:pr-10">
-      <div className="mx-auto max-w-4xl px-6 py-14">
+      <div className="mx-auto max-w-5xl px-6 py-14">
         <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-mist/70">Nytt prosjekt</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight md:text-5xl">Hva vil du vise frem?</h1>
 

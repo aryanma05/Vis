@@ -416,22 +416,5 @@ export async function analyzeFolder(root: string, entries: FolderEntry[]): Promi
   };
 }
 
-// Store skjermbilder (retina-PNG-er) skaleres ned så de holder seg under 4 MB.
-export async function prepareImage(file: File, maxWidth = 2400): Promise<File> {
-  if (file.type === "image/gif") return file;
-  const bitmap = await createImageBitmap(file);
-  if (file.size < 3.5 * 1024 * 1024 && bitmap.width <= maxWidth) {
-    bitmap.close();
-    return file;
-  }
-  const scale = Math.min(1, maxWidth / bitmap.width);
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.round(bitmap.width * scale);
-  canvas.height = Math.round(bitmap.height * scale);
-  canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  bitmap.close();
-  const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/webp", 0.9));
-  const out = blob?.type === "image/webp" ? blob : await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/jpeg", 0.9));
-  if (!out) return file;
-  return new File([out], file.name.replace(/\.\w+$/, out.type === "image/webp" ? ".webp" : ".jpg"), { type: out.type });
-}
+// Samme klargjøring som resten av appen (skalerer ned og fjerner metadata).
+export { prepareImage } from "@/lib/prepare-image";

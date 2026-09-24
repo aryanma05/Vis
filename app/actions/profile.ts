@@ -25,7 +25,7 @@ export async function uploadAvatarAction(formData: FormData) {
     const user = await requireUserForAction();
     const file = formData.get("avatar");
     if (!(file instanceof File)) throw new Error("Mangler fil");
-    const stored = await storeImage(file, `avatars/${user.id}`);
+    const stored = await storeImage(file, `avatars/${user.id}`, { ownerId: user.id });
     await setAvatar(user.id, stored.url);
     // Slett forrige opplastede bilde (ikke GitHub-avataren, den ligger hos GitHub).
     if (user.image) await deleteStoredFiles([storageKeyFromUrl(user.image)]);

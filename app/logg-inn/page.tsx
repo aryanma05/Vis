@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import GithubButton from "@/components/GithubButton";
-import { isGithubConfigured } from "@/lib/auth";
+import { isEmailEnabled, isGithubConfigured } from "@/lib/auth";
 import { getCurrentUser } from "@/lib/session";
 import LoginForm from "./LoginForm";
 
@@ -29,13 +29,18 @@ export default async function LoginPage() {
           )}
 
           <Suspense>
-            <LoginForm />
+            <LoginForm canResetPassword={isEmailEnabled} />
           </Suspense>
 
           <p className="mt-6 text-center text-sm text-mist">
             Ny her?{" "}
             <Link href="/register" className="font-medium text-fg underline">
               Lag en profil
+            </Link>
+          </p>
+          <p className="mt-3 text-center text-xs">
+            <Link href="/personvern" className="text-mist/80 underline underline-offset-2 hover:text-fg">
+              Personvern
             </Link>
           </p>
         </section>

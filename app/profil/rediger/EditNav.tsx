@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowIcon } from "@/components/icons";
 
-export default function EditNav({ active, username }: { active: "profil" | "cv"; username: string }) {
+export default function EditNav({ active, username }: { active: "profil" | "cv" | "konto"; username: string }) {
   const item = (href: string, label: string, isActive: boolean) => (
     <Link
       href={href}
@@ -31,6 +31,7 @@ export default function EditNav({ active, username }: { active: "profil" | "cv";
         <nav className="mt-10 flex gap-8">
           {item("/profil/rediger", "Profil", active === "profil")}
           {item("/profil/rediger/cv", "CV", active === "cv")}
+          {item("/profil/rediger/konto", "Konto og personvern", active === "konto")}
         </nav>
       </div>
     </div>

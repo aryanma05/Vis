@@ -56,3 +56,11 @@ export const PencilIcon = ({ className = "h-5 w-5" }: Props) => (
     <path d="m12.5 4.5 3 3L7 16H4v-3l8.5-8.5Z" strokeLinejoin="round" />
   </svg>
 );
+
+export const ImageIcon = ({ className = "h-5 w-5" }: Props) => (
+  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" className={className} aria-hidden="true">
+    <rect x="2.5" y="3.5" width="15" height="13" rx="2" />
+    <circle cx="7.5" cy="8" r="1.4" />
+    <path d="m17.5 13-3.8-3.8L6.5 16.5" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);

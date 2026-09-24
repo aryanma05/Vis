@@ -6,6 +6,8 @@ import { nextCookies } from "better-auth/next-js";
 import { username } from "better-auth/plugins";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/db";
+import { deleteAllFilesOfUser } from "@/lib/account";
+import { canSendEmail, resetPasswordEmail, sendEmail, verificationEmail } from "@/lib/mailer";
 import {
   isValidUsername,
   toUsernameBase,
@@ -70,6 +72,42 @@ export const auth = betterAuth({
     minPasswordLength: 8,
     maxPasswordLength: 128,
     autoSignIn: true,
+    // Man må bekrefte e-posten før man kan logge inn, så ingen kan lage kontoer i andres
+    // navn. Slås bare på når vi faktisk kan sende e-post (se lib/mailer.ts). Da svarer
+    // registreringen også likt uansett om e-posten finnes fra før, så ingen kan sjekke
+    // hvem som har konto.
+    requireEmailVerification: canSendEmail,
+    sendResetPassword: async ({ user, url }) => {
+      await sendEmail(resetPasswordEmail(user.email, user.name, url));
+    },
+    resetPasswordTokenExpiresIn: 60 * 60,
+    // Nytt passord logger ut alle andre enheter.
+    revokeSessionsOnPasswordReset: true,
+  },
+  emailVerification: {
+    sendVerificationEmail: async ({ user, url }) => {
+      // Lenker som sendes ved innlogging har ingen egen side å gå til etterpå. Send dem
+      // til bekreftelsessiden, så man ser at det gikk bra (eller hva som gikk galt).
+      const link = new URL(url);
+      const callback = link.searchParams.get("callbackURL");
+      if (!callback || callback === "/") link.searchParams.set("callbackURL", "/epost-bekreftet");
+      await sendEmail(verificationEmail(user.email, user.name, link.toString()));
+    },
+    sendOnSignUp: canSendEmail,
+    // Prøver man å logge inn uten å ha bekreftet, sendes en ny lenke.
+    sendOnSignIn: canSendEmail,
+    autoSignInAfterVerification: true,
+    expiresIn: 60 * 60 * 24,
+  },
+  user: {
+    deleteUser: {
+      enabled: true,
+      // Alt annet (profil, prosjekter, CV, kommentarer, filer i databasen) slettes
+      // automatisk sammen med brukeren (ON DELETE CASCADE).
+      beforeDelete: async (user) => {
+        await deleteAllFilesOfUser(user.id);
+      },
+    },
   },
   socialProviders: githubConfigured
     ? {
@@ -102,6 +140,10 @@ export const auth = betterAuth({
     customRules: {
       "/sign-up/email": { window: 60, max: 10 },
       "/sign-in/*": { window: 60, max: 10 },
+      // Hver av disse sender en e-post, så de holdes lavt.
+      "/send-verification-email": { window: 60, max: 3 },
+      "/request-password-reset": { window: 60, max: 3 },
+      "/delete-user": { window: 60, max: 5 },
     },
   },
   databaseHooks: {
@@ -139,3 +181,4 @@ export const auth = betterAuth({
 
 export type Session = typeof auth.$Infer.Session;
 export const isGithubConfigured = githubConfigured;
+export const isEmailEnabled = canSendEmail;
