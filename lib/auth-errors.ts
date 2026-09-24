@@ -11,7 +11,7 @@ const MESSAGES: Record<string, string> = {
   USERNAME_IS_ALREADY_TAKEN: "Brukernavnet er tatt. Prøv et annet.",
   USERNAME_TOO_SHORT: "Brukernavnet er for kort.",
   USERNAME_TOO_LONG: "Brukernavnet er for langt (maks 39 tegn).",
-  INVALID_USERNAME: "Brukernavnet kan bare ha små bokstaver, tall og - _ .",
+  INVALID_USERNAME: "Brukernavnet er ugyldig. Bruk bokstaver (a–z), tall og - _ .",
   SOCIAL_ACCOUNT_ALREADY_LINKED: "Denne GitHub-kontoen er allerede koblet til en annen Vis-konto.",
   LINKED_ACCOUNT_ALREADY_EXISTS: "GitHub er allerede koblet til kontoen din.",
 };

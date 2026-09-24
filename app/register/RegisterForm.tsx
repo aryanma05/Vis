@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 import { authErrorMessage } from "@/lib/auth-errors";
-import { isValidUsername, toUsernameBase } from "@/lib/username";
+import { toUsernameBase, usernameError } from "@/lib/username";
 import { ui } from "@/components/ui";
 
 export default function RegisterForm() {
@@ -13,12 +13,17 @@ export default function RegisterForm() {
   const [username, setUsername] = useState("");
   const [usernameTouched, setUsernameTouched] = useState(false);
   const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "free" | "taken" | "invalid">("idle");
+  const [usernameProblem, setUsernameProblem] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
   async function checkUsername(value: string) {
     if (!value) return setUsernameStatus("idle");
-    if (!isValidUsername(value)) return setUsernameStatus("invalid");
+    const problem = usernameError(value);
+    if (problem) {
+      setUsernameProblem(problem);
+      return setUsernameStatus("invalid");
+    }
     setUsernameStatus("checking");
     const { data } = await authClient.isUsernameAvailable({ username: value });
     setUsernameStatus(data?.available ? "free" : "taken");
@@ -27,6 +32,12 @@ export default function RegisterForm() {
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
+    const problem = username ? usernameError(username) : null;
+    if (problem) {
+      setUsernameProblem(problem);
+      setUsernameStatus("invalid");
+      return;
+    }
     setPending(true);
     setError(null);
 
@@ -89,7 +100,7 @@ export default function RegisterForm() {
             value={username}
             onChange={(e) => {
               setUsernameTouched(true);
-              setUsername(e.target.value.toLowerCase().replace(/\s/g, ""));
+              setUsername(e.target.value.replace(/\s/g, ""));
               setUsernameStatus("idle");
             }}
             onBlur={() => checkUsername(username)}
@@ -99,7 +110,7 @@ export default function RegisterForm() {
         {usernameStatus === "free" && <p className="mt-1 text-sm text-emerald-300">Ledig!</p>}
         {usernameStatus === "taken" && <p className={ui.fieldError}>Brukernavnet er tatt.</p>}
         {usernameStatus === "invalid" && (
-          <p className={ui.fieldError}>Bruk 2–39 tegn: små bokstaver, tall og - _ .</p>
+          <p className={ui.fieldError}>{usernameProblem}</p>
         )}
       </div>
 
