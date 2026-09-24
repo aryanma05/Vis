@@ -47,6 +47,10 @@ const RESERVED_USERNAMES = new Set([
 
 // Forklarer hva som er galt med brukernavnet, eller null hvis det er gyldig.
 export function usernameError(username: string): string | null {
+  // Nettlesere og passordhåndterere fyller ofte inn e-posten her.
+  if (username.includes("@")) {
+    return "Det ser ut som en e-postadresse. Brukernavnet er det som kommer etter vis.no/@.";
+  }
   if (username.length < USERNAME_MIN_LENGTH) {
     return `Brukernavnet må ha minst ${USERNAME_MIN_LENGTH} tegn.`;
   }
@@ -78,6 +82,20 @@ export function shownUsername(u: { username: string; displayUsername?: string | 
   return u.displayUsername && u.displayUsername.toLowerCase() === u.username
     ? u.displayUsername
     : u.username;
+}
+
+// Alternativer å foreslå når et brukernavn er tatt. "arin" -> "arin-k", "arin27" ...
+export function usernameAlternatives(taken: string, name = ""): string[] {
+  const base = toUsernameBase(taken);
+  const words = toUsernameBase(name).split(/[-_.]/).filter(Boolean);
+  const last = words.length > 1 ? words[words.length - 1] : "";
+  const candidates = [
+    last && `${words[0]}${last}`,
+    last && `${base}-${last[0]}`,
+    `${base}${Math.floor(10 + Math.random() * 90)}`,
+    `${base}-${Math.floor(100 + Math.random() * 900)}`,
+  ];
+  return [...new Set(candidates)].filter((c) => c && c !== base && isValidUsername(c));
 }
 
 // Lager et gyldig utgangspunkt for et brukernavn fra f.eks. GitHub-login,

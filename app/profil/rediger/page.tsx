@@ -1,8 +1,10 @@
 import { notFound } from "next/navigation";
 import { getOwnProfile } from "@/lib/profiles";
 import { requireUser } from "@/lib/session";
+import { shownUsername } from "@/lib/username";
 import EditNav from "./EditNav";
 import ProfileForm from "./ProfileForm";
+import UsernameForm from "./UsernameForm";
 
 export const metadata = { title: "Rediger profil – vis" };
 
@@ -15,6 +17,7 @@ export default async function EditProfilePage() {
     <main className="min-h-screen pb-28 md:pb-16 md:pl-28 md:pr-10">
       <EditNav active="profil" username={user.username} />
       <div className="mx-auto max-w-5xl px-6">
+        <UsernameForm current={shownUsername(user)} />
         <ProfileForm
           image={profile.image}
           initial={{

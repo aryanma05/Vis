@@ -59,6 +59,8 @@ Callback-URL: `http://localhost:3000/api/auth/callback/github` (lag en egen app 
 ```
 db/schema.ts              alle tabellene
 lib/auth.ts               innlogging (Better Auth), brukernavn-regler
+lib/username.ts           hva som er et gyldig brukernavn, og forslag når det er tatt
+lib/auth-errors.ts        norske feilmeldinger for innlogging/registrering
 lib/session.ts            getCurrentUser() / requireUser() for sider og actions
 lib/projects.ts           prosjekter: lese, opprette, endre, slette, bilder, feed, søk, tagger
 lib/github.ts             GitHub-import (repoliste, README → prosjekt)

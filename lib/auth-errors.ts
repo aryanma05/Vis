@@ -1,23 +1,62 @@
-// Norske meldinger for feilkodene fra Better Auth.
-const MESSAGES: Record<string, string> = {
-  USER_ALREADY_EXISTS: "Det finnes allerede en konto med denne e-posten.",
-  USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL: "Det finnes allerede en konto med denne e-posten.",
-  INVALID_EMAIL: "Ugyldig e-postadresse.",
-  INVALID_EMAIL_OR_PASSWORD: "Feil e-post eller passord.",
-  INVALID_USERNAME_OR_PASSWORD: "Feil brukernavn eller passord.",
-  INVALID_PASSWORD: "Feil passord.",
-  PASSWORD_TOO_SHORT: "Passordet må ha minst 8 tegn.",
-  PASSWORD_TOO_LONG: "Passordet er for langt.",
-  USERNAME_IS_ALREADY_TAKEN: "Brukernavnet er tatt. Prøv et annet.",
-  USERNAME_TOO_SHORT: "Brukernavnet er for kort.",
-  USERNAME_TOO_LONG: "Brukernavnet er for langt (maks 39 tegn).",
-  INVALID_USERNAME: "Brukernavnet er ugyldig. Bruk bokstaver (a–z), tall og - _ .",
-  SOCIAL_ACCOUNT_ALREADY_LINKED: "Denne GitHub-kontoen er allerede koblet til en annen Vis-konto.",
-  LINKED_ACCOUNT_ALREADY_EXISTS: "GitHub er allerede koblet til kontoen din.",
+// Norske meldinger for feilkodene fra Better Auth, og hvilket skjemafelt feilen hører til.
+
+export type AuthField = "name" | "username" | "email" | "password";
+export type AuthErrorInfo = { message: string; field?: AuthField; code?: string };
+type AuthErrorLike = { code?: string; message?: string; status?: number } | null | undefined;
+
+const ERRORS: Record<string, { message: string; field?: AuthField }> = {
+  USER_ALREADY_EXISTS: { field: "email", message: "Det finnes allerede en konto med denne e-posten." },
+  USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL: { field: "email", message: "Det finnes allerede en konto med denne e-posten." },
+  INVALID_EMAIL: { field: "email", message: "E-postadressen ser ikke riktig ut." },
+  INVALID_EMAIL_OR_PASSWORD: { message: "Feil e-post eller passord." },
+  INVALID_USERNAME_OR_PASSWORD: { message: "Feil brukernavn eller passord." },
+  INVALID_PASSWORD: { field: "password", message: "Feil passord." },
+  PASSWORD_TOO_SHORT: { field: "password", message: "Passordet må ha minst 8 tegn." },
+  PASSWORD_TOO_LONG: { field: "password", message: "Passordet kan ha maks 128 tegn." },
+  USERNAME_IS_ALREADY_TAKEN: { field: "username", message: "Brukernavnet er tatt. Prøv et annet." },
+  USERNAME_TOO_SHORT: { field: "username", message: "Brukernavnet må ha minst 2 tegn." },
+  USERNAME_TOO_LONG: { field: "username", message: "Brukernavnet kan ha maks 39 tegn." },
+  INVALID_USERNAME: { field: "username", message: "Brukernavnet kan bare ha bokstaver (a–z), tall og - _ ." },
+  INVALID_DISPLAY_USERNAME: { field: "username", message: "Brukernavnet kan bare ha bokstaver (a–z), tall og - _ ." },
+  FAILED_TO_CREATE_USER: { message: "Kontoen kunne ikke opprettes. Prøv igjen om litt." },
+  // Adressen i nettleseren stemmer ikke med BETTER_AUTH_URL på serveren.
+  INVALID_ORIGIN: { message: "Innlogging er feilkonfigurert på serveren (BETTER_AUTH_URL). Si fra til oss." },
+  MISSING_OR_NULL_ORIGIN: { message: "Innlogging er feilkonfigurert på serveren (BETTER_AUTH_URL). Si fra til oss." },
+  SOCIAL_ACCOUNT_ALREADY_LINKED: { message: "Denne GitHub-kontoen er allerede koblet til en annen Vis-konto." },
+  LINKED_ACCOUNT_ALREADY_EXISTS: { message: "GitHub er allerede koblet til kontoen din." },
 };
 
-export function authErrorMessage(error: { code?: string; message?: string; status?: number } | null | undefined) {
-  if (!error) return "Noe gikk galt. Prøv igjen.";
-  if (error.status === 429) return "For mange forsøk. Vent litt og prøv igjen.";
-  return (error.code && MESSAGES[error.code]) || "Noe gikk galt. Prøv igjen.";
+// Better Auth gir VALIDATION_ERROR med meldinger som "[body.email] Invalid email address".
+function validationError(message = ""): AuthErrorInfo | null {
+  const field = message.match(/\[body\.(\w+)\]/)?.[1];
+  if (field === "email") return { field, message: "E-postadressen ser ikke riktig ut. Sjekk at den har med f.eks. .com." };
+  if (field === "password") return { field, message: "Passordet må ha mellom 8 og 128 tegn." };
+  if (field === "name") return { field, message: "Skriv inn navnet ditt." };
+  if (field === "username") return { field, message: "Brukernavnet er ugyldig." };
+  return null;
+}
+
+// context "login": alle brukernavn-feil betyr for brukeren det samme, feil brukernavn eller passord.
+export function authError(error: AuthErrorLike, context?: "login"): AuthErrorInfo {
+  if (!error) return { message: "Noe gikk galt. Prøv igjen." };
+  if (error.status === 429) {
+    return { message: "For mange forsøk på kort tid. Vent et minutt og prøv igjen.", code: "RATE_LIMITED" };
+  }
+  if (!error.status && !error.code) {
+    return { message: "Fikk ikke kontakt med serveren. Sjekk nettet og prøv igjen.", code: "NETWORK" };
+  }
+  if (context === "login" && (error.code?.startsWith("USERNAME_") || error.code === "INVALID_USERNAME")) {
+    return { message: "Feil brukernavn eller passord.", code: error.code };
+  }
+
+  const known = error.code === "VALIDATION_ERROR" ? validationError(error.message) : error.code && ERRORS[error.code];
+  if (known) return { ...known, code: error.code };
+
+  // Ukjent feil: logg den, så den er lett å finne i konsollen.
+  console.error("[auth]", error);
+  return { message: "Noe gikk galt. Prøv igjen.", code: error.code };
+}
+
+export function authErrorMessage(error: AuthErrorLike, context?: "login") {
+  return authError(error, context).message;
 }

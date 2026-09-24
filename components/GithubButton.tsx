@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { authClient } from "@/lib/auth-client";
+import { authErrorMessage } from "@/lib/auth-errors";
 import { ui } from "@/components/ui";
 
 // mode "signin": logg inn / registrer med GitHub.
@@ -26,7 +27,7 @@ export default function GithubButton({
         ? await authClient.linkSocial({ provider: "github", callbackURL })
         : await authClient.signIn.social({ provider: "github", callbackURL });
     if (result?.error) {
-      setError(result.error.message ?? "Kunne ikke koble til GitHub.");
+      setError(authErrorMessage(result.error));
       setPending(false);
     }
   }
