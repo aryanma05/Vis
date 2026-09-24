@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { MAX_TAGS_PER_PROJECT } from "@/lib/tags";
+import { ACCENT_KEYS, OPEN_TO } from "@/lib/constants";
+import { MAX_TAGS_PER_PROJECT } from "@/lib/tag-names";
 
 const emptyToNull = (v: string | null | undefined) => (v ? v : null);
 
@@ -11,16 +12,15 @@ const optionalText = (max: number) =>
     .nullish()
     .transform(emptyToNull);
 
+// Godtar "vis.no" og legger til https:// selv, siden folk sjelden skriver det.
 const optionalUrl = z
   .string()
   .trim()
   .max(500)
   .nullish()
   .transform(emptyToNull)
-  .refine(
-    (v) => v === null || /^https?:\/\/[^\s]+\.[^\s]+/i.test(v),
-    "Lenken må starte med http:// eller https://",
-  );
+  .transform((v) => (v && !/^https?:\/\//i.test(v) && /^[\w-]+(\.[\w-]+)+/.test(v) ? `https://${v}` : v))
+  .refine((v) => v === null || /^https?:\/\/[^\s]+\.[^\s]+/i.test(v), "Lenken må starte med http:// eller https://");
 
 // "2024-05" eller "2024".
 export const yearMonth = z
@@ -51,6 +51,8 @@ export const projectInput = z.object({
   description: z.string().max(20_000, "Beskrivelsen er for lang.").nullish().transform((v) => v ?? ""),
   repoUrl: optionalUrl,
   demoUrl: optionalUrl,
+  videoUrl: optionalUrl,
+  role: optionalText(80),
   projectDate: yearMonth,
   tags: tagList,
   status: z.enum(["draft", "published"]).default("published"),
@@ -60,7 +62,18 @@ export type ProjectInput = z.output<typeof projectInput>;
 
 export const socialLink = z.object({
   label: z.string().trim().min(1).max(40),
-  url: z.string().trim().url().max(500),
+  url: z
+    .string()
+    .trim()
+    .max(500)
+    .transform((v) => (/^https?:\/\//i.test(v) ? v : `https://${v}`))
+    .pipe(z.url()),
+});
+
+const customSection = z.object({
+  id: z.string().min(1).max(40),
+  title: z.string().trim().min(1, "Seksjonen må ha en tittel.").max(60),
+  body: z.string().trim().max(5000),
 });
 
 export const profileInput = z.object({
@@ -70,6 +83,11 @@ export const profileInput = z.object({
   location: optionalText(100),
   websiteUrl: optionalUrl,
   links: z.array(socialLink).max(10).default([]),
+  readme: optionalText(10_000),
+  lookingFor: optionalText(400),
+  openTo: z.array(z.enum(OPEN_TO)).max(OPEN_TO.length).default([]),
+  customSections: z.array(customSection).max(8).default([]),
+  accentColor: z.enum(ACCENT_KEYS).nullish().transform((v) => v ?? null),
 });
 
 export type ProfileInput = z.output<typeof profileInput>;

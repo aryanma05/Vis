@@ -15,17 +15,26 @@ const schema = {
   },
 };
 
-export default function Markdown({ children }: { children: string }) {
+export default function Markdown({ children, size = "md" }: { children: string; size?: "sm" | "md" }) {
   return (
-    <div className="markdown">
+    <div className={`markdown ${size === "sm" ? "markdown-sm" : ""}`}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeRaw, [rehypeSanitize, schema]]}
         components={{
-          a: ({ href, children }) => (
-            <a href={href} target="_blank" rel="noreferrer nofollow">
-              {children}
-            </a>
+          a: ({ href, children }) => {
+            const internal = href?.startsWith("/") && !href.startsWith("//");
+            return internal ? (
+              <a href={href}>{children}</a>
+            ) : (
+              <a href={href} target="_blank" rel="noreferrer nofollow ugc">
+                {children}
+              </a>
+            );
+          },
+          img: ({ src, alt, width, height }) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={typeof src === "string" ? src : undefined} alt={alt ?? ""} width={width} height={height} loading="lazy" decoding="async" />
           ),
         }}
       >

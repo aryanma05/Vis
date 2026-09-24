@@ -1,48 +1,37 @@
-import Link from "next/link";
+import type { Metadata } from "next";
 import AuthCard from "@/components/AuthCard";
+import { ButtonLink } from "@/components/ui/button";
+import { emailProviderConfigured } from "@/lib/mailer";
 import { getCurrentUser } from "@/lib/session";
 import ResendVerification from "./ResendVerification";
 
-export const metadata = { title: "E-post bekreftet – vis" };
+export const metadata: Metadata = { title: "Bekreft e-post", robots: { index: false } };
 
-// Lenken i bekreftelses-e-posten sender hit. Går noe galt, kommer Better Auth hit med
-// ?error=TOKEN_EXPIRED eller ?error=INVALID_TOKEN.
+// Eldre bekreftelseslenker sender hit. Går noe galt, kommer Better Auth hit med
+// ?error=TOKEN_EXPIRED eller ?error=INVALID_TOKEN. Nye kontoer bekrefter med kode.
 export default async function EmailVerifiedPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const { error } = await searchParams;
   const user = await getCurrentUser();
+  const devHint = !emailProviderConfigured && process.env.NODE_ENV !== "production";
 
-  if (error) {
+  if (error || !user) {
     return (
-      <AuthCard title={error === "TOKEN_EXPIRED" ? "Lenken har gått ut" : "Lenken virket ikke"}>
-        <p className="mt-4 text-mist">
-          {error === "TOKEN_EXPIRED"
-            ? "Bekreftelseslenker virker i 24 timer."
-            : "Lenken er ugyldig eller allerede brukt."}{" "}
-          Skriv inn e-posten din, så sender vi en ny.
-        </p>
-        <ResendVerification />
+      <AuthCard
+        title={error === "TOKEN_EXPIRED" ? "Lenken har gått ut" : error ? "Lenken virket ikke" : "Bekreft e-posten"}
+        subtitle="Skriv inn e-posten din, så sender vi en sekssifret kode du kan bekrefte med."
+      >
+        <ResendVerification devHint={devHint} />
       </AuthCard>
     );
   }
 
   return (
-    <AuthCard title="E-posten er bekreftet">
-      <p className="mt-4 text-mist">Takk! Kontoen din er klar.</p>
-      <div className="mt-6 flex flex-wrap gap-3">
-        {user ? (
-          <>
-            <Link href="/ny" className="rounded-lg bg-primary px-5 py-3 font-semibold text-on-primary transition hover:opacity-90">
-              Del ditt første prosjekt
-            </Link>
-            <Link href="/profil/rediger" className="rounded-lg border border-line px-5 py-3 font-semibold text-fg transition hover:border-ice">
-              Fyll ut profilen
-            </Link>
-          </>
-        ) : (
-          <Link href="/logg-inn" className="rounded-lg bg-primary px-5 py-3 font-semibold text-on-primary transition hover:opacity-90">
-            Logg inn
-          </Link>
-        )}
+    <AuthCard title="E-posten er bekreftet" subtitle="Takk! Profilen din er klar.">
+      <div className="flex flex-wrap gap-3">
+        <ButtonLink href="/velkommen">Kom i gang</ButtonLink>
+        <ButtonLink href={`/@${user.username}`} variant="secondary">
+          Se profilen
+        </ButtonLink>
       </div>
     </AuthCard>
   );

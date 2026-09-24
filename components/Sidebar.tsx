@@ -1,171 +1,170 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
-import { Bell, Home, LogIn, LogOut, Moon, Plus, Search, Settings, Sparkles, Sun, UserPlus } from "lucide-react";
-import { useTheme } from "@/components/ThemeProvider";
-import { authClient } from "@/lib/auth-client";
+import { usePathname } from "next/navigation";
+import { Bell, Compass, Home, LogIn, Plus, Search } from "lucide-react";
+import Avatar from "@/components/Avatar";
+import { LogoMark } from "@/components/Logo";
+import NavUserMenu, { ThemeButtons, type NavUser } from "@/components/nav/NavUserMenu";
+import { openSearch } from "@/components/nav/search-events";
+import { Menu } from "@/components/ui/menu";
+import { Palette } from "lucide-react";
 
-export type NavUser = { username: string; name: string; image: string | null; unread?: number } | null;
+export type { NavUser };
+
+function Tip({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="pointer-events-none absolute left-full top-1/2 ml-4 -translate-x-1 -translate-y-1/2 whitespace-nowrap rounded-lg border border-line bg-surface px-2.5 py-1 text-xs font-medium text-fg opacity-0 shadow-lg shadow-black/20 transition duration-150 group-hover:translate-x-0 group-hover:opacity-100 group-focus-within:translate-x-0 group-focus-within:opacity-100">
+      {children}
+    </span>
+  );
+}
+
+const itemBase =
+  "relative flex size-10 items-center justify-center rounded-xl transition duration-200 focus-visible:outline-offset-4";
 
 // Flytende sidemeny på desktop. Menyvalgene endrer seg etter om du er logget inn.
 export default function Sidebar({ user = null }: { user?: NavUser }) {
-  const { theme, setTheme } = useTheme();
-  const [isThemeMenuOpen, setIsThemeMenuOpen] = useState(false);
   const pathname = usePathname();
-  const router = useRouter();
+  const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`));
 
-  const isActive = (href: string) => {
-    if (href === "/") return pathname === "/";
-    return pathname === href || pathname.startsWith(`${href}/`);
-  };
-
-  const navItems = user
-    ? [
-        { href: "/sok", label: "Utforsk", icon: Search },
-        { href: "/ny", label: "Del prosjekt", icon: Plus },
-        { href: "/varsler", label: "Varsler", icon: Bell, badge: user.unread ?? 0 },
-        { href: `/@${user.username}`, label: "Profilen din", icon: UserAvatar(user) },
-      ]
-    : [
-        { href: "/sok", label: "Utforsk", icon: Search },
-        { href: "/logg-inn", label: "Logg inn", icon: LogIn },
-        { href: "/register", label: "Lag profil", icon: UserPlus },
-      ];
-
-  const pill = "bg-ink/95 text-ice";
-  const active = "bg-primary text-on-primary";
-  const tooltip =
-    "pointer-events-none absolute left-14 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-full bg-surface/95 px-3 py-1 text-xs font-medium text-ice opacity-0 shadow-md shadow-black/30 transition-opacity duration-200 group-hover:opacity-100";
+  const items = [
+    { href: "/", label: user ? "Strømmen" : "Hjem", Icon: Home },
+    { href: "/sok", label: "Utforsk", Icon: Compass },
+    ...(user ? [{ href: "/varsler", label: "Varsler", Icon: Bell, badge: user.unread ?? 0 }] : []),
+  ];
 
   return (
-    <aside className="pointer-events-none fixed left-6 top-1/2 z-40 hidden -translate-y-1/2 md:block">
-      <div className="pointer-events-auto flex w-16 flex-col items-center gap-4 rounded-full border border-line/70 bg-surface/85 py-4 shadow-lg shadow-black/40 backdrop-blur-xl transition-colors duration-300">
+    <aside className="pointer-events-none fixed inset-y-0 left-5 z-40 hidden items-center md:flex print:!hidden">
+      <nav
+        aria-label="Hovedmeny"
+        className="pointer-events-auto flex w-14 flex-col items-center gap-2 rounded-[22px] border border-line bg-surface/80 py-3 shadow-[0_24px_60px_-30px_rgb(0_0_0/0.65)] backdrop-blur-xl"
+      >
+        <Link href="/" aria-label="Vis – forsiden" className="group relative mb-1">
+          <LogoMark className="size-10 transition group-hover:scale-105" />
+        </Link>
+
         <div className="group relative">
-          <Link
-            href="/"
-            aria-label="Hjem"
-            aria-current={isActive("/") ? "page" : undefined}
-            className={`flex h-9 w-9 items-center justify-center rounded-2xl shadow-sm shadow-black/30 transition hover:scale-105 ${
-              isActive("/") ? active : pill
-            }`}
+          <button
+            type="button"
+            onClick={() => openSearch()}
+            aria-label="Søk (⌘K)"
+            className={`${itemBase} text-mist hover:bg-surface-2 hover:text-fg`}
           >
-            <Home className="h-5 w-5" />
-          </Link>
-          <span className={tooltip}>Hjem</span>
+            <Search className="size-[18px]" />
+          </button>
+          <Tip>
+            Søk <span className="ml-1 font-mono text-[10px] text-mist">⌘K</span>
+          </Tip>
         </div>
 
-        <div className="my-1 h-px w-6 bg-line" />
-
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const current = isActive(item.href);
-          const badge = "badge" in item ? (item.badge ?? 0) : 0;
-
+        {items.map(({ href, label, Icon, ...rest }) => {
+          const active = isActive(href);
+          const badge = "badge" in rest ? (rest.badge as number) : 0;
           return (
-            <div className="group relative" key={item.href}>
+            <div key={href} className="group relative">
               <Link
-                href={item.href}
-                aria-label={item.label}
-                aria-current={current ? "page" : undefined}
-                className={`relative flex h-9 w-9 items-center justify-center rounded-full shadow-sm shadow-black/30 transition-transform duration-200 hover:scale-110 ${
-                  current ? active : `${pill} hover:bg-sea hover:text-white`
-                }`}
+                href={href}
+                aria-label={label}
+                aria-current={active ? "page" : undefined}
+                className={`${itemBase} ${active ? "bg-fg/10 text-fg" : "text-mist hover:bg-surface-2 hover:text-fg"}`}
               >
-                <Icon className="h-4 w-4" />
+                <Icon className="size-[18px]" />
+                {active && <span className="absolute -left-3 top-1/2 h-5 w-1 -translate-y-1/2 rounded-full bg-ice" aria-hidden="true" />}
                 {badge > 0 && (
-                  <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-on-primary">
+                  <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-ice px-1 text-[10px] font-bold text-on-primary ring-2 ring-surface">
                     {badge > 9 ? "9+" : badge}
                   </span>
                 )}
               </Link>
-              <span className={tooltip}>{item.label}</span>
+              <Tip>{label}</Tip>
             </div>
           );
         })}
 
         <div className="my-1 h-px w-6 bg-line" />
 
-        {user && (
-          <div className="group relative">
-            <button
-              type="button"
-              aria-label="Logg ut"
-              onClick={async () => {
-                await authClient.signOut();
-                router.push("/");
-                router.refresh();
-              }}
-              className={`flex h-8 w-8 items-center justify-center rounded-full ${pill} shadow-sm shadow-black/30 transition-transform duration-200 hover:scale-110 hover:bg-sea hover:text-white`}
-            >
-              <LogOut className="h-4 w-4" />
-            </button>
-            <span className={tooltip}>Logg ut</span>
-          </div>
-        )}
-
-        <div className="group relative">
-          <button
-            type="button"
-            onClick={() => setIsThemeMenuOpen((prev) => !prev)}
-            aria-label="Bytt tema"
-            aria-expanded={isThemeMenuOpen}
-            className={`flex h-8 w-8 items-center justify-center rounded-full ${pill} shadow-sm shadow-black/30 transition-transform duration-200 hover:scale-110 hover:bg-sea hover:text-white`}
-          >
-            <Settings className="h-4 w-4" />
-          </button>
-
-          {!isThemeMenuOpen && <span className={tooltip}>Tema</span>}
-
-          <div
-            className={`absolute bottom-0 left-12 flex items-center gap-1 rounded-full bg-surface/95 p-1 text-xs shadow-md shadow-black/40 transition-opacity duration-200 ${
-              isThemeMenuOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
-            }`}
-          >
-            {(
-              [
-                { name: "dark", label: "Mørkt tema", Icon: Moon },
-                { name: "midnight", label: "Midnattsblått tema", Icon: Sparkles },
-                { name: "light", label: "Lyst tema", Icon: Sun },
-              ] as const
-            ).map(({ name, label, Icon }) => (
-              <button
-                key={name}
-                type="button"
-                onClick={() => setTheme(name)}
-                aria-label={label}
-                aria-pressed={theme === name}
-                className={`flex h-7 w-7 items-center justify-center rounded-full transition ${
-                  theme === name ? active : "text-ice hover:bg-primary hover:text-on-primary"
-                }`}
+        {user ? (
+          <>
+            <div className="group relative">
+              <Link
+                href="/ny"
+                aria-label="Del prosjekt"
+                className={`${itemBase} bg-primary text-on-primary shadow-[inset_0_1px_0_rgb(255_255_255/0.3)] hover:scale-105`}
               >
-                <Icon className="h-4 w-4" />
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
+                <Plus className="size-5" strokeWidth={2.4} />
+              </Link>
+              <Tip>Del prosjekt</Tip>
+            </div>
+            <NavUserMenu
+              user={user}
+              side="right"
+              align="end"
+              trigger={({ open, toggle, id }) => (
+                <div className="group relative mt-1">
+                  <button
+                    type="button"
+                    onClick={toggle}
+                    aria-haspopup="menu"
+                    aria-expanded={open}
+                    aria-controls={open ? id : undefined}
+                    aria-label="Profilmeny"
+                    className={`rounded-full p-0.5 ring-2 transition ${
+                      open || pathname.startsWith(`/@${user.username}`) || pathname.startsWith("/profil") ? "ring-ice" : "ring-transparent hover:ring-line"
+                    }`}
+                  >
+                    <Avatar name={user.name} image={user.image} size={36} />
+                  </button>
+                  {!open && <Tip>{user.name}</Tip>}
+                </div>
+              )}
+            />
+          </>
+        ) : (
+          <>
+            <div className="group relative">
+              <Link href="/logg-inn" aria-label="Logg inn" className={`${itemBase} text-mist hover:bg-surface-2 hover:text-fg`}>
+                <LogIn className="size-[18px]" />
+              </Link>
+              <Tip>Logg inn</Tip>
+            </div>
+            <div className="group relative">
+              <Link
+                href="/register"
+                aria-label="Lag profil"
+                className={`${itemBase} bg-primary text-on-primary hover:scale-105`}
+              >
+                <Plus className="size-5" strokeWidth={2.4} />
+              </Link>
+              <Tip>Lag profil</Tip>
+            </div>
+            <Menu
+              label="Tema"
+              side="right"
+              align="end"
+              className="w-56 p-2"
+              trigger={({ open, toggle }) => (
+                <div className="group relative">
+                  <button
+                    type="button"
+                    onClick={toggle}
+                    aria-haspopup="menu"
+                    aria-expanded={open}
+                    aria-label="Fargetema"
+                    className={`${itemBase} text-mist hover:bg-surface-2 hover:text-fg`}
+                  >
+                    <Palette className="size-[18px]" />
+                  </button>
+                  {!open && <Tip>Tema</Tip>}
+                </div>
+              )}
+            >
+              <p className="px-1 pb-2 pt-1 label-mono">Tema</p>
+              <ThemeButtons />
+            </Menu>
+          </>
+        )}
+      </nav>
     </aside>
   );
-}
-
-// Profilbildet brukes som ikon for profil-lenken.
-function UserAvatar(user: NonNullable<NavUser>) {
-  const initials = user.name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]!.toUpperCase())
-    .join("");
-
-  function Avatar({ className = "" }: { className?: string }) {
-    if (user.image) {
-      // eslint-disable-next-line @next/next/no-img-element
-      return <img src={user.image} alt="" className={`${className} h-5 w-5 rounded-full object-cover`} />;
-    }
-    return <span className={`${className} text-[10px] font-semibold`}>{initials}</span>;
-  }
-
-  return Avatar;
 }

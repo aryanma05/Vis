@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 import PasswordInput from "@/components/PasswordInput";
-import { ui } from "@/components/ui";
+import { Button, ButtonLink } from "@/components/ui/button";
+import { labelClass } from "@/components/ui/field";
 import { authClient } from "@/lib/auth-client";
 import { authErrorMessage } from "@/lib/auth-errors";
 
@@ -26,19 +26,17 @@ export default function ResetPasswordForm({ token }: { token: string }) {
 
   if (done) {
     return (
-      <div role="status" className="mt-6 space-y-4">
+      <div role="status" className="space-y-5">
         <p className="text-mist">Passordet er endret, og du er logget ut på alle andre enheter.</p>
-        <Link href="/logg-inn" className={`${ui.primary} inline-block`}>
-          Logg inn
-        </Link>
+        <ButtonLink href="/logg-inn">Logg inn</ButtonLink>
       </div>
     );
   }
 
   return (
-    <form onSubmit={onSubmit} noValidate className="mt-6 space-y-4">
+    <form onSubmit={onSubmit} noValidate className="space-y-5">
       <div>
-        <label htmlFor="password" className={ui.label}>
+        <label htmlFor="password" className={labelClass}>
           Nytt passord
         </label>
         <PasswordInput
@@ -50,14 +48,10 @@ export default function ResetPasswordForm({ token }: { token: string }) {
           onChange={(e) => setPassword(e.target.value)}
         />
       </div>
-      {error && (
-        <p role="alert" className={ui.error}>
-          {error}
-        </p>
-      )}
-      <button type="submit" disabled={pending} className={`${ui.primary} w-full`}>
-        {pending ? "Lagrer…" : "Lagre nytt passord"}
-      </button>
+      {error && <p role="alert" className="text-sm text-danger">{error}</p>}
+      <Button type="submit" loading={pending} className="w-full" size="lg">
+        Lagre nytt passord
+      </Button>
     </form>
   );
 }
