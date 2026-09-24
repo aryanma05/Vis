@@ -8,6 +8,7 @@ import { ProjectGrid } from "@/components/ProjectCard";
 import { ArrowIcon, DownloadIcon } from "@/components/icons";
 import { getProfileByUsername } from "@/lib/profiles";
 import { getCurrentUser } from "@/lib/session";
+import { shownUsername } from "@/lib/username";
 
 type Props = {
   params: Promise<{ username: string }>;
@@ -19,7 +20,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const profile = await getProfileByUsername(decodeURIComponent(username));
   if (!profile) return { title: "Fant ikke profilen – vis" };
   return {
-    title: `${profile.name} (@${profile.username}) – vis`,
+    title: `${profile.name} (@${shownUsername(profile)}) – vis`,
     description: profile.headline ?? profile.bio?.slice(0, 160) ?? `Prosjektene til ${profile.name} på vis.`,
   };
 }
@@ -60,7 +61,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
               <div>
                 <h1 className="text-4xl font-semibold tracking-tight md:text-6xl">{user.name}</h1>
                 <p className="mt-2 text-mist">
-                  @{user.username}
+                  @{shownUsername(user)}
                   {user.location && <span className="text-mist/60"> · {user.location}</span>}
                 </p>
               </div>
