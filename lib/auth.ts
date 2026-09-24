@@ -42,6 +42,7 @@ export const auth = betterAuth({
   appName: "Vis",
   baseURL:
     process.env.BETTER_AUTH_URL ??
+    process.env.RENDER_EXTERNAL_URL ??
     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined),
   database: drizzleAdapter(db, {
     provider: "pg",

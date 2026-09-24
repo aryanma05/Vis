@@ -108,3 +108,26 @@ til de to første, så gamle lenker fortsatt virker.
 3. Storage → Create → Blob. `BLOB_READ_WRITE_TOKEN` settes automatisk.
 4. Legg inn `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` (f.eks. `https://vis.no`), GitHub-nøklene og `ANTHROPIC_API_KEY` under Settings → Environment Variables.
 5. Kjør migreringene mot produksjonsdatabasen: `DATABASE_URL=<prod-url> npm run db:migrate`.
+
+## Deploy på Render + Neon
+
+**Neon** (console.neon.tech): lag et prosjekt i regionen *AWS Europe Central 1 (Frankfurt)*.
+Under *Connect* finnes to strenger: den med *Connection pooling* på (verten inneholder
+`-pooler`) er `DATABASE_URL`, den uten er `DATABASE_URL_UNPOOLED`.
+
+**Render** (dashboard.render.com): New → Web Service, koble til repoet, region *Frankfurt*.
+
+| Felt | Verdi |
+| --- | --- |
+| Language | Node |
+| Build Command | `npm ci && npm run db:migrate && npm run build` |
+| Start Command | `npm run start` |
+
+Miljøvariabler: `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, `BETTER_AUTH_SECRET`,
+`BETTER_AUTH_URL` (Render-adressen, f.eks. `https://vis.onrender.com`), `NODE_VERSION=22`,
+`BLOB_READ_WRITE_TOKEN`, og valgfritt GitHub-nøklene og `ANTHROPIC_API_KEY`.
+Ikke sett `NODE_ENV`: da hopper `npm ci` over devDependencies som bygget trenger.
+
+Migreringene kjøres automatisk i hvert bygg. Bilder lagres i Vercel Blob også når appen
+kjører på Render (Render sin disk tømmes ved hver omstart). Lag en Blob-store på vercel.com
+under Storage og kopier `BLOB_READ_WRITE_TOKEN`.
