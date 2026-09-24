@@ -38,12 +38,23 @@ async function findAvailableUsername(base: string) {
   return `${base}-${crypto.randomUUID().slice(0, 8)}`;
 }
 
+const vercelUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined;
+
+// Alle adressene appen selv kjører på. Står BETTER_AUTH_URL litt feil (f.eks. med / på
+// slutten, eller en annen Render-adresse enn den man åpner), avviser Better Auth ellers
+// alle innlogginger og registreringer med INVALID_ORIGIN.
+const ownOrigins = [process.env.BETTER_AUTH_URL, process.env.RENDER_EXTERNAL_URL, vercelUrl].flatMap((url) => {
+  try {
+    return url ? [new URL(url).origin] : [];
+  } catch {
+    return [];
+  }
+});
+
 export const auth = betterAuth({
   appName: "Vis",
-  baseURL:
-    process.env.BETTER_AUTH_URL ??
-    process.env.RENDER_EXTERNAL_URL ??
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined),
+  baseURL: process.env.BETTER_AUTH_URL ?? process.env.RENDER_EXTERNAL_URL ?? vercelUrl,
+  trustedOrigins: ownOrigins,
   database: drizzleAdapter(db, {
     provider: "pg",
     schema: {
@@ -86,6 +97,12 @@ export const auth = betterAuth({
   rateLimit: {
     enabled: true,
     storage: "database",
+    // Standarden er 3 forsøk per 10 sekunder, som er lite når man retter feil i
+    // skjemaet og sender på nytt. Klient-IP-en hentes i app/api/auth/[...all]/route.ts.
+    customRules: {
+      "/sign-up/email": { window: 60, max: 10 },
+      "/sign-in/*": { window: 60, max: 10 },
+    },
   },
   databaseHooks: {
     user: {

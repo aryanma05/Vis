@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 import { authErrorMessage } from "@/lib/auth-errors";
+import PasswordInput from "@/components/PasswordInput";
 import { ui } from "@/components/ui";
 
 export default function LoginForm() {
@@ -17,16 +18,24 @@ export default function LoginForm() {
     const form = new FormData(event.currentTarget);
     const identifier = String(form.get("identifier")).trim();
     const password = String(form.get("password"));
+    if (!identifier || !password) return setError("Fyll inn e-post eller brukernavn og passord.");
     setPending(true);
     setError(null);
 
-    // Både e-post og brukernavn fungerer.
-    const { data, error } = identifier.includes("@")
-      ? await authClient.signIn.email({ email: identifier, password })
-      : await authClient.signIn.username({ username: identifier.toLowerCase(), password });
+    // Både e-post og brukernavn (også med @ foran) fungerer.
+    const isEmail = /^[^@\s]+@[^@\s]+$/.test(identifier);
+    let result;
+    try {
+      result = isEmail
+        ? await authClient.signIn.email({ email: identifier, password })
+        : await authClient.signIn.username({ username: identifier.replace(/^@/, "").toLowerCase(), password });
+    } catch {
+      result = { data: null, error: {} };
+    }
+    const { data, error } = result;
 
     if (error) {
-      setError(authErrorMessage(error));
+      setError(authErrorMessage(error, "login"));
       setPending(false);
       return;
     }
@@ -44,17 +53,31 @@ export default function LoginForm() {
         <label htmlFor="identifier" className={ui.label}>
           E-post eller brukernavn
         </label>
-        <input id="identifier" name="identifier" type="text" required autoComplete="username" className={ui.input} />
+        <input
+          id="identifier"
+          name="identifier"
+          type="text"
+          required
+          autoComplete="username"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          className={ui.input}
+        />
       </div>
 
       <div>
         <label htmlFor="password" className={ui.label}>
           Passord
         </label>
-        <input id="password" name="password" type="password" required autoComplete="current-password" className={ui.input} />
+        <PasswordInput id="password" name="password" required autoComplete="current-password" />
       </div>
 
-      {error && <p className={ui.error}>{error}</p>}
+      {error && (
+        <p role="alert" className={ui.error}>
+          {error}
+        </p>
+      )}
 
       <button type="submit" disabled={pending} className={`${ui.primary} mt-2 w-full`}>
         {pending ? "Logger inn…" : "Logg inn"}
