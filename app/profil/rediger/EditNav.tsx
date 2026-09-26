@@ -1,38 +1,36 @@
 import Link from "next/link";
-import { ArrowIcon } from "@/components/icons";
+import { ArrowUpRight } from "lucide-react";
+import { Tabs } from "@/components/ui/tabs";
 
 export default function EditNav({ active, username }: { active: "profil" | "cv" | "konto"; username: string }) {
-  const item = (href: string, label: string, isActive: boolean) => (
-    <Link
-      href={href}
-      className={`-mb-px border-b-2 pb-4 text-sm font-medium transition ${
-        isActive ? "border-primary text-fg" : "border-transparent text-mist hover:text-fg"
-      }`}
-    >
-      {label}
-    </Link>
-  );
-
   return (
     <div className="border-b border-line">
-      <div className="mx-auto max-w-5xl px-6 pt-12">
-        <div className="flex items-end justify-between gap-4">
+      <div className="mx-auto max-w-6xl px-5 pt-10 md:px-10 md:pt-14">
+        <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-mist/70">Innstillinger</p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight md:text-5xl">Rediger profil</h1>
+            <p className="label-mono">Innstillinger</p>
+            <h1 className="mt-3 text-4xl font-bold tracking-tight md:text-5xl">
+              {active === "profil" ? "Profil og visittkort" : active === "cv" ? "CV" : "Konto og varsler"}
+            </h1>
           </div>
           <Link
             href={`/@${username}${active === "cv" ? "?fane=cv" : ""}`}
-            className="group mb-1 inline-flex items-center gap-2 text-sm text-mist hover:text-fg"
+            className="group mb-1 inline-flex items-center gap-1.5 text-sm text-mist transition hover:text-fg"
           >
-            Se profilen <ArrowIcon className="h-4 w-4 transition group-hover:translate-x-0.5" />
+            Se profilen <ArrowUpRight className="size-4 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
           </Link>
         </div>
-        <nav className="mt-10 flex gap-8">
-          {item("/profil/rediger", "Profil", active === "profil")}
-          {item("/profil/rediger/cv", "CV", active === "cv")}
-          {item("/profil/rediger/konto", "Konto og personvern", active === "konto")}
-        </nav>
+        <div className="mt-8">
+          <Tabs
+            label="Innstillinger"
+            active={active}
+            items={[
+              { key: "profil", label: "Profil", href: "/profil/rediger" },
+              { key: "cv", label: "CV", href: "/profil/rediger/cv" },
+              { key: "konto", label: "Konto og varsler", href: "/profil/rediger/konto" },
+            ]}
+          />
+        </div>
       </div>
     </div>
   );

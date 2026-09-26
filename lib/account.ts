@@ -1,11 +1,12 @@
 import "server-only";
 
 import { and, asc, eq, inArray } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { db, schema } from "@/db";
 import { getCv } from "@/lib/cv";
 import { deleteStoredFiles, storageKeyFromUrl } from "@/lib/storage";
 
-const { account, comment, cvDocument, profile, project, projectImage, projectTag, tag, user } = schema;
+const { account, comment, cvDocument, follow, profile, project, projectImage, projectTag, reaction, tag, user } = schema;
 
 // Har brukeren et passord (og ikke bare GitHub-innlogging)?
 export async function hasPassword(userId: string) {
@@ -51,7 +52,9 @@ export async function getAccountInfo(userId: string) {
     .where(eq(user.id, userId))
     .limit(1);
   if (!row) return null;
-  return { ...row, hasPassword: await hasPassword(userId) };
+  const providers = await db.select({ provider: account.providerId }).from(account).where(eq(account.userId, userId));
+  const linked = new Set(providers.map((p) => p.provider));
+  return { ...row, hasPassword: linked.has("credential"), github: linked.has("github"), google: linked.has("google") };
 }
 
 // Alt vi har lagret om brukeren, som JSON (retten til innsyn og dataportabilitet i GDPR).
@@ -70,7 +73,20 @@ export async function exportUserData(userId: string) {
     .where(eq(user.id, userId))
     .limit(1);
   const [profileRow] = await db
-    .select({ headline: profile.headline, bio: profile.bio, location: profile.location, websiteUrl: profile.websiteUrl, links: profile.links })
+    .select({
+      headline: profile.headline,
+      bio: profile.bio,
+      location: profile.location,
+      websiteUrl: profile.websiteUrl,
+      links: profile.links,
+      readme: profile.readme,
+      lookingFor: profile.lookingFor,
+      openTo: profile.openTo,
+      customSections: profile.customSections,
+      accentColor: profile.accentColor,
+      cvTemplate: profile.cvTemplate,
+      notificationPrefs: profile.notificationPrefs,
+    })
     .from(profile)
     .where(eq(profile.userId, userId))
     .limit(1);
@@ -83,8 +99,12 @@ export async function exportUserData(userId: string) {
       description: project.description,
       repoUrl: project.repoUrl,
       demoUrl: project.demoUrl,
+      videoUrl: project.videoUrl,
+      role: project.role,
       projectDate: project.projectDate,
       status: project.status,
+      pinned: project.pinned,
+      viewCount: project.viewCount,
       createdAt: project.createdAt,
     })
     .from(project)
@@ -106,7 +126,9 @@ export async function exportUserData(userId: string) {
       ])
     : [[], []];
 
-  const [cv, [cvDoc], comments, accounts] = await Promise.all([
+  const following = alias(user, "following");
+  const follower = alias(user, "follower");
+  const [cv, [cvDoc], comments, accounts, followingRows, followerRows, reactions] = await Promise.all([
     getCv(userId),
     db
       .select({ fileName: cvDocument.fileName, fileUrl: cvDocument.fileUrl, isPublic: cvDocument.isPublic, updatedAt: cvDocument.updatedAt })
@@ -119,6 +141,20 @@ export async function exportUserData(userId: string) {
       .where(eq(comment.authorId, userId))
       .orderBy(asc(comment.createdAt)),
     db.select({ provider: account.providerId, createdAt: account.createdAt }).from(account).where(eq(account.userId, userId)),
+    db
+      .select({ username: following.username, since: follow.createdAt })
+      .from(follow)
+      .innerJoin(following, eq(following.id, follow.followingId))
+      .where(eq(follow.followerId, userId)),
+    db
+      .select({ username: follower.username, since: follow.createdAt })
+      .from(follow)
+      .innerJoin(follower, eq(follower.id, follow.followerId))
+      .where(eq(follow.followingId, userId)),
+    db
+      .select({ projectId: reaction.projectId, type: reaction.type, createdAt: reaction.createdAt })
+      .from(reaction)
+      .where(eq(reaction.userId, userId)),
   ]);
 
   return {
@@ -133,5 +169,8 @@ export async function exportUserData(userId: string) {
     cv,
     cvDocument: cvDoc ?? null,
     comments,
+    following: followingRows,
+    followers: followerRows,
+    reactions,
   };
 }

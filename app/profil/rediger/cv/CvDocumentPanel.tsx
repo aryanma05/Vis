@@ -2,12 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
-import {
-  addCvPageAction,
-  deleteCvDocumentAction,
-  setCvVisibilityAction,
-  uploadCvDocumentAction,
-} from "@/app/actions/cv";
+import { FileUp, Sparkles, Trash2 } from "lucide-react";
+import { addCvPageAction, deleteCvDocumentAction, setCvVisibilityAction, uploadCvDocumentAction } from "@/app/actions/cv";
+import { Button, Spinner } from "@/components/ui/button";
+import Switch from "@/components/ui/switch";
+import { toast } from "@/components/ui/toast";
 import { renderPdfPages } from "@/lib/pdf-pages";
 import { imageDimensions, prepareImage } from "@/lib/prepare-image";
 
@@ -26,10 +25,12 @@ export default function CvDocumentPanel({
   initial,
   onAutofill,
   autofilling,
+  canParse,
 }: {
   initial: DocState;
   onAutofill: () => void;
   autofilling: boolean;
+  canParse: boolean;
 }) {
   const router = useRouter();
   const [doc, setDoc] = useState(initial);
@@ -49,12 +50,12 @@ export default function CvDocumentPanel({
 
     try {
       if (isPdf) {
-        setStatus("Leser PDF-en…");
+        setStatus("Leser PDF-en …");
         const { pages, totalPages } = await renderPdfPages(file, {
-          onProgress: (i, total) => setStatus(`Lager bilde av side ${i} av ${total}…`),
+          onProgress: (i, total) => setStatus(`Lager bilde av side ${i} av ${total} …`),
         });
 
-        setStatus("Laster opp…");
+        setStatus("Laster opp …");
         const fd = new FormData();
         fd.append("file", file);
         const uploaded = await uploadCvDocumentAction(fd);
@@ -62,7 +63,7 @@ export default function CvDocumentPanel({
 
         const stored: NonNullable<DocState>["pages"] = [];
         for (const [index, page] of pages.entries()) {
-          setStatus(`Laster opp side ${index + 1} av ${pages.length}…`);
+          setStatus(`Laster opp side ${index + 1} av ${pages.length} …`);
           const pageData = new FormData();
           pageData.append("page", new File([page.blob], `side-${index + 1}`, { type: page.blob.type }));
           pageData.append("index", String(index));
@@ -76,24 +77,19 @@ export default function CvDocumentPanel({
         setDoc({ fileUrl: uploaded.data.url, fileName: file.name, mimeType: "application/pdf", pages: stored, isPublic: doc?.isPublic ?? true });
         if (totalPages > pages.length) setError(`Vi viser de ${pages.length} første sidene av ${totalPages}.`);
       } else {
-        setStatus("Gjør klar bildet…");
+        setStatus("Gjør klar bildet …");
         const prepared = await prepareImage(file);
         const size = await imageDimensions(prepared);
-        setStatus("Laster opp…");
+        setStatus("Laster opp …");
         const fd = new FormData();
         fd.append("file", prepared);
         fd.append("width", String(size.width));
         fd.append("height", String(size.height));
         const uploaded = await uploadCvDocumentAction(fd);
         if (!uploaded.ok) throw new Error(uploaded.error);
-        setDoc({
-          fileUrl: uploaded.data.url,
-          fileName: file.name,
-          mimeType: prepared.type,
-          pages: [{ url: uploaded.data.url, ...size }],
-          isPublic: doc?.isPublic ?? true,
-        });
+        setDoc({ fileUrl: uploaded.data.url, fileName: file.name, mimeType: prepared.type, pages: [{ url: uploaded.data.url, ...size }], isPublic: doc?.isPublic ?? true });
       }
+      toast.success("CV-en er lastet opp", canParse ? { description: "Trykk «Fyll ut feltene» for å hente ut innholdet." } : undefined);
       router.refresh();
     } catch (e) {
       setError((e as Error).message || "Noe gikk galt med opplastingen.");
@@ -102,20 +98,19 @@ export default function CvDocumentPanel({
     }
   }
 
-  async function toggleVisibility() {
+  async function toggleVisibility(next: boolean) {
     if (!doc) return;
-    const next = !doc.isPublic;
     setDoc({ ...doc, isPublic: next });
     const result = await setCvVisibilityAction(next);
     if (!result.ok) {
       setDoc({ ...doc, isPublic: !next });
-      setError(result.error);
+      toast.error(result.error);
     }
   }
 
   async function remove() {
     if (!confirm("Fjerne CV-dokumentet fra profilen?")) return;
-    setStatus("Fjerner…");
+    setStatus("Fjerner …");
     const result = await deleteCvDocumentAction();
     setStatus(null);
     if (!result.ok) return setError(result.error);
@@ -156,23 +151,26 @@ export default function CvDocumentPanel({
             const file = e.dataTransfer.files?.[0];
             if (file) handleFile(file);
           }}
-          className={`flex w-full flex-col items-center justify-center rounded-2xl border border-dashed px-6 py-16 text-center transition ${
-            dragging ? "border-primary bg-primary/5" : "border-line hover:border-mist/60"
+          className={`blueprint flex w-full flex-col items-center justify-center rounded-3xl border-2 border-dashed px-6 py-14 text-center transition ${
+            dragging ? "border-ice bg-ice/10" : "border-line hover:border-ice/50"
           }`}
         >
           {busy ? (
             <>
-              <span className="h-6 w-6 animate-spin rounded-full border-2 border-line border-t-ice" />
+              <Spinner className="size-6 text-ice" />
               <span className="mt-4 text-mist">{status}</span>
             </>
           ) : (
             <>
-              <span className="text-lg font-medium">Slipp CV-en her</span>
-              <span className="mt-1.5 text-sm text-mist">eller klikk for å velge. PDF (maks 4 MB) eller bilde.</span>
+              <span className="flex size-12 items-center justify-center rounded-2xl border border-line bg-surface text-ice">
+                <FileUp className="size-5" />
+              </span>
+              <span className="mt-4 text-lg font-semibold">Slipp CV-en her</span>
+              <span className="mt-1 text-sm text-mist">eller klikk for å velge · PDF (maks 4 MB) eller bilde</span>
             </>
           )}
         </button>
-        {error && <p className="mt-3 text-sm text-red-300">{error}</p>}
+        {error && <p className="mt-3 text-sm text-danger">{error}</p>}
       </div>
     );
   }
@@ -180,56 +178,45 @@ export default function CvDocumentPanel({
   return (
     <div>
       {picker}
-      <div className="flex gap-5 overflow-x-auto pb-2">
+      <div className="no-scrollbar flex gap-4 overflow-x-auto pb-2">
         {doc.pages.map((page, i) => (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             key={page.url}
             src={page.url}
             alt={`Side ${i + 1}`}
-            className="h-64 w-auto shrink-0 rounded-[2px] bg-white shadow-[0_20px_40px_-20px_rgba(0,0,0,0.8)] ring-1 ring-black/10"
+            className="h-56 w-auto shrink-0 rounded-[3px] bg-white shadow-[0_20px_40px_-20px_rgb(0_0_0/0.8)] ring-1 ring-black/10"
           />
         ))}
-        {doc.pages.length === 0 && (
-          <p className="text-sm text-amber-200">Sidene ble ikke laget ferdig. Last opp filen på nytt.</p>
-        )}
+        {doc.pages.length === 0 && <p className="text-sm text-warn">Sidene ble ikke laget ferdig. Last opp filen på nytt.</p>}
       </div>
 
       <p className="mt-4 truncate text-sm text-mist">{doc.fileName}</p>
 
-      <div className="mt-6 flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          role="switch"
-          aria-checked={doc.isPublic}
-          onClick={toggleVisibility}
-          className="mr-2 inline-flex items-center gap-3 text-sm"
-        >
-          <span className={`relative h-6 w-11 rounded-full transition ${doc.isPublic ? "bg-primary" : "bg-line"}`}>
-            <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-ink transition-all ${doc.isPublic ? "left-[22px]" : "left-0.5"}`} />
-          </span>
-          {doc.isPublic ? "Synlig på profilen" : "Skjult for andre"}
-        </button>
-        <button
-          type="button"
-          onClick={onAutofill}
-          disabled={autofilling}
-          className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-ink transition hover:bg-white disabled:opacity-60"
-        >
-          {autofilling ? "Leser CV-en…" : "Fyll ut feltene fra CV-en"}
-        </button>
-        <button type="button" onClick={() => inputRef.current?.click()} className="rounded-lg border border-line px-4 py-2 text-sm transition hover:border-primary">
-          Bytt fil
-        </button>
-        <button type="button" onClick={remove} className="rounded-lg px-3 py-2 text-sm text-mist hover:text-red-300">
-          Fjern
-        </button>
+      <div className="mt-5 max-w-sm">
+        <Switch
+          checked={doc.isPublic}
+          onChange={toggleVisibility}
+          label={doc.isPublic ? "Synlig på profilen" : "Skjult for andre"}
+          description="Besøkende kan se og laste ned CV-dokumentet når det er synlig."
+        />
       </div>
-      <p className="mt-4 text-xs leading-5 text-mist/60">
-        CV-en blir synlig for alle som besøker profilen din når den er slått på. Fjern gjerne telefonnummer og adresse
-        hvis du ikke vil dele dem.
-      </p>
-      {error && <p className="mt-3 text-sm text-red-300">{error}</p>}
+
+      <div className="mt-6 flex flex-wrap items-center gap-2">
+        {canParse && (
+          <Button size="sm" onClick={onAutofill} loading={autofilling}>
+            <Sparkles className="size-4" /> {autofilling ? "Leser CV-en …" : "Fyll ut feltene fra CV-en"}
+          </Button>
+        )}
+        <Button size="sm" variant="secondary" onClick={() => inputRef.current?.click()}>
+          Bytt fil
+        </Button>
+        <Button size="sm" variant="ghost" onClick={remove} className="hover:text-danger">
+          <Trash2 className="size-4" /> Fjern
+        </Button>
+      </div>
+      <p className="mt-4 text-xs leading-5 text-mist/70">Fjern gjerne telefonnummer og adresse fra CV-en hvis du ikke vil dele dem med alle.</p>
+      {error && <p className="mt-3 text-sm text-danger">{error}</p>}
     </div>
   );
 }

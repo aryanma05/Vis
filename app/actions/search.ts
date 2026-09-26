@@ -3,6 +3,7 @@
 import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { publicProject } from "@/lib/projects";
+import { outer } from "@/lib/sql";
 
 const { profile, project, projectImage, tag, user } = schema;
 
@@ -32,7 +33,7 @@ export async function quickSearchAction(query: string): Promise<QuickResult> {
         id: project.id,
         title: project.title,
         owner: user.name,
-        cover: sql<string | null>`(select ${projectImage.url} from ${projectImage} where ${projectImage.projectId} = ${project.id} order by ${projectImage.position} limit 1)`,
+        cover: sql<string | null>`(select ${projectImage.url} from ${projectImage} where ${projectImage.projectId} = ${outer(project.id)} order by ${projectImage.position} limit 1)`,
       })
       .from(project)
       .innerJoin(user, eq(user.id, project.ownerId))

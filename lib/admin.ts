@@ -7,6 +7,7 @@ import { log } from "@/lib/log";
 import { isUuid } from "@/lib/projects";
 import { UserFacingError } from "@/lib/result";
 import { getCurrentUser, type CurrentUser } from "@/lib/session";
+import { outer } from "@/lib/sql";
 
 const { comment, project, report, session, user } = schema;
 
@@ -89,8 +90,8 @@ export async function listUsers(query: string, limit = 50) {
       banReason: user.banReason,
       banExpires: user.banExpires,
       createdAt: user.createdAt,
-      projects: sql<number>`(select count(*)::int from ${project} where ${project.ownerId} = ${user.id})`,
-      reports: sql<number>`(select count(*)::int from ${report} where ${report.targetOwnerId} = ${user.id})`,
+      projects: sql<number>`(select count(*)::int from ${project} where ${project.ownerId} = ${outer(user.id)})`,
+      reports: sql<number>`(select count(*)::int from ${report} where ${report.targetOwnerId} = ${outer(user.id)})`,
     })
     .from(user)
     .where(q ? or(ilike(user.name, like), ilike(user.username, like), ilike(user.email, like)) : undefined)

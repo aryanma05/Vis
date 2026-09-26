@@ -54,10 +54,7 @@ export default function CommentForm({
   }, [body]);
 
   useEffect(() => {
-    if (!mention || mention.query.length < 1) {
-      setPeople([]);
-      return;
-    }
+    if (!mention?.query) return;
     const timer = setTimeout(async () => {
       const result = await quickSearchAction(mention.query);
       setPeople(result.people);
@@ -101,7 +98,9 @@ export default function CommentForm({
       router.refresh();
     });
 
-  const showPeople = mention && people.length > 0;
+  // Forslagene gjelder bare mens man skriver en @omtale.
+  const suggestions = mention?.query ? people : [];
+  const showPeople = suggestions.length > 0;
 
   return (
     <form
@@ -126,17 +125,17 @@ export default function CommentForm({
               if (showPeople) {
                 if (e.key === "ArrowDown") {
                   e.preventDefault();
-                  setActive((i) => (i + 1) % people.length);
+                  setActive((i) => (i + 1) % suggestions.length);
                   return;
                 }
                 if (e.key === "ArrowUp") {
                   e.preventDefault();
-                  setActive((i) => (i - 1 + people.length) % people.length);
+                  setActive((i) => (i - 1 + suggestions.length) % suggestions.length);
                   return;
                 }
                 if (e.key === "Enter" || e.key === "Tab") {
                   e.preventDefault();
-                  pick(people[active]);
+                  pick(suggestions[active]);
                   return;
                 }
                 if (e.key === "Escape") {
@@ -173,7 +172,7 @@ export default function CommentForm({
 
         {showPeople && (
           <ul role="listbox" aria-label="Nevn en person" className="absolute left-0 right-0 top-full z-30 mt-2 overflow-hidden rounded-2xl border border-line bg-surface p-1.5 shadow-[0_24px_48px_-20px_rgb(0_0_0/0.6)] sm:right-auto sm:w-80">
-            {people.map((p, i) => (
+            {suggestions.map((p, i) => (
               <li key={p.username}>
                 <button
                   type="button"

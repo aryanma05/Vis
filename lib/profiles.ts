@@ -10,6 +10,7 @@ import { getCvDocument } from "@/lib/cv-document";
 import { getProjectsByOwner, publicProject } from "@/lib/projects";
 import { getFollowCounts, isFollowing, personColumns, withFollowState, type PersonCard } from "@/lib/social";
 import type { ProfileInput } from "@/lib/validation";
+import { outer } from "@/lib/sql";
 
 const { cvSkill, follow, profile, project, projectImage, projectTag, reaction, tag, user } = schema;
 
@@ -159,7 +160,7 @@ export async function searchPeople(
         ilike(user.username, like),
         ilike(profile.headline, like),
         ilike(profile.location, like),
-        sql`exists (select 1 from ${cvSkill} where ${cvSkill.userId} = ${user.id} and ${cvSkill.name} ilike ${like})`,
+        sql`exists (select 1 from ${cvSkill} where ${cvSkill.userId} = ${outer(user.id)} and ${cvSkill.name} ilike ${like})`,
       )!,
     );
   }
@@ -168,7 +169,7 @@ export async function searchPeople(
   if (tagSlug) {
     conditions.push(
       sql`exists (select 1 from ${project} p join ${projectTag} pt on pt.project_id = p.id join ${tag} t on t.id = pt.tag_id
-        where p.owner_id = ${user.id} and p.status = 'published' and p.removed_at is null and t.slug = ${tagSlug})`,
+        where p.owner_id = ${outer(user.id)} and p.status = 'published' and p.removed_at is null and t.slug = ${tagSlug})`,
     );
   }
 
@@ -221,14 +222,14 @@ export async function getFeaturedProfiles(limit = 6): Promise<FeaturedProfile[]>
       accentColor: profile.accentColor,
       projectCount: personColumns.projectCount,
       followerCount: personColumns.followerCount,
-      reactions: sql<number>`(select count(*)::int from ${reaction} r join ${project} p on p.id = r.project_id where p.owner_id = ${user.id})`,
+      reactions: sql<number>`(select count(*)::int from ${reaction} r join ${project} p on p.id = r.project_id where p.owner_id = ${outer(user.id)})`,
     })
     .from(user)
     .leftJoin(profile, eq(profile.userId, user.id))
     .where(and(notBanned, sql`${personColumns.projectCount} > 0`))
     .orderBy(
       desc(sql`(${user.image} is not null)::int + (${profile.headline} is not null)::int`),
-      desc(sql`${personColumns.followerCount} * 2 + ${personColumns.projectCount} * 3 + (select count(*) from ${reaction} r join ${project} p on p.id = r.project_id where p.owner_id = ${user.id})`),
+      desc(sql`${personColumns.followerCount} * 2 + ${personColumns.projectCount} * 3 + (select count(*) from ${reaction} r join ${project} p on p.id = r.project_id where p.owner_id = ${outer(user.id)})`),
     )
     .limit(limit);
 

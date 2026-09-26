@@ -65,10 +65,8 @@ export default function CommandPalette({ loggedIn, username }: { loggedIn: boole
   useEffect(() => {
     if (!open) return;
     const q = query.trim();
-    if (!q) {
-      setResults(EMPTY);
-      return;
-    }
+    // Uten søkeord vises snarveiene, så de gamle treffene trenger ikke tømmes her.
+    if (!q) return;
     const timer = setTimeout(() => {
       startTransition(async () => {
         const r = await quickSearchAction(q);

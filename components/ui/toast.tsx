@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useSyncExternalStore } from "react";
 import { CheckCircle2, Info, TriangleAlert, X } from "lucide-react";
 
 // Små beskjeder nede i hjørnet («Lagret», «Lenken er kopiert»). Kan kalles fra
@@ -45,11 +45,8 @@ const ICONS = { success: CheckCircle2, error: TriangleAlert, info: Info };
 const TONE = { success: "text-success", error: "text-danger", info: "text-ice" };
 
 export function Toaster() {
+  // Serveren og første klientgjengivelse ser en tom liste, så de er like.
   const list = useSyncExternalStore(subscribe, () => toasts, () => EMPTY);
-  // Unngå at servergjengivelsen og første klientgjengivelse er ulike.
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-  if (!mounted) return null;
 
   return (
     <div

@@ -16,6 +16,9 @@ export function siteUrl(): string {
   return "http://localhost:3000";
 }
 
+// Domenet uten protokoll, til visning (f.eks. i delingsbilder).
+export const siteHost = () => new URL(siteUrl()).host;
+
 export const SITE_NAME = "Vis";
 export const SITE_TAGLINE = "Din faglige identitet, samlet på ett sted.";
 export const SITE_DESCRIPTION =

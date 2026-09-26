@@ -1,4 +1,7 @@
+import type { Metadata } from "next";
 import { ButtonLink } from "@/components/ui/button";
+
+export const metadata: Metadata = { title: "Fant ikke siden", robots: { index: false } };
 
 export default function NotFound() {
   return (
