@@ -8,6 +8,7 @@ import { log } from "@/lib/log";
 import { isUuid } from "@/lib/projects";
 import { UserFacingError } from "@/lib/result";
 import { profilePath, projectPath } from "@/lib/site";
+import { outer } from "@/lib/sql";
 
 const { comment, project, report, user } = schema;
 
@@ -109,9 +110,9 @@ export async function listReports(status: "open" | "resolved" | "dismissed" | "a
       ownerName: owner.name,
       ownerUsername: owner.username,
       ownerBanned: owner.banned,
-      sameTarget: sql<number>`(select count(*)::int from ${report} r2 where r2.target_type = ${report.targetType} and r2.target_id = ${report.targetId})`,
-      projectRemoved: sql<boolean>`${report.targetType} = 'project' and exists (select 1 from ${project} p where p.id::text = ${report.targetId} and p.removed_at is not null)`,
-      commentExists: sql<boolean>`${report.targetType} <> 'comment' or exists (select 1 from ${comment} c where c.id::text = ${report.targetId})`,
+      sameTarget: sql<number>`(select count(*)::int from ${report} r2 where r2.target_type = ${outer(report.targetType)} and r2.target_id = ${outer(report.targetId)})`,
+      projectRemoved: sql<boolean>`${report.targetType} = 'project' and exists (select 1 from ${project} p where p.id::text = ${outer(report.targetId)} and p.removed_at is not null)`,
+      commentExists: sql<boolean>`${report.targetType} <> 'comment' or exists (select 1 from ${comment} c where c.id::text = ${outer(report.targetId)})`,
     })
     .from(report)
     .leftJoin(reporter, eq(reporter.id, report.reporterId))

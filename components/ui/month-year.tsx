@@ -1,6 +1,6 @@
 "use client";
 
-import { inputClass } from "@/components/form";
+import { selectClass } from "@/components/ui/field";
 
 const MONTHS = ["jan", "feb", "mar", "apr", "mai", "jun", "jul", "aug", "sep", "okt", "nov", "des"];
 const THIS_YEAR = new Date().getFullYear();
@@ -28,7 +28,7 @@ export default function MonthYear({
         value={month}
         disabled={disabled || !year}
         onChange={(e) => update(year, e.target.value)}
-        className={`${inputClass} w-24 disabled:opacity-40`}
+        className={`${selectClass} w-[6.5rem] disabled:opacity-40`}
       >
         <option value="">Mnd</option>
         {MONTHS.map((m, i) => (
@@ -42,7 +42,7 @@ export default function MonthYear({
         value={year}
         disabled={disabled}
         onChange={(e) => update(e.target.value, month)}
-        className={`${inputClass} w-28 disabled:opacity-40`}
+        className={`${selectClass} w-28 disabled:opacity-40`}
       >
         <option value="">År</option>
         {YEARS.map((y) => (

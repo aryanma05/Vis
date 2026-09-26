@@ -3,8 +3,9 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createProjectAction, updateProjectAction, uploadProjectImagesAction } from "@/app/actions/projects";
-import { Field, inputClass } from "@/components/form";
-import { FolderIcon } from "@/components/icons";
+import { Check, FolderOpen } from "lucide-react";
+import { Button, Spinner } from "@/components/ui/button";
+import { Field, inputClass } from "@/components/ui/field";
 import {
   analyzeFolder,
   entriesFromDrop,
@@ -137,37 +138,35 @@ export default function FolderImport() {
             const item = e.dataTransfer.items?.[0];
             if (item) analyze(entriesFromDrop(item));
           }}
-          className={`flex flex-col items-center justify-center rounded-2xl border border-dashed px-6 py-20 text-center transition ${
-            dragging ? "border-primary bg-primary/5" : "border-line"
+          className={`blueprint flex flex-col items-center justify-center rounded-3xl border-2 border-dashed px-6 py-20 text-center transition ${
+            dragging ? "border-ice bg-ice/10" : "border-line"
           }`}
         >
           {status ? (
             <>
-              <span className="h-6 w-6 animate-spin rounded-full border-2 border-line border-t-ice" />
+              <Spinner className="size-6 text-ice" />
               <span className="mt-4 text-mist">{status}</span>
             </>
           ) : (
             <>
-              <FolderIcon className="h-10 w-10 text-mist" />
-              <p className="mt-4 text-lg font-medium">Dra prosjektmappen hit</p>
-              <p className="mt-1.5 max-w-md text-sm text-mist">
+              <span className="flex size-16 items-center justify-center rounded-3xl border border-line bg-surface text-ice">
+                <FolderOpen className="size-7" />
+              </span>
+              <p className="mt-5 text-2xl font-bold tracking-tight">Dra prosjektmappen hit</p>
+              <p className="mt-2 max-w-md text-sm leading-6 text-mist">
                 Vi henter tittel, beskrivelse og skjermbilder fra README-en, og ser hvilke teknologier du har brukt.
               </p>
-              <button
-                type="button"
-                onClick={choose}
-                className="mt-6 rounded-lg border border-line px-4 py-2 text-sm font-medium transition hover:border-primary"
-              >
+              <Button variant="secondary" className="mt-6" onClick={choose}>
                 Velg mappe
-              </button>
+              </Button>
             </>
           )}
         </div>
-        <p className="mt-4 text-xs leading-5 text-mist/60">
+        <p className="mt-4 text-xs leading-5 text-mist/70">
           Koden din lastes ikke opp. Vi leser bare README, package.json og lignende filer i nettleseren din, og laster opp
           skjermbildene du velger. node_modules, .git og byggmapper hoppes over.
         </p>
-        {error && <p className="mt-3 text-sm text-red-300">{error}</p>}
+        {error && <p className="mt-3 text-sm text-danger">{error}</p>}
       </div>
     );
   }
@@ -176,14 +175,15 @@ export default function FolderImport() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between gap-4 rounded-xl border border-line px-4 py-3 text-sm">
-        <span className="text-mist">
+      <div className="flex items-center justify-between gap-4 rounded-2xl border border-line px-4 py-3 text-sm">
+        <span className="flex items-center gap-2 text-mist">
+          <Check className="size-4 text-success" />
           Leste {draft.fileCount.toLocaleString("nb-NO")} filer
           {draft.description ? " · fant README" : " · fant ingen README"}
         </span>
-        <button type="button" onClick={() => setDraft(null)} className="text-mist hover:text-fg">
+        <Button variant="ghost" size="xs" onClick={() => setDraft(null)}>
           Velg en annen mappe
-        </button>
+        </Button>
       </div>
 
       <div className="grid gap-5 md:grid-cols-2">
@@ -229,18 +229,18 @@ export default function FolderImport() {
                       return next;
                     })
                   }
-                  className={`group relative overflow-hidden rounded-lg border text-left transition ${on ? "border-primary" : "border-line opacity-50"}`}
+                  className={`group relative overflow-hidden rounded-2xl border bg-surface text-left transition ${on ? "border-ice/70" : "border-line opacity-50 hover:opacity-80"}`}
                   aria-pressed={on}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={previews.get(img.path)} alt="" className="aspect-[16/10] w-full object-cover" />
-                  <span className="block truncate px-2 py-1.5 font-mono text-[10px] text-mist">{img.path}</span>
+                  <span className="block truncate px-2.5 py-2 font-mono text-[10.5px] text-mist">{img.path}</span>
                   <span
-                    className={`absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full text-xs ${
-                      on ? "bg-primary text-ink" : "bg-ink/80 text-mist"
+                    className={`absolute right-2 top-2 flex size-6 items-center justify-center rounded-full ${
+                      on ? "bg-primary text-on-primary" : "bg-black/50 text-transparent"
                     }`}
                   >
-                    {on ? "✓" : ""}
+                    <Check className="size-3.5" strokeWidth={3} />
                   </span>
                 </button>
               );
@@ -258,18 +258,13 @@ export default function FolderImport() {
         </details>
       )}
 
-      {error && <p className="text-sm text-red-300">{error}</p>}
+      {error && <p className="text-sm text-danger">{error}</p>}
 
-      <div className="flex items-center gap-4">
-        <button
-          type="button"
-          onClick={create}
-          disabled={status !== null || !draft.title.trim()}
-          className="rounded-lg bg-primary px-5 py-3 font-semibold text-ink transition hover:bg-white disabled:opacity-60"
-        >
+      <div className="flex flex-wrap items-center gap-4">
+        <Button onClick={create} disabled={!draft.title.trim()} loading={status !== null}>
           {status ?? "Opprett prosjekt som utkast"}
-        </button>
-        <p className="text-sm text-mist/70">Du kan se over og publisere det etterpå.</p>
+        </Button>
+        <p className="text-sm text-mist/80">Du kan se over og publisere det etterpå.</p>
       </div>
     </div>
   );

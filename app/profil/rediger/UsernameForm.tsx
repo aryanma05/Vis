@@ -2,19 +2,19 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import UsernameField, { useUsernameCheck } from "@/components/UsernameField";
+import { Button } from "@/components/ui/button";
+import { Section } from "@/components/ui/field";
+import { toast } from "@/components/ui/toast";
 import { authClient } from "@/lib/auth-client";
 import { authErrorMessage } from "@/lib/auth-errors";
 import { usernameError } from "@/lib/username";
-import { Section } from "@/components/form";
-import UsernameField, { useUsernameCheck } from "@/components/UsernameField";
-import { ui } from "@/components/ui";
 
 // Egen form, fordi brukernavnet endres via Better Auth og ikke profil-actionen.
 export default function UsernameForm({ current }: { current: string }) {
   const router = useRouter();
   const [value, setValue] = useState(current);
   const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const check = useUsernameCheck(value, { current });
 
@@ -30,7 +30,8 @@ export default function UsernameForm({ current }: { current: string }) {
       // displayUsername beholder store bokstaver, username lagres med små.
       const { error } = await authClient.updateUser({ username: value, displayUsername: value });
       if (error) return setError(authErrorMessage(error));
-      setSaved(value);
+      toast.success(`Profilen din ligger nå på vis.no/@${value}`);
+      router.push(`/profil/rediger`);
       router.refresh();
     } catch {
       setError(authErrorMessage({}));
@@ -41,10 +42,7 @@ export default function UsernameForm({ current }: { current: string }) {
 
   return (
     <form onSubmit={save}>
-      <Section
-        title="Brukernavn"
-        description="Adressen til profilen din. Bytter du, slutter gamle lenker til profilen å virke."
-      >
+      <Section title="Profiladresse" description="Brukernavnet ditt. Bytter du, slutter gamle lenker til profilen å virke.">
         <div className="max-w-md">
           <UsernameField
             value={value}
@@ -53,15 +51,11 @@ export default function UsernameForm({ current }: { current: string }) {
             onChange={(next) => {
               setValue(next);
               setError(null);
-              setSaved(null);
             }}
           />
-          <div className="mt-4 flex flex-wrap items-center gap-4">
-            <button type="submit" disabled={pending || value === current || !value} className={`${ui.secondary} py-2.5`}>
-              {pending ? "Lagrer…" : "Bytt brukernavn"}
-            </button>
-            {saved && <p className="text-sm text-ice">✓ Profilen din ligger nå på vis.no/@{saved}</p>}
-          </div>
+          <Button type="submit" variant="secondary" size="sm" className="mt-4" loading={pending} disabled={value === current || !value}>
+            Bytt brukernavn
+          </Button>
         </div>
       </Section>
     </form>

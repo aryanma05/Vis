@@ -191,29 +191,33 @@ body::after {
   }
 }
 
-::selection {
-  background: var(--ice);
-  color: var(--on-primary);
-}
+/* Grunnstiler ligger i base-laget, så Tailwind-klasser som truncate og
+   outline-none fortsatt vinner over dem. */
+@layer base {
+  ::selection {
+    background: var(--ice);
+    color: var(--on-primary);
+  }
 
-:focus-visible {
-  outline: 2px solid var(--ice);
-  outline-offset: 2px;
-}
+  :focus-visible {
+    outline: 2px solid var(--ice);
+    outline-offset: 2px;
+  }
 
-* {
-  scrollbar-width: thin;
-  scrollbar-color: var(--line) transparent;
-}
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--line) transparent;
+  }
 
-h1,
-h2,
-h3 {
-  text-wrap: balance;
-}
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
 
-p {
-  text-wrap: pretty;
+  p {
+    text-wrap: pretty;
+  }
 }
 
 @keyframes fade {
@@ -520,6 +524,59 @@ dialog.modal[open] > * {
   color: var(--ice);
   font-weight: 600;
   text-decoration: none;
+}
+
+/* Tekstsider (components/ProsePage.tsx). */
+.prose-vis {
+  color: color-mix(in srgb, var(--fg) 82%, var(--mist));
+  font-size: 1.0625rem;
+  line-height: 1.8;
+}
+.prose-vis h2 {
+  margin-top: 3rem;
+  color: var(--fg);
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  scroll-margin-top: 6rem;
+}
+.prose-vis h3 {
+  margin-top: 2rem;
+  color: var(--fg);
+  font-size: 1.1rem;
+  font-weight: 650;
+}
+.prose-vis p,
+.prose-vis ul,
+.prose-vis ol {
+  margin-top: 1rem;
+}
+.prose-vis ul {
+  list-style: disc;
+  padding-left: 1.3rem;
+}
+.prose-vis ol {
+  list-style: decimal;
+  padding-left: 1.3rem;
+}
+.prose-vis li + li {
+  margin-top: 0.4rem;
+}
+.prose-vis li::marker {
+  color: var(--mist);
+}
+.prose-vis strong {
+  color: var(--fg);
+  font-weight: 650;
+}
+.prose-vis a {
+  color: var(--fg);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--ice) 55%, transparent);
+  text-underline-offset: 4px;
+}
+.prose-vis a:hover {
+  text-decoration-color: var(--ice);
 }
 
 /* Kompakt variant for kommentarer og korte tekster. */

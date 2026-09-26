@@ -70,12 +70,12 @@ export default function ReactionBar({
             onClick={() => toggle(type)}
             aria-pressed={on}
             title={disabled ? "Du kan ikke reagere på ditt eget prosjekt" : REACTION_LABELS[type]}
-            className={`inline-flex h-10 items-center gap-2 rounded-xl border px-3.5 text-sm font-medium transition active:scale-95 ${
+            className={`inline-flex h-10 items-center gap-1.5 rounded-xl border px-3 text-sm font-medium transition active:scale-95 sm:gap-2 sm:px-3.5 ${
               on ? ACTIVE[type] : "border-line text-fg/90 hover:border-mist/50 hover:bg-surface"
             } ${disabled ? "cursor-default opacity-80 hover:bg-transparent" : ""}`}
           >
             <Icon className={`size-4 ${popped === type ? "animate-[pop_420ms_var(--ease-spring)]" : ""}`} fill={on && type === "like" ? "currentColor" : "none"} aria-hidden="true" />
-            <span>{REACTION_LABELS[type]}</span>
+            <span className="max-sm:sr-only">{REACTION_LABELS[type]}</span>
             <span className={`tabular-nums ${on ? "" : "text-mist"}`}>{state.counts[type]}</span>
           </button>
         );

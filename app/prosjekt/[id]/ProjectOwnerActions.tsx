@@ -71,34 +71,38 @@ export default function ProjectOwnerActions({
       <ButtonLink href={`/prosjekt/${projectId}/rediger`} variant="secondary" size="sm">
         <PenLine className="size-4" /> Rediger
       </ButtonLink>
-      {!draft && !removed && (
-        <Button
-          variant="secondary"
-          size="sm"
-          disabled={pending}
-          onClick={() => run(() => setProjectPinnedAction(projectId, !pinned), pinned ? "Løsnet fra profilen" : "Festet på profilen")}
-        >
-          {pinned ? <PinOff className="size-4" /> : <Pin className="size-4" />}
-          {pinned ? "Løsne" : "Fest på profilen"}
+      <div className="flex w-full items-center gap-2 sm:w-auto">
+        {!draft && !removed && (
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={pending}
+            className="max-sm:flex-1"
+            onClick={() => run(() => setProjectPinnedAction(projectId, !pinned), pinned ? "Løsnet fra profilen" : "Festet på profilen")}
+          >
+            {pinned ? <PinOff className="size-4" /> : <Pin className="size-4" />}
+            {pinned ? "Løsne" : <><span className="sm:hidden">Fest</span><span className="max-sm:hidden">Fest på profilen</span></>}
+          </Button>
+        )}
+        {!removed && (
+          <Button
+            size="sm"
+            variant={draft ? "primary" : "secondary"}
+            disabled={pending}
+            className="max-sm:flex-1"
+            onClick={() => run(() => setProjectStatusAction(projectId, draft ? "published" : "draft"), draft ? "Prosjektet er publisert 🎉" : "Gjort om til utkast")}
+          >
+            {draft ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
+            {draft ? "Publiser" : <><span className="sm:hidden">Utkast</span><span className="max-sm:hidden">Gjør til utkast</span></>}
+          </Button>
+        )}
+        <ButtonLink href="/innsikt" variant="ghost" size="icon-sm" aria-label="Innsikt">
+          <BarChart3 className="size-4" />
+        </ButtonLink>
+        <Button variant="ghost" size="icon-sm" aria-label="Slett prosjektet" onClick={() => setConfirmDelete(true)} className="hover:text-danger">
+          <Trash2 className="size-4" />
         </Button>
-      )}
-      <ButtonLink href="/innsikt" variant="ghost" size="sm" aria-label="Innsikt">
-        <BarChart3 className="size-4" />
-      </ButtonLink>
-      {!removed && (
-        <Button
-          size="sm"
-          variant={draft ? "primary" : "secondary"}
-          disabled={pending}
-          onClick={() => run(() => setProjectStatusAction(projectId, draft ? "published" : "draft"), draft ? "Prosjektet er publisert 🎉" : "Gjort om til utkast")}
-        >
-          {draft ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
-          {draft ? "Publiser" : "Gjør til utkast"}
-        </Button>
-      )}
-      <Button variant="ghost" size="icon-sm" aria-label="Slett prosjektet" onClick={() => setConfirmDelete(true)} className="hover:text-danger">
-        <Trash2 className="size-4" />
-      </Button>
+      </div>
 
       <Dialog open={confirmDelete} onClose={() => setConfirmDelete(false)} title="Slette prosjektet?" description="Bildene, kommentarene og reaksjonene forsvinner også. Dette kan ikke angres." size="sm">
         <div className="flex justify-end gap-3">

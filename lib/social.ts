@@ -4,6 +4,7 @@ import { and, desc, eq, inArray, ne, notInArray, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { emailNotification, notify } from "@/lib/notifications";
 import { UserFacingError } from "@/lib/result";
+import { outer } from "@/lib/sql";
 
 const { follow, profile, project, user } = schema;
 
@@ -21,8 +22,8 @@ export type PersonCard = {
 
 const notBanned = sql`coalesce(${user.banned}, false) = false`;
 
-const followerCount = sql<number>`(select count(*)::int from ${follow} where ${follow.followingId} = ${user.id})`;
-const publishedCount = sql<number>`(select count(*)::int from ${project} where ${project.ownerId} = ${user.id} and ${project.status} = 'published' and ${project.removedAt} is null)`;
+const followerCount = sql<number>`(select count(*)::int from ${follow} where ${follow.followingId} = ${outer(user.id)})`;
+const publishedCount = sql<number>`(select count(*)::int from ${project} where ${project.ownerId} = ${outer(user.id)} and ${project.status} = 'published' and ${project.removedAt} is null)`;
 
 export const personColumns = {
   id: user.id,

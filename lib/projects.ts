@@ -7,6 +7,7 @@ import { tagSlug } from "@/lib/tag-names";
 import { setProjectTags } from "@/lib/tags";
 import { UserFacingError } from "@/lib/result";
 import type { ProjectInput } from "@/lib/validation";
+import { outer } from "@/lib/sql";
 
 const { comment, follow, project, projectImage, projectTag, projectViewDay, reaction, tag, user, profile } = schema;
 
@@ -354,7 +355,7 @@ export async function searchProjects(
     const like = `%${query.trim().toLowerCase()}%`;
     const tagPatterns = terms.map((t) => `${tagSlug(t)}%`).filter((p) => p !== "%");
     const tagMatch = tagPatterns.length
-      ? sql`exists (select 1 from ${projectTag} pt join ${tag} t on t.id = pt.tag_id where pt.project_id = ${project.id} and (${sql.join(
+      ? sql`exists (select 1 from ${projectTag} pt join ${tag} t on t.id = pt.tag_id where pt.project_id = ${outer(project.id)} and (${sql.join(
           tagPatterns.map((p) => sql`t.slug like ${p}`),
           sql` or `,
         )}))`
@@ -374,8 +375,8 @@ export async function searchProjects(
     );
   }
 
-  const reactionCount = sql`(select count(*) from ${reaction} where ${reaction.projectId} = ${project.id})`;
-  const commentCount = sql`(select count(*) from ${comment} where ${comment.projectId} = ${project.id})`;
+  const reactionCount = sql`(select count(*) from ${reaction} where ${reaction.projectId} = ${outer(project.id)})`;
+  const commentCount = sql`(select count(*) from ${comment} where ${comment.projectId} = ${outer(project.id)})`;
 
   const orderBy =
     sort === "az"
@@ -490,7 +491,7 @@ export async function getMoreFromOwner(ownerId: string, excludeId: string, limit
 // Prosjekter fra andre som bruker de samme teknologiene.
 export async function getRelatedProjects(projectId: string, ownerId: string, tagSlugs: string[], limit = 3) {
   if (tagSlugs.length === 0) return [];
-  const shared = sql<number>`(select count(*) from ${projectTag} pt join ${tag} t on t.id = pt.tag_id where pt.project_id = ${project.id} and t.slug in ${tagSlugs})`;
+  const shared = sql<number>`(select count(*) from ${projectTag} pt join ${tag} t on t.id = pt.tag_id where pt.project_id = ${outer(project.id)} and t.slug in ${tagSlugs})`;
   const rows = await db
     .select(cardColumns)
     .from(project)

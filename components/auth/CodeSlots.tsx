@@ -80,7 +80,13 @@ export default function CodeSlots({
   const [slots, setSlots] = useState(() => toSlots(value ?? defaultValue, length));
   const [active, setActive] = useState(() => firstEmptyOf(toSlots(value ?? defaultValue, length)));
   const [focused, setFocused] = useState(false);
+  // Markøren skjules fra koden er riktig til vasken har trukket seg tilbake igjen.
   const [veiled, setVeiled] = useState(status === "success");
+  const [seenStatus, setSeenStatus] = useState(status);
+  if (seenStatus !== status) {
+    setSeenStatus(status);
+    if (status === "success") setVeiled(true);
+  }
   const activeMv = useMotionValue(active);
   const openMv = useMotionValue(status === "success" ? 1 : 0);
   const checkMv = useMotionValue(status === "success" ? 1 : 0);
@@ -305,7 +311,6 @@ export default function CodeSlots({
     statusRef.current = status;
     const L = live.current;
     if (status === "success") {
-      setVeiled(true);
       if (L.reduce) {
         openMv.jump(1);
         drops.forEach((d) => d.jump(1));
@@ -338,17 +343,15 @@ export default function CodeSlots({
     }
     if (was !== "success") return;
     if (L.reduce) {
-      openMv.jump(0);
       checkMv.jump(0);
       drops.forEach((d) => d.jump(0));
-      setVeiled(false);
-      return;
+    } else {
+      animate(checkMv, 0, { duration: 0.15, ease: EASE_OUT });
+      drops.forEach((d) => animate(d, 0, { type: "spring", duration: 0.3, bounce: 0, delay: 0.1 }));
     }
-    animate(checkMv, 0, { duration: 0.15, ease: EASE_OUT });
-    animate(openMv, 0, { duration: WASH_OUT, ease: EASE_OUT, delay: 0.06 }).then(() => {
+    animate(openMv, 0, L.reduce ? { duration: 0 } : { duration: WASH_OUT, ease: EASE_OUT, delay: 0.06 }).then(() => {
       if (openMv.get() === 0) setVeiled(false);
     });
-    drops.forEach((d) => animate(d, 0, { type: "spring", duration: 0.3, bounce: 0, delay: 0.1 }));
   }, [status, openMv, checkMv, drops, drive, moveActive, commit, length]);
 
   useEffect(() => () => clearTimeout(drainTimer.current), []);

@@ -75,13 +75,16 @@ function EmptyNote() {
 /*  Klassisk: én kolonne med etiketter i margen                               */
 /* -------------------------------------------------------------------------- */
 
-function Classic({ data, style }: { data: CvViewData; style: CSSProperties }) {
-  const Row = ({ label, children }: { label: string; children: React.ReactNode }) => (
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
     <section className="cv-section grid gap-2 border-t border-[#e2e8f0] py-5 sm:grid-cols-[130px_1fr] sm:gap-6">
       <h2 className="text-[10.5px] font-semibold uppercase tracking-[0.18em] text-[#64748b]">{label}</h2>
       <div className="min-w-0">{children}</div>
     </section>
   );
+}
+
+function Classic({ data, style }: { data: CvViewData; style: CSSProperties }) {
   return (
     <article className={`${paper} px-7 py-10 sm:px-14 sm:py-14`} style={style}>
       <header className="pb-7">
@@ -156,10 +159,12 @@ function Classic({ data, style }: { data: CvViewData; style: CSSProperties }) {
 /*  Moderne: sidekolonne i aksentfargen                                       */
 /* -------------------------------------------------------------------------- */
 
+function ModernHeading({ children }: { children: React.ReactNode }) {
+  return <h2 className="mb-3 text-[11px] font-bold uppercase tracking-[0.16em] text-[#0f172a]">{children}</h2>;
+}
+
 function Modern({ data, style }: { data: CvViewData; style: CSSProperties }) {
-  const H = ({ children }: { children: React.ReactNode }) => (
-    <h2 className="mb-3 text-[11px] font-bold uppercase tracking-[0.16em] text-[#0f172a]">{children}</h2>
-  );
+  const H = ModernHeading;
   return (
     <article className={`${paper} grid overflow-hidden sm:grid-cols-[34%_1fr]`} style={style}>
       <aside className="px-7 py-10 sm:px-8 sm:py-12" style={{ background: "color-mix(in srgb, var(--cv-accent) 22%, white)" }}>
@@ -246,12 +251,16 @@ function Modern({ data, style }: { data: CvViewData; style: CSSProperties }) {
 /*  Kompakt: tett, to kolonner, får plass til mye                              */
 /* -------------------------------------------------------------------------- */
 
-function Compact({ data, style }: { data: CvViewData; style: CSSProperties }) {
-  const H = ({ children }: { children: React.ReactNode }) => (
+function CompactHeading({ children }: { children: React.ReactNode }) {
+  return (
     <h2 className="mb-2 border-b-2 pb-1 text-[11px] font-bold uppercase tracking-[0.14em]" style={{ borderColor: "var(--cv-accent)" }}>
       {children}
     </h2>
   );
+}
+
+function Compact({ data, style }: { data: CvViewData; style: CSSProperties }) {
+  const H = CompactHeading;
   return (
     <article className={`${paper} px-7 py-9 sm:px-11 sm:py-11`} style={style}>
       <header className="flex flex-wrap items-end justify-between gap-4 border-b border-[#0f172a] pb-4">
