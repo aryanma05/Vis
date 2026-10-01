@@ -65,6 +65,16 @@ export default async function ProfilePage({ params, searchParams }: Props) {
   const publishedCount = profile.projects.filter((p) => p.status === "published" && !p.removed).length;
   const pinned = visibleProjects.filter((p) => p.pinned);
   const featured = (pinned.length > 0 ? pinned : visibleProjects).slice(0, 4);
+  // Teknologiene som går igjen i prosjektene, flest først.
+  const tagCounts = new Map<string, { slug: string; name: string; count: number }>();
+  for (const p of visibleProjects) {
+    for (const t of p.tags) {
+      const entry = tagCounts.get(t.slug) ?? { ...t, count: 0 };
+      entry.count++;
+      tagCounts.set(t.slug, entry);
+    }
+  }
+  const topTags = [...tagCounts.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, "nb")).slice(0, 10);
   const hasStructuredCv = profile.cv.experience.length + profile.cv.education.length + profile.cv.skills.length > 0;
   const hasCv = hasStructuredCv || Boolean(profile.cvDocument) || Boolean(profile.bio);
 
@@ -89,33 +99,42 @@ export default async function ProfilePage({ params, searchParams }: Props) {
       <ViewTracker kind="profile" id={profile.id} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
 
-      {/* Omslag: en myk flate i profilens aksentfarge. */}
-      <div
-        className="h-32 md:-ml-24 md:h-48"
-        aria-hidden="true"
-        style={{ background: `linear-gradient(180deg, color-mix(in srgb, ${accent.color} 30%, transparent), transparent)` }}
-      />
+      {/* Banner i profilens aksentfarge: lys, et svakt rutenett og sirkler. */}
+      <div className="mx-auto max-w-7xl px-5 pt-2 md:px-10 md:pt-8">
+        <div aria-hidden="true" className="glass-card relative h-40 overflow-hidden rounded-[28px] md:h-60">
+          <div
+            className="absolute inset-0"
+            style={{
+              background: `radial-gradient(70% 130% at 88% -10%, color-mix(in srgb, ${accent.color} 55%, transparent), transparent 70%), radial-gradient(55% 110% at 0% 110%, color-mix(in srgb, ${accent.color} 22%, transparent), transparent 70%)`,
+            }}
+          />
+          <div
+            className="absolute inset-0 [mask-image:radial-gradient(90%_120%_at_70%_0%,black,transparent_75%)]"
+            style={{
+              backgroundImage: `linear-gradient(color-mix(in srgb, var(--fg) 8%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--fg) 8%, transparent) 1px, transparent 1px)`,
+              backgroundSize: "44px 44px",
+            }}
+          />
+          <div className="absolute -bottom-28 right-[10%] size-72 rounded-full border md:size-96" style={{ borderColor: `color-mix(in srgb, ${accent.color} 45%, transparent)` }} />
+          <div className="absolute -bottom-44 right-[4%] size-[26rem] rounded-full border md:size-[34rem]" style={{ borderColor: `color-mix(in srgb, ${accent.color} 25%, transparent)` }} />
+          <span className="glass-rim" />
+        </div>
+      </div>
 
       <div className="mx-auto grid max-w-7xl grid-cols-1 gap-10 px-5 md:px-10 lg:grid-cols-[340px_minmax(0,1fr)] xl:gap-14">
         {/* ------------------------------------------------------------------ */}
         {/* Visittkortet                                                       */}
         {/* ------------------------------------------------------------------ */}
-        <aside className="-mt-16 lg:sticky lg:top-6 lg:-mt-20 lg:self-start">
-          <Avatar name={profile.name} image={profile.image} size={120} className="shadow-[0_10px_30px_-12px_rgb(0_0_0/0.45)] ring-4 ring-ink" />
-          <h1 className="mt-5 text-3xl font-bold leading-tight tracking-[-0.03em] md:text-[2.1rem]">{profile.name}</h1>
+        <aside className="-mt-14 lg:sticky lg:top-6 lg:-mt-20 lg:self-start">
+          <Avatar
+            name={profile.name}
+            image={profile.image}
+            size={120}
+            className="relative z-10 ml-4 shadow-[0_10px_30px_-12px_rgb(0_0_0/0.45)] ring-4 ring-ink md:ml-6"
+          />
+          <h1 className="mt-5 text-3xl font-semibold leading-tight tracking-[-0.035em] md:text-[2.1rem]">{profile.name}</h1>
           <p className="mt-1 text-mist">@{shownUsername(profile)}</p>
-          {profile.headline && <p className="mt-4 text-lg leading-7 text-fg">{profile.headline}</p>}
-
-          <ul className="mt-4 space-y-1.5 text-sm text-mist">
-            {profile.location && (
-              <li className="flex items-center gap-2">
-                <MapPin className="size-4 shrink-0" aria-hidden="true" /> {profile.location}
-              </li>
-            )}
-            <li className="flex items-center gap-2">
-              <CalendarDays className="size-4 shrink-0" aria-hidden="true" /> På Vis siden {monthYear(profile.createdAt)}
-            </li>
-          </ul>
+          {profile.headline && <p className="mt-3 text-lg leading-7 text-fg">{profile.headline}</p>}
 
           {profile.openTo.length > 0 && (
             <div className="mt-5 rounded-[18px] bg-success/10 p-3.5">
@@ -138,7 +157,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
             />
           </div>
 
-          <dl className="mt-7 grid grid-cols-4 divide-x divide-line overflow-hidden rounded-[18px] glass-card text-center">
+          <dl className="mt-6 grid grid-cols-4 divide-x divide-line overflow-hidden rounded-[18px] glass-card text-center">
             {[
               { label: "Prosjekter", value: publishedCount, href: `${base}?fane=prosjekter` },
               { label: "Følgere", value: profile.followers, href: `${base}/folgere` },
@@ -163,33 +182,55 @@ export default async function ProfilePage({ params, searchParams }: Props) {
             })}
           </dl>
 
-          {(profile.websiteUrl || profile.links.length > 0) && (
-            <ul className="mt-6 space-y-1">
-              {[...(profile.websiteUrl ? [{ label: hostLabel(profile.websiteUrl), url: profile.websiteUrl }] : []), ...profile.links].map((link) => {
-                const Icon = linkIcon(link.url);
-                return (
-                  <li key={link.url}>
-                    <a
-                      href={link.url}
-                      target="_blank"
-                      rel="noreferrer me"
-                      className="group flex items-center gap-3 rounded-xl px-2 py-2 text-sm text-fg/90 transition hover:bg-fill hover:text-fg"
-                    >
-                      <Icon className="size-4 shrink-0 text-mist group-hover:text-accent" />
-                      <span className="min-w-0 flex-1 truncate">{link.label}</span>
-                      <ArrowUpRight className="size-3.5 shrink-0 text-mist opacity-0 transition group-hover:opacity-100" aria-hidden="true" />
-                    </a>
-                  </li>
-                );
-              })}
-            </ul>
+          {/* Sted, når de ble med og lenkene, samlet i én gruppe som i Innstillinger på iOS. */}
+          <ul className="mt-4 divide-y divide-line overflow-hidden rounded-[18px] glass-card text-sm">
+            {profile.location && (
+              <li className="flex items-center gap-3 px-4 py-3">
+                <MapPin className="size-4 shrink-0 text-mist" aria-hidden="true" />
+                <span className="min-w-0 flex-1 truncate">{profile.location}</span>
+              </li>
+            )}
+            <li className="flex items-center gap-3 px-4 py-3">
+              <CalendarDays className="size-4 shrink-0 text-mist" aria-hidden="true" />
+              <span className="min-w-0 flex-1 truncate">På Vis siden {monthYear(profile.createdAt)}</span>
+            </li>
+            {[...(profile.websiteUrl ? [{ label: hostLabel(profile.websiteUrl), url: profile.websiteUrl }] : []), ...profile.links].map((link) => {
+              const Icon = linkIcon(link.url);
+              return (
+                <li key={link.url}>
+                  <a
+                    href={link.url}
+                    target="_blank"
+                    rel="noreferrer me"
+                    className="group flex items-center gap-3 px-4 py-3 text-fg transition hover:bg-fill"
+                  >
+                    <Icon className="size-4 shrink-0 text-mist group-hover:text-accent" />
+                    <span className="min-w-0 flex-1 truncate">{link.label}</span>
+                    <ArrowUpRight className="size-3.5 shrink-0 text-mist" aria-hidden="true" />
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+
+          {topTags.length > 0 && (
+            <section className="mt-6">
+              <h2 className="px-1 caption">Jobber med</h2>
+              <div className="mt-2.5 flex flex-wrap gap-1.5">
+                {topTags.map((t) => (
+                  <Tag key={t.slug} href={`/tag/${t.slug}`} count={t.count > 1 ? t.count : undefined}>
+                    {t.name}
+                  </Tag>
+                ))}
+              </div>
+            </section>
           )}
         </aside>
 
         {/* ------------------------------------------------------------------ */}
         {/* Faner                                                              */}
         {/* ------------------------------------------------------------------ */}
-        <section className="min-w-0 lg:pt-8">
+        <section className="min-w-0 lg:pt-6">
           <div>
             <Tabs
               label="Profil"
