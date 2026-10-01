@@ -66,8 +66,8 @@ export default function HomeHero({ stats }: { stats: { people: number; projects:
 
         <div className="fade-up mt-8 grid gap-8 md:grid-cols-[minmax(0,1fr)_auto] md:items-end" style={{ animationDelay: "350ms" }}>
           <p className="max-w-xl text-lg leading-8 text-fg/80 md:text-xl md:leading-9">
-            Et visuelt visittkort, en ryddig CV og prosjektene dine – samlet på én lenke. Importer CV-en, hent prosjekter fra
-            GitHub, og bli oppdaget av folk som ser etter nettopp deg.
+            Prosjektene dine, vist frem slik de fortjener – med bilder, video og historien bak. Hent dem fra GitHub eller en
+            mappe, og samle alt du lager på én lenke.
           </p>
           <div className="flex flex-wrap gap-3">
             <ButtonLink href="/register" size="lg">

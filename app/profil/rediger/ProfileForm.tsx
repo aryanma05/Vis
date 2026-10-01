@@ -240,7 +240,7 @@ export default function ProfileForm({ initial, image, username }: { initial: Pro
               className={`${textareaClass} min-h-20`}
               value={values.lookingFor}
               onChange={(e) => set("lookingFor", e.target.value)}
-              placeholder="F.eks. «Deltidsjobb som frontendutvikler i Bergen fra januar»"
+              placeholder="F.eks. «Noen å bygge en app sammen med i Bergen»"
               maxLength={400}
             />
           </Field>

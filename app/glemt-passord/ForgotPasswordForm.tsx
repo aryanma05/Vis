@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { KeyRound } from "lucide-react";
 import CodeSlots, { type CodeStatus } from "@/components/auth/CodeSlots";
@@ -9,15 +9,27 @@ import { Button } from "@/components/ui/button";
 import { inputClass, labelClass } from "@/components/ui/field";
 import { authClient } from "@/lib/auth-client";
 import { authErrorMessage } from "@/lib/auth-errors";
-import { emailError } from "@/lib/email";
+import { emailError, RESET_EMAIL_KEY } from "@/lib/email";
 
 type Step = "email" | "code" | "password";
+
+const noSubscribe = () => () => {};
+function readRememberedEmail() {
+  try {
+    return sessionStorage.getItem(RESET_EMAIL_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
 
 // Nytt passord i tre steg: e-post, sekssifret kode, nytt passord. Etterpå logges man inn.
 export default function ForgotPasswordForm({ devHint }: { devHint: boolean }) {
   const router = useRouter();
   const [step, setStep] = useState<Step>("email");
-  const [email, setEmail] = useState("");
+  // E-posten man skrev på innloggingen (se app/logg-inn/LoginForm.tsx), til man skriver selv.
+  const remembered = useSyncExternalStore(noSubscribe, readRememberedEmail, () => "");
+  const [typed, setEmail] = useState<string | null>(null);
+  const email = typed ?? remembered;
   const [code, setCode] = useState("");
   const [status, setStatus] = useState<CodeStatus>("idle");
   const [password, setPassword] = useState("");
@@ -53,6 +65,11 @@ export default function ForgotPasswordForm({ devHint }: { devHint: boolean }) {
     const { error } = await authClient.emailOtp.requestPasswordReset({ email: trimmed });
     setPending(false);
     if (error) return setError(authErrorMessage(error));
+    // Lås e-posten før den huskede fjernes, så kode-steget bruker samme adresse.
+    setEmail(trimmed);
+    try {
+      sessionStorage.removeItem(RESET_EMAIL_KEY);
+    } catch {}
     setStep("code");
     setStatus("idle");
     setCooldown(45);

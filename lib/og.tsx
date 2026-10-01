@@ -70,11 +70,36 @@ export const gridBackground = {
   backgroundSize: "48px 48px",
 };
 
+// Logoen (V-en i hvit sirkel) og ordmerket ved siden av.
 export function Wordmark({ size = 44, color = "#ffffff" }: { size?: number; color?: string }) {
   return (
-    <div style={{ display: "flex", alignItems: "baseline", fontSize: size, fontWeight: 800, letterSpacing: "-0.06em", color }}>
-      vis
-      <div style={{ width: size * 0.2, height: size * 0.2, borderRadius: 999, background: OG_COLORS.ice, marginLeft: size * 0.08 }} />
+    <div style={{ display: "flex", alignItems: "center" }}>
+      <LogoBadge size={size * 1.1} />
+      <div style={{ display: "flex", alignItems: "baseline", fontSize: size, fontWeight: 800, letterSpacing: "-0.06em", color, marginLeft: size * 0.3 }}>
+        vis
+        <div style={{ width: size * 0.2, height: size * 0.2, borderRadius: 999, background: OG_COLORS.ice, marginLeft: size * 0.08 }} />
+      </div>
     </div>
+  );
+}
+
+// Samme geometri som components/Logo.tsx.
+function LogoBadge({ size }: { size: number }) {
+  return (
+    <svg width={size} height={size} viewBox="52.5 52.5 95 95">
+      <defs>
+        <linearGradient id="og-l" gradientUnits="userSpaceOnUse" x1="80.8" y1="80.8" x2="100" y2="120.9">
+          <stop offset="0" stopColor="#00EEFF" />
+          <stop offset="1" stopColor="#1414FF" />
+        </linearGradient>
+        <linearGradient id="og-r" gradientUnits="userSpaceOnUse" x1="119.2" y1="80.8" x2="100" y2="120.9">
+          <stop offset="0" stopColor="#1414FF" />
+          <stop offset="1" stopColor="#00EEFF" />
+        </linearGradient>
+      </defs>
+      <circle cx="100" cy="100" r="47.5" fill="#ffffff" />
+      <path d="M80.8 80.8 100 120.9" fill="none" stroke="url(#og-l)" strokeWidth="16.8" strokeLinecap="round" />
+      <path d="M119.2 80.8 100 120.9" fill="none" stroke="url(#og-r)" strokeWidth="16.8" strokeLinecap="round" />
+    </svg>
   );
 }

@@ -1,3 +1,6 @@
+// Nøkkelen i sessionStorage som tar med e-posten fra innloggingen til «Glemt passordet?».
+export const RESET_EMAIL_KEY = "vis-reset-email";
+
 // Fanger vanlige skrivefeil i e-postadresser før de sendes, så folk ikke ender med en
 // konto på "arin@gmial.com" som de aldri får logget inn på igjen.
 

@@ -94,7 +94,7 @@ function frame(inner: string, footer: string) {
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:20px;overflow:hidden;border:1px solid #d0d7e2">
       <tr><td style="background:${INK};padding:22px 32px">
         <span style="font-size:20px;font-weight:800;letter-spacing:-0.03em;color:${ICE}">vis</span>
-        <span style="font-size:12px;color:#b8d8e3;padding-left:8px">din faglige identitet</span>
+        <span style="font-size:12px;color:#b8d8e3;padding-left:8px">prosjektene dine, vist frem</span>
       </td></tr>
       <tr><td style="padding:32px">${inner}</td></tr>
     </table>

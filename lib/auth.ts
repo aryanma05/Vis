@@ -2,11 +2,13 @@ import "server-only";
 
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { APIError } from "better-auth/api";
 import { nextCookies } from "better-auth/next-js";
 import { admin, emailOTP, username } from "better-auth/plugins";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { deleteAllFilesOfUser } from "@/lib/account";
+import { log } from "@/lib/log";
 import { canSendEmail, resetPasswordEmail, sendEmail, verificationCodeEmail } from "@/lib/mailer";
 import {
   isValidUsername,
@@ -51,6 +53,17 @@ async function findAvailableUsername(base: string) {
   return `${base}-${crypto.randomUUID().slice(0, 8)}`;
 }
 
+// Feiler e-posttjenesten (feil nøkkel, ubekreftet avsender, nede), får brukeren en
+// forståelig melding i stedet for «Noe gikk galt», og feilen havner i loggen.
+async function sendAuthEmail(email: Parameters<typeof sendEmail>[0]) {
+  try {
+    await sendEmail(email);
+  } catch (error) {
+    log.error("auth.email", { error, subject: email.subject });
+    throw new APIError("BAD_GATEWAY", { code: "EMAIL_SEND_FAILED", message: "Kunne ikke sende e-posten." });
+  }
+}
+
 const vercelUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined;
 
 // Alle adressene appen selv kjører på. Står BETTER_AUTH_URL litt feil (f.eks. med / på
@@ -90,7 +103,7 @@ export const auth = betterAuth({
     requireEmailVerification: canSendEmail,
     // Eldre lenker for nytt passord (appen bruker nå kode, se emailOTP under).
     sendResetPassword: async ({ user, url }) => {
-      await sendEmail(resetPasswordEmail(user.email, user.name, url));
+      await sendAuthEmail(resetPasswordEmail(user.email, user.name, url));
     },
     resetPasswordTokenExpiresIn: 60 * 60,
     // Nytt passord logger ut alle andre enheter.
@@ -205,7 +218,7 @@ export const auth = betterAuth({
       disableSignUp: true,
       overrideDefaultEmailVerification: true,
       async sendVerificationOTP({ email, otp, type }) {
-        await sendEmail(verificationCodeEmail(email, otp, type, EMAIL_CODE_MINUTES));
+        await sendAuthEmail(verificationCodeEmail(email, otp, type, EMAIL_CODE_MINUTES));
       },
     }),
     // Roller og utestenging. Selve modereringen skjer i lib/admin.ts.

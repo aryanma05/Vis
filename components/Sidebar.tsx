@@ -4,8 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Bell, Compass, Home, LogIn, Plus, Search } from "lucide-react";
 import Avatar from "@/components/Avatar";
-import { LogoMark } from "@/components/Logo";
-import NavUserMenu, { ThemeButtons, type NavUser } from "@/components/nav/NavUserMenu";
+import HomeLogo from "@/components/nav/HomeLogo";
+import NavUserMenu, { type NavUser } from "@/components/nav/NavUserMenu";
+import ThemeSwitch from "@/components/nav/ThemeSwitch";
 import { openSearch } from "@/components/nav/search-events";
 import { Menu } from "@/components/ui/menu";
 import { Palette } from "lucide-react";
@@ -40,9 +41,10 @@ export default function Sidebar({ user = null }: { user?: NavUser }) {
         aria-label="Hovedmeny"
         className="pointer-events-auto flex w-14 flex-col items-center gap-2 rounded-[22px] border border-line bg-surface/80 py-3 shadow-[0_24px_60px_-30px_rgb(0_0_0/0.65)] backdrop-blur-xl"
       >
-        <Link href="/" aria-label="Vis – forsiden" className="group relative mb-1">
-          <LogoMark className="size-10 transition group-hover:scale-105" />
-        </Link>
+        <div className="group relative mb-1">
+          <HomeLogo label={pathname === "/" ? "Til toppen" : "Vis – til forsiden"} className="size-10" />
+          <Tip>{pathname === "/" ? "Til toppen" : "Forsiden"}</Tip>
+        </div>
 
         <div className="group relative">
           <button
@@ -142,7 +144,7 @@ export default function Sidebar({ user = null }: { user?: NavUser }) {
               label="Tema"
               side="right"
               align="end"
-              className="w-56 p-2"
+              className="w-52 p-2"
               trigger={({ open, toggle }) => (
                 <div className="group relative">
                   <button
@@ -160,7 +162,7 @@ export default function Sidebar({ user = null }: { user?: NavUser }) {
               )}
             >
               <p className="px-1 pb-2 pt-1 label-mono">Tema</p>
-              <ThemeButtons />
+              <ThemeSwitch />
             </Menu>
           </>
         )}

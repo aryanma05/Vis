@@ -8,28 +8,33 @@ import type { ProjectCard as Card } from "@/lib/projects";
 
 // Bildet er hovedsaken på kortet. Under står tittel, hvem som laget det og tall for
 // reaksjoner og kommentarer. Prosjekter uten bilder får et generert cover.
+// `fill`: bildet fyller høyden kortet får av rutenettet (ProjectMasonry) i stedet for et fast format.
 export default function ProjectCard({
   project,
   showOwner = true,
   priority = false,
   size = "md",
+  fill = false,
 }: {
   project: Card;
   showOwner?: boolean;
   priority?: boolean;
   size?: "md" | "lg";
+  fill?: boolean;
 }) {
   const href = `/prosjekt/${project.id}`;
   const when = project.publishedAt ?? project.createdAt;
 
   return (
-    <article className="group relative">
+    <article className={`group relative ${fill ? "flex h-full flex-col" : ""}`}>
       <Link
         href={href}
         aria-label={`Åpne prosjektet ${project.title}`}
-        className="relative block overflow-hidden rounded-[20px] bg-surface ring-1 ring-line/60 transition duration-500 ease-out group-hover:ring-ice/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ice"
+        className={`relative block overflow-hidden rounded-[20px] bg-surface ring-1 ring-line/60 transition duration-500 ease-out group-hover:ring-ice/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ice ${
+          fill ? "min-h-0 flex-1" : ""
+        }`}
       >
-        <div className={`relative overflow-hidden ${size === "lg" ? "aspect-[16/10]" : "aspect-[4/3]"}`}>
+        <div className={`relative overflow-hidden ${fill ? "h-full" : size === "lg" ? "aspect-[16/10]" : "aspect-[4/3]"}`}>
           {project.coverImageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img

@@ -17,7 +17,9 @@ prosjektene dine på én lenke (`/@brukernavn`), pluss en feed der man oppdager 
   med dra-og-slipp, import fra PDF/Word/bilde (fyller ut automatisk med `ANTHROPIC_API_KEY`)
   og eksport som PDF via utskrift.
 - **Prosjekter** med markdown-beskrivelse (README-visning), tagger, rolle, dato, lenker,
-  video og bilder. Import fra GitHub eller en lokal mappe.
+  video og bilder. Import fra GitHub (brukernavn eller repo-lenke, uten å logge inn med
+  GitHub) eller en lokal mappe. Prosjekter med et GitHub-repo viser stjerner, språk, siste
+  commits og bidragsytere, og eieren kan hente README-en på nytt.
 - **Oppdag**: nyeste, populære (trending) og «Følger»-feed, søk etter prosjekter og
   personer, tag-sider på `/tag/<navn>`.
 - **Sosialt**: følg folk, reaksjoner (Lik/Nyttig/Inspirerende), kommentarer med svar og
@@ -63,6 +65,7 @@ med `DATABASE_URL=postgres://localhost:5432/vis`, eller en egen Neon-database/-b
 | `BETTER_AUTH_SECRET` | Tilfeldig hemmelighet, `openssl rand -base64 32` | Ja |
 | `BETTER_AUTH_URL` | `http://localhost:3000` lokalt, domenet i produksjon | Ja |
 | `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | GitHub OAuth-app, for innlogging og repo-import | Nei, knappen skjules uten |
+| `GITHUB_TOKEN` | Token uten tilganger for offentlige GitHub-data: import fra brukernavn/repo-lenke og repo-info på prosjektsidene. Uten den er grensen 60 kall i timen | Nei, men anbefalt i produksjon |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google OAuth-klient, for innlogging | Nei, knappen skjules uten |
 | `ADMIN_EMAILS` | Kommaseparerte e-postadresser som blir admin når kontoen lages | Nei |
 | `BLOB_READ_WRITE_TOKEN` | Vercel Blob. Uten den lagres bilder og CV-er i databasen (`/filer/...`) | Nei |

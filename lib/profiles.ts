@@ -345,7 +345,7 @@ export async function getOnboarding(userId: string, username: string): Promise<O
     {
       key: "del",
       label: "Del profilen",
-      description: `vis.no/@${username} – lim den inn i LinkedIn eller søknaden.`,
+      description: `vis.no/@${username} – legg den i bioen din eller del den med venner.`,
       href: `/@${username}`,
       done: row.projects > 0 && Boolean(row.headline),
     },

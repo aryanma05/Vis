@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import VerifyEmailCode from "@/components/auth/VerifyEmailCode";
@@ -9,11 +9,25 @@ import { Button } from "@/components/ui/button";
 import { inputClass, labelClass } from "@/components/ui/field";
 import { authClient } from "@/lib/auth-client";
 import { authError } from "@/lib/auth-errors";
+import { RESET_EMAIL_KEY } from "@/lib/email";
 
-export default function LoginForm({ canResetPassword, devHint }: { canResetPassword: boolean; devHint: boolean }) {
+// Feil som betyr «feil passord»: da er det naturlig å tilby nytt passord.
+const WRONG_PASSWORD = new Set(["INVALID_EMAIL_OR_PASSWORD", "INVALID_USERNAME_OR_PASSWORD", "INVALID_PASSWORD"]);
+
+// Tar med e-posten til «Glemt passordet?», så man slipper å skrive den igjen.
+// (sessionStorage, ikke adressen, så e-posten ikke havner i historikk og logger.)
+function rememberEmailForReset(form: HTMLFormElement | null) {
+  const value = String(new FormData(form ?? undefined).get("identifier") ?? "").trim();
+  try {
+    if (/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value)) sessionStorage.setItem(RESET_EMAIL_KEY, value);
+  } catch {}
+}
+
+export default function LoginForm({ devHint }: { devHint: boolean }) {
   const router = useRouter();
   const next = useSearchParams().get("neste");
-  const [error, setError] = useState<string | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  const [error, setError] = useState<{ message: string; wrongPassword: boolean } | null>(null);
   const [pending, setPending] = useState(false);
   // Satt når e-posten ikke er bekreftet: da sendes en kode, og man skriver den inn her.
   const [verify, setVerify] = useState<{ identifier: string; email: string | null } | null>(null);
@@ -30,7 +44,7 @@ export default function LoginForm({ canResetPassword, devHint }: { canResetPassw
     const form = new FormData(event.currentTarget);
     const identifier = String(form.get("identifier")).trim();
     const password = String(form.get("password"));
-    if (!identifier || !password) return setError("Fyll inn e-post eller brukernavn og passord.");
+    if (!identifier || !password) return setError({ message: "Fyll inn e-post eller brukernavn og passord.", wrongPassword: false });
     setPending(true);
     setError(null);
 
@@ -53,7 +67,7 @@ export default function LoginForm({ canResetPassword, devHint }: { canResetPassw
         setVerify({ identifier, email: isEmail ? identifier : null });
         return;
       }
-      setError(info.message);
+      setError({ message: info.message, wrongPassword: WRONG_PASSWORD.has(info.code ?? "") || info.code?.startsWith("USERNAME_") === true });
       return;
     }
 
@@ -73,7 +87,7 @@ export default function LoginForm({ canResetPassword, devHint }: { canResetPassw
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-5" noValidate>
+    <form ref={formRef} onSubmit={onSubmit} className="space-y-5" noValidate>
       <div>
         <label htmlFor="identifier" className={labelClass}>
           E-post eller brukernavn
@@ -97,19 +111,26 @@ export default function LoginForm({ canResetPassword, devHint }: { canResetPassw
           <label htmlFor="password" className="text-sm font-medium text-fg">
             Passord
           </label>
-          {canResetPassword && (
-            <Link href="/glemt-passord" className="text-sm text-mist transition hover:text-fg">
-              Glemt passordet?
-            </Link>
-          )}
+          <Link href="/glemt-passord" onClick={() => rememberEmailForReset(formRef.current)} className="text-sm text-mist transition hover:text-fg">
+            Glemt passordet?
+          </Link>
         </div>
         <PasswordInput id="password" name="password" required autoComplete="current-password" />
       </div>
 
       {error && (
-        <p role="alert" className="rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
-          {error}
-        </p>
+        <div role="alert" className="rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
+          <p>{error.message}</p>
+          {error.wrongPassword && (
+            <Link
+              href="/glemt-passord"
+              onClick={() => rememberEmailForReset(formRef.current)}
+              className="mt-1.5 inline-block font-semibold text-fg underline-offset-4 hover:underline"
+            >
+              Glemt passordet? Lag et nytt på et minutt →
+            </Link>
+          )}
+        </div>
       )}
 
       <Button type="submit" loading={pending} className="w-full" size="lg">

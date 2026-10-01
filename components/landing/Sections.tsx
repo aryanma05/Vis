@@ -8,6 +8,12 @@ import { ButtonLink } from "@/components/ui/button";
 export function FeatureTrio() {
   const features = [
     {
+      Icon: FolderGit2,
+      title: "Prosjekter",
+      text: "Hent fra GitHub, dra inn en mappe eller last opp bilder. README-en blir en fin prosjektside med kommentarer.",
+      art: <ProjectsArt />,
+    },
+    {
       Icon: IdCard,
       title: "Visittkort",
       text: "Navn, tittel, hvor du holder til, hva du er åpen for og lenkene dine. Det første folk ser – og det de husker.",
@@ -19,20 +25,14 @@ export function FeatureTrio() {
       text: "Last opp PDF-en, så fyller vi ut erfaring, utdanning og ferdigheter. Rett opp, velg mal, og last ned som PDF.",
       art: <CvArt />,
     },
-    {
-      Icon: FolderGit2,
-      title: "Prosjekter",
-      text: "Hent fra GitHub, dra inn en mappe eller last opp bilder. README-en blir en fin prosjektside med kommentarer.",
-      art: <ProjectsArt />,
-    },
   ];
   return (
     <section className="border-t border-line px-5 py-24 md:py-32 md:pl-28 md:pr-10">
       <div className="mx-auto max-w-7xl">
         <Reveal>
-          <p className="label-mono">Tre ting, én lenke</p>
+          <p className="label-mono">Prosjekter først</p>
           <h2 className="mt-4 max-w-3xl text-4xl font-bold leading-[1.05] tracking-tight md:text-6xl">
-            Alt en arbeidsgiver lurer på, <span className="serif-accent font-normal text-ice">før</span> de spør.
+            Det du lager, vist slik det <span className="serif-accent font-normal text-ice">fortjener</span>.
           </h2>
         </Reveal>
         <div className="mt-16 grid gap-5 md:grid-cols-3">
@@ -68,7 +68,7 @@ function CardArt() {
           </div>
         </div>
         <div className="mt-3 flex gap-1">
-          <span className="rounded bg-success/15 px-1.5 py-0.5 text-[10px] font-medium text-success">Åpen for jobb</span>
+          <span className="rounded bg-success/15 px-1.5 py-0.5 text-[10px] font-medium text-success">Åpen for samarbeid</span>
           <span className="rounded bg-ice/10 px-1.5 py-0.5 text-[10px] font-medium text-ice">Frilans</span>
         </div>
         <div className="mt-3 space-y-1.5">
@@ -124,8 +124,8 @@ function ProjectsArt() {
 export function HowItWorks() {
   const steps = [
     { n: "01", title: "Lag profil", text: "To minutter. Velg brukernavn, så har du vis.no/@deg." },
-    { n: "02", title: "Importer CV-en", text: "Last opp PDF eller Word. Vi fyller ut erfaring, utdanning og ferdigheter." },
-    { n: "03", title: "Vis frem arbeidet", text: "Prosjekter fra GitHub, en mappe eller bilder. Del lenken og få tilbakemeldinger." },
+    { n: "02", title: "Del et prosjekt", text: "Hent det fra GitHub, dra inn en mappe eller last opp bilder og skriv litt om det." },
+    { n: "03", title: "Få det sett", text: "Folk følger deg, reagerer og kommenterer. Del lenken hvor du vil." },
   ];
   return (
     <section className="px-5 py-24 md:py-32 md:pl-28 md:pr-10">
@@ -180,7 +180,7 @@ export function CtaBand() {
         <div className="pointer-events-none absolute -left-24 -top-24 size-72 rounded-full border border-ice/15" aria-hidden="true" />
         <div className="pointer-events-none absolute -bottom-32 -right-16 size-96 rounded-full border border-ice/10" aria-hidden="true" />
         <h2 className="relative mx-auto max-w-3xl text-4xl font-bold leading-[1.05] tracking-tight md:text-6xl">
-          Klar til å vise hva du <span className="serif-accent font-normal text-ice">kan</span>?
+          Klar til å vise hva du har <span className="serif-accent font-normal text-ice">laget</span>?
         </h2>
         <p className="relative mx-auto mt-5 max-w-lg text-lg leading-8 text-mist">Gratis, på norsk, og ferdig på et par minutter.</p>
         <div className="relative mt-9 flex flex-wrap justify-center gap-3">
