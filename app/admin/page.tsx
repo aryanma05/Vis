@@ -38,7 +38,7 @@ export default async function AdminPage({ searchParams }: Props) {
   return (
     <main className="px-5 pb-28 pt-10 md:pb-20 md:pl-28 md:pr-10 md:pt-14">
       <div className="mx-auto max-w-6xl">
-        <p className="label-mono inline-flex items-center gap-2">
+        <p className="caption inline-flex items-center gap-2">
           <ShieldCheck className="size-3.5" /> Admin
         </p>
         <h1 className="mt-3 text-4xl font-bold tracking-tight md:text-5xl">Moderering</h1>
@@ -50,7 +50,7 @@ export default async function AdminPage({ searchParams }: Props) {
             ["Fjernede prosjekter", counts.removedProjects],
             ["Stengte kontoer", counts.bannedUsers],
           ].map(([label, value]) => (
-            <div key={label} className="rounded-2xl border border-line p-4">
+            <div key={label} className="rounded-[18px] glass-card p-4">
               <dt className="text-sm text-mist">{label}</dt>
               <dd className="mt-1 text-3xl font-bold tracking-tight">{value}</dd>
             </div>
@@ -58,8 +58,8 @@ export default async function AdminPage({ searchParams }: Props) {
         </dl>
 
         {focus && (
-          <section className="mt-8 rounded-3xl border border-ice/40 bg-ice/[0.05] p-5">
-            <p className="label-mono">Moderer prosjekt</p>
+          <section className="mt-8 rounded-[22px] bg-sea/10 p-5">
+            <p className="caption">Moderer prosjekt</p>
             <div className="mt-3 flex flex-wrap items-center justify-between gap-4">
               <div>
                 <Link href={`/prosjekt/${focus.id}`} className="text-lg font-semibold hover:text-ice">
@@ -76,7 +76,7 @@ export default async function AdminPage({ searchParams }: Props) {
           </section>
         )}
 
-        <div className="mt-10 border-b border-line">
+        <div className="mt-10">
           <Tabs
             label="Moderering"
             active={tab}
@@ -117,7 +117,7 @@ export default async function AdminPage({ searchParams }: Props) {
                 {reports.map((r) => {
                   const Icon = TYPE_ICON[r.targetType];
                   return (
-                    <li key={r.id} className="rounded-3xl border border-line bg-surface/40 p-5">
+                    <li key={r.id} className="rounded-[22px] glass-card p-5">
                       <div className="flex flex-wrap items-start justify-between gap-4">
                         <div className="flex min-w-0 gap-3">
                           <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-line bg-ink-2 text-danger">
@@ -179,7 +179,7 @@ export default async function AdminPage({ searchParams }: Props) {
               <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-mist" />
               <input name="q" defaultValue={q ?? ""} placeholder="Søk etter navn, brukernavn eller e-post" className={`${inputClass} pl-11`} />
             </form>
-            <ul className="mt-6 divide-y divide-line overflow-hidden rounded-3xl border border-line">
+            <ul className="mt-6 divide-y divide-line overflow-hidden rounded-[22px] glass-card">
               {users.map((u) => (
                 <li key={u.id} className="flex flex-wrap items-center gap-4 px-5 py-4">
                   <Avatar name={u.name} image={u.image} size={40} />
@@ -189,7 +189,7 @@ export default async function AdminPage({ searchParams }: Props) {
                         {u.name}
                       </Link>
                       <span className="text-sm font-normal text-mist">@{u.username}</span>
-                      {u.role === "admin" && <span className="rounded-md bg-ice/15 px-1.5 py-0.5 text-[11px] font-medium text-ice">admin</span>}
+                      {u.role === "admin" && <span className="rounded-full bg-sea/15 px-2 py-0.5 text-[11px] font-medium text-sea">admin</span>}
                       {u.banned && <span className="rounded-md bg-danger/15 px-1.5 py-0.5 text-[11px] font-medium text-danger">stengt</span>}
                     </p>
                     <p className="truncate text-sm text-mist">

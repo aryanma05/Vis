@@ -112,7 +112,7 @@ export default function CommentForm({
     >
       <Avatar name={viewer.name} image={viewer.image} size={compact ? 30 : 38} className="mt-1" />
       <div className="relative min-w-0 flex-1">
-        <div className="rounded-2xl border border-line bg-ink-2/50 transition focus-within:border-ice/60 focus-within:ring-4 focus-within:ring-ice/10">
+        <div className="rounded-[20px] bg-fill inset-ring inset-ring-line inset-shadow-[0_1px_2px_rgb(0_0_0/0.1)] transition focus-within:bg-fill-2 focus-within:ring-2 focus-within:ring-sea/50">
           <textarea
             ref={ref}
             value={body}
@@ -171,7 +171,7 @@ export default function CommentForm({
         </div>
 
         {showPeople && (
-          <ul role="listbox" aria-label="Nevn en person" className="absolute left-0 right-0 top-full z-30 mt-2 overflow-hidden rounded-2xl border border-line bg-surface p-1.5 shadow-[0_24px_48px_-20px_rgb(0_0_0/0.6)] sm:right-auto sm:w-80">
+          <ul role="listbox" aria-label="Nevn en person" className="glass-strong absolute left-0 right-0 top-full z-30 mt-2 overflow-hidden rounded-[20px] p-1.5 sm:right-auto sm:w-80">
             {suggestions.map((p, i) => (
               <li key={p.username}>
                 <button

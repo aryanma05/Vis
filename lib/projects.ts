@@ -2,6 +2,7 @@ import "server-only";
 
 import { and, asc, desc, eq, inArray, isNull, lt, ne, or, sql, type SQL } from "drizzle-orm";
 import { db, schema } from "@/db";
+import { captureScreenshots, MAX_SCREENSHOTS, normalizeProjectUrl } from "@/lib/screenshots";
 import { deleteStoredFiles, storeImage } from "@/lib/storage";
 import { tagSlug } from "@/lib/tag-names";
 import { setProjectTags } from "@/lib/tags";
@@ -667,6 +668,22 @@ export async function addProjectImages(ownerId: string, projectId: string, files
     await deleteStoredFiles(stored.map((s) => s.key));
     throw error;
   }
+}
+
+// Skjermbilder av prosjektets nettside, lagt til etter bildene som finnes fra før.
+export async function addProjectScreenshots(ownerId: string, projectId: string, url: string) {
+  await assertOwner(ownerId, projectId);
+  const room = MAX_PROJECT_IMAGES - (await countImages(projectId));
+  if (room <= 0) throw new UserFacingError(`Et prosjekt kan ha maks ${MAX_PROJECT_IMAGES} bilder.`);
+
+  const address = normalizeProjectUrl(url);
+  const shots = await captureScreenshots(address, { max: Math.min(room, MAX_SCREENSHOTS) });
+  const files = shots.map((shot, i) => new File([new Uint8Array(shot.bytes)], `skjermbilde-${i + 1}.webp`, { type: "image/webp" }));
+  const images = await addProjectImages(ownerId, projectId, files);
+
+  const alt = `Skjermbilde av ${new URL(address).hostname.replace(/^www\./, "")}`;
+  await db.update(projectImage).set({ alt }).where(inArray(projectImage.id, images.map((img) => img.id)));
+  return images.map((img) => ({ ...img, alt }));
 }
 
 // For bilder som allerede ligger på nett, f.eks. fra en GitHub-README.

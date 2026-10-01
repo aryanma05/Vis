@@ -28,7 +28,7 @@ export default function FollowList({
           <ArrowLeft className="size-4" /> {name}
         </Link>
         <h1 className="mt-4 text-3xl font-bold tracking-tight md:text-5xl">{mode === "folgere" ? "Følgere" : "Følger"}</h1>
-        <div className="mt-8 border-b border-line">
+        <div className="mt-8">
           <Tabs
             label="Følgere og følger"
             active={mode}

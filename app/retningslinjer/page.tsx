@@ -11,12 +11,8 @@ export default function GuidelinesPage() {
   return (
     <ProsePage
       eyebrow="Trygghet"
-      title={
-        <>
-          Retningslinjer for <span className="serif-accent font-normal text-ice">innhold</span>
-        </>
-      }
-      intro="Vis skal være et sted der folk tør å vise frem det de lager – også det som ikke er ferdig. Det krever at vi er ærlige om hva vi har laget, og greie med hverandre."
+      title="Retningslinjer for innhold"
+      intro="Vis skal være et sted der folk tør å vise frem det de lager, også det som ikke er ferdig. Det krever at vi er ærlige om hva vi har laget, og greie med hverandre."
       updated="25. september 2026"
     >
       <h2>1. Vis ditt eget arbeid</h2>

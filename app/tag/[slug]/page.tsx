@@ -6,6 +6,7 @@ import Avatar from "@/components/Avatar";
 import ProjectMasonry from "@/components/ProjectMasonry";
 import { ButtonLink } from "@/components/ui/button";
 import { EmptyState, Tag } from "@/components/ui/misc";
+import { Tabs } from "@/components/ui/tabs";
 import { getRelatedTags, getTagBySlug, getTopCreatorsForTag, searchProjects } from "@/lib/projects";
 
 type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{ sort?: string }> };
@@ -35,18 +36,18 @@ export default async function TagPage({ params, searchParams }: Props) {
 
   return (
     <main className="pb-28 md:pb-20 md:pl-24">
-      <header className="blueprint border-b border-line">
-        <div className="mx-auto max-w-7xl px-5 pb-12 pt-12 md:px-10 md:pb-16 md:pt-20">
-          <p className="label-mono inline-flex items-center gap-2">
+      <header>
+        <div className="mx-auto max-w-7xl px-5 pb-4 pt-8 md:px-10 md:pt-14">
+          <p className="caption inline-flex items-center gap-1.5">
             <Hash className="size-3.5" /> Teknologi
           </p>
-          <h1 className="mt-4 display text-[clamp(3rem,9vw,7.5rem)]">{tag.name}</h1>
-          <p className="mt-5 text-lg text-mist">
+          <h1 className="mt-2 display text-[clamp(2.5rem,6vw,4.5rem)]">{tag.name}</h1>
+          <p className="mt-3 text-lg text-mist">
             {projects.length} {projects.length === 1 ? "prosjekt" : "prosjekter"} fra {creators.length}{" "}
             {creators.length === 1 ? "person" : "personer"} på Vis.
           </p>
           {related.length > 0 && (
-            <div className="mt-8 flex flex-wrap items-center gap-2">
+            <div className="mt-6 flex flex-wrap items-center gap-2">
               <span className="mr-1 text-sm text-mist">Ofte sammen med</span>
               {related.map((t) => (
                 <Tag key={t.slug} href={`/tag/${t.slug}`} count={t.count}>
@@ -58,26 +59,18 @@ export default async function TagPage({ params, searchParams }: Props) {
         </div>
       </header>
 
-      <div className="mx-auto grid max-w-7xl gap-12 px-5 pt-12 md:px-10 xl:grid-cols-[minmax(0,1fr)_300px]">
+      <div className="mx-auto grid max-w-7xl gap-12 px-5 pt-8 md:px-10 xl:grid-cols-[minmax(0,1fr)_300px]">
         <section className="min-w-0">
-          <div className="mb-8 flex flex-wrap items-center gap-2">
-            {[
-              ["newest", "Nyeste"],
-              ["trending", "Trender"],
-              ["popular", "Mest likt"],
-            ].map(([key, label]) => (
-              <Link
-                key={key}
-                href={key === "newest" ? `/tag/${tag.slug}` : `/tag/${tag.slug}?sort=${key}`}
-                scroll={false}
-                className={`rounded-xl border px-3.5 py-1.5 text-sm font-medium transition ${
-                  order === key ? "border-primary bg-primary text-on-primary" : "border-line text-mist hover:text-fg"
-                }`}
-              >
-                {label}
-              </Link>
-            ))}
-          </div>
+          <Tabs
+            label="Sortering"
+            className="mb-8"
+            active={order}
+            items={[
+              { key: "newest", label: "Nyeste", href: `/tag/${tag.slug}` },
+              { key: "trending", label: "Populært", href: `/tag/${tag.slug}?sort=trending` },
+              { key: "popular", label: "Mest likt", href: `/tag/${tag.slug}?sort=popular` },
+            ]}
+          />
           {projects.length > 0 ? (
             <ProjectMasonry projects={projects} columns={2} />
           ) : (
@@ -87,17 +80,17 @@ export default async function TagPage({ params, searchParams }: Props) {
 
         {creators.length > 0 && (
           <aside className="xl:sticky xl:top-8 xl:self-start">
-            <h2 className="label-mono">Folk som bruker {tag.name}</h2>
+            <h2 className="caption">Folk som bruker {tag.name}</h2>
             <ul className="mt-5 space-y-4">
               {creators.map((c) => (
                 <li key={c.id}>
                   <Link href={`/@${c.username}`} className="group flex items-center gap-3">
                     <Avatar name={c.name} image={c.image} size={40} />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate font-medium group-hover:text-ice">{c.name}</span>
+                      <span className="block truncate font-medium">{c.name}</span>
                       <span className="block truncate text-[13px] text-mist">{c.headline ?? `@${c.username}`}</span>
                     </span>
-                    <span className="font-mono text-xs text-mist">{c.count}</span>
+                    <span className="text-xs tabular-nums text-mist">{c.count}</span>
                   </Link>
                 </li>
               ))}

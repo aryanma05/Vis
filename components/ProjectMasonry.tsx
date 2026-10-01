@@ -25,7 +25,7 @@ export default function ProjectMasonry({
 
   return (
     <div
-      className={`grid grid-cols-1 gap-x-6 [grid-auto-rows:7px] sm:grid-cols-2 sm:[grid-auto-rows:8px] ${
+      className={`grid grid-cols-1 gap-x-5 [grid-auto-rows:7px] sm:grid-cols-2 sm:[grid-auto-rows:8px] ${
         columns === 3 ? "xl:grid-cols-3" : ""
       }`}
     >

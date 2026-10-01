@@ -50,7 +50,7 @@ export function EmailStatus({ email, verified, canSend, devHint }: { email: stri
         </Button>
       )}
       {verifying && (
-        <div className="mt-6 max-w-sm rounded-3xl border border-line p-5">
+        <div className="mt-6 max-w-sm rounded-[22px] glass-card p-5">
           <VerifyEmailCode
             identifier={email}
             email={email}
@@ -138,7 +138,7 @@ export function NotificationSettings({ initial, emailEnabled }: { initial: Prefs
   return (
     <div className="max-w-lg space-y-5">
       {!emailEnabled && (
-        <p className="rounded-xl border border-dashed border-line px-4 py-3 text-sm text-mist">
+        <p className="rounded-xl bg-fill px-4 py-3 text-sm text-mist">
           E-post er ikke satt opp på serveren ennå, så du får bare varsler her inne.
         </p>
       )}

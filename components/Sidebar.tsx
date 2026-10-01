@@ -2,29 +2,28 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, Compass, Home, LogIn, Plus, Search } from "lucide-react";
+import { Bell, Compass, Home, LogIn, Palette, Plus, Search } from "lucide-react";
 import Avatar from "@/components/Avatar";
-import HomeLogo from "@/components/nav/HomeLogo";
 import NavUserMenu, { type NavUser } from "@/components/nav/NavUserMenu";
 import ThemeSwitch from "@/components/nav/ThemeSwitch";
 import { openSearch } from "@/components/nav/search-events";
 import { Menu } from "@/components/ui/menu";
-import { Palette } from "lucide-react";
 
 export type { NavUser };
 
 function Tip({ children }: { children: React.ReactNode }) {
   return (
-    <span className="pointer-events-none absolute left-full top-1/2 ml-4 -translate-x-1 -translate-y-1/2 whitespace-nowrap rounded-lg border border-line bg-surface px-2.5 py-1 text-xs font-medium text-fg opacity-0 shadow-lg shadow-black/20 transition duration-150 group-hover:translate-x-0 group-hover:opacity-100 group-focus-within:translate-x-0 group-focus-within:opacity-100">
+    <span className="glass-strong pointer-events-none absolute left-full top-1/2 ml-4 -translate-x-1 -translate-y-1/2 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium text-fg opacity-0 transition duration-150 group-hover:translate-x-0 group-hover:opacity-100 group-focus-within:translate-x-0 group-focus-within:opacity-100">
       {children}
     </span>
   );
 }
 
 const itemBase =
-  "relative flex size-10 items-center justify-center rounded-xl transition duration-200 focus-visible:outline-offset-4";
+  "relative flex size-11 items-center justify-center rounded-full transition duration-200 active:scale-90 focus-visible:outline-offset-2";
 
-// Flytende sidemeny på desktop. Menyvalgene endrer seg etter om du er logget inn.
+// Flytende sidemeny i glass på desktop. Menyvalgene endrer seg etter om du er logget inn.
+// Logoen står for seg selv øverst til venstre (components/nav/HomeLogo.tsx), ikke her.
 export default function Sidebar({ user = null }: { user?: NavUser }) {
   const pathname = usePathname();
   const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`));
@@ -39,24 +38,19 @@ export default function Sidebar({ user = null }: { user?: NavUser }) {
     <aside className="pointer-events-none fixed inset-y-0 left-5 z-40 hidden items-center md:flex print:!hidden">
       <nav
         aria-label="Hovedmeny"
-        className="pointer-events-auto flex w-14 flex-col items-center gap-2 rounded-[22px] border border-line bg-surface/80 py-3 shadow-[0_24px_60px_-30px_rgb(0_0_0/0.65)] backdrop-blur-xl"
+        className="glass pointer-events-auto flex w-[60px] flex-col items-center gap-1 rounded-full py-2"
       >
-        <div className="group relative mb-1">
-          <HomeLogo label={pathname === "/" ? "Til toppen" : "Vis – til forsiden"} className="size-10" />
-          <Tip>{pathname === "/" ? "Til toppen" : "Forsiden"}</Tip>
-        </div>
-
         <div className="group relative">
           <button
             type="button"
             onClick={() => openSearch()}
             aria-label="Søk (⌘K)"
-            className={`${itemBase} text-mist hover:bg-surface-2 hover:text-fg`}
+            className={`${itemBase} text-mist hover:bg-fill hover:text-fg`}
           >
-            <Search className="size-[18px]" />
+            <Search className="size-[19px]" />
           </button>
           <Tip>
-            Søk <span className="ml-1 font-mono text-[10px] text-mist">⌘K</span>
+            Søk <span className="ml-1 text-mist">⌘K</span>
           </Tip>
         </div>
 
@@ -69,12 +63,11 @@ export default function Sidebar({ user = null }: { user?: NavUser }) {
                 href={href}
                 aria-label={label}
                 aria-current={active ? "page" : undefined}
-                className={`${itemBase} ${active ? "bg-fg/10 text-fg" : "text-mist hover:bg-surface-2 hover:text-fg"}`}
+                className={`${itemBase} ${active ? "glass-thumb text-fg" : "text-mist hover:bg-fill hover:text-fg"}`}
               >
-                <Icon className="size-[18px]" />
-                {active && <span className="absolute -left-3 top-1/2 h-5 w-1 -translate-y-1/2 rounded-full bg-ice" aria-hidden="true" />}
+                <Icon className="size-[19px]" strokeWidth={active ? 2.2 : 1.8} />
                 {badge > 0 && (
-                  <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-ice px-1 text-[10px] font-bold text-on-primary ring-2 ring-surface">
+                  <span className="absolute right-0 top-0 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-danger px-1 text-[10px] font-semibold text-white">
                     {badge > 9 ? "9+" : badge}
                   </span>
                 )}
@@ -84,7 +77,7 @@ export default function Sidebar({ user = null }: { user?: NavUser }) {
           );
         })}
 
-        <div className="my-1 h-px w-6 bg-line" />
+        <div className="my-1.5 h-px w-7 bg-line" />
 
         {user ? (
           <>
@@ -92,9 +85,9 @@ export default function Sidebar({ user = null }: { user?: NavUser }) {
               <Link
                 href="/ny"
                 aria-label="Del prosjekt"
-                className={`${itemBase} bg-primary text-on-primary shadow-[inset_0_1px_0_rgb(255_255_255/0.3)] hover:scale-105`}
+                className={`${itemBase} bg-primary text-on-primary hover:opacity-90`}
               >
-                <Plus className="size-5" strokeWidth={2.4} />
+                <Plus className="size-5" strokeWidth={2.2} />
               </Link>
               <Tip>Del prosjekt</Tip>
             </div>
@@ -111,8 +104,8 @@ export default function Sidebar({ user = null }: { user?: NavUser }) {
                     aria-expanded={open}
                     aria-controls={open ? id : undefined}
                     aria-label="Profilmeny"
-                    className={`rounded-full p-0.5 ring-2 transition ${
-                      open || pathname.startsWith(`/@${user.username}`) || pathname.startsWith("/profil") ? "ring-ice" : "ring-transparent hover:ring-line"
+                    className={`rounded-full p-0.5 ring-2 transition active:scale-90 ${
+                      open || pathname.startsWith(`/@${user.username}`) || pathname.startsWith("/profil") ? "ring-fg/30" : "ring-transparent hover:ring-fill-2"
                     }`}
                   >
                     <Avatar name={user.name} image={user.image} size={36} />
@@ -125,8 +118,8 @@ export default function Sidebar({ user = null }: { user?: NavUser }) {
         ) : (
           <>
             <div className="group relative">
-              <Link href="/logg-inn" aria-label="Logg inn" className={`${itemBase} text-mist hover:bg-surface-2 hover:text-fg`}>
-                <LogIn className="size-[18px]" />
+              <Link href="/logg-inn" aria-label="Logg inn" className={`${itemBase} text-mist hover:bg-fill hover:text-fg`}>
+                <LogIn className="size-[19px]" />
               </Link>
               <Tip>Logg inn</Tip>
             </div>
@@ -134,9 +127,9 @@ export default function Sidebar({ user = null }: { user?: NavUser }) {
               <Link
                 href="/register"
                 aria-label="Lag profil"
-                className={`${itemBase} bg-primary text-on-primary hover:scale-105`}
+                className={`${itemBase} bg-primary text-on-primary hover:opacity-90`}
               >
-                <Plus className="size-5" strokeWidth={2.4} />
+                <Plus className="size-5" strokeWidth={2.2} />
               </Link>
               <Tip>Lag profil</Tip>
             </div>
@@ -153,15 +146,15 @@ export default function Sidebar({ user = null }: { user?: NavUser }) {
                     aria-haspopup="menu"
                     aria-expanded={open}
                     aria-label="Fargetema"
-                    className={`${itemBase} text-mist hover:bg-surface-2 hover:text-fg`}
+                    className={`${itemBase} text-mist hover:bg-fill hover:text-fg`}
                   >
-                    <Palette className="size-[18px]" />
+                    <Palette className="size-[19px]" />
                   </button>
                   {!open && <Tip>Tema</Tip>}
                 </div>
               )}
             >
-              <p className="px-1 pb-2 pt-1 label-mono">Tema</p>
+              <p className="px-2 pb-2 pt-1 caption">Utseende</p>
               <ThemeSwitch />
             </Menu>
           </>

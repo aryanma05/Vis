@@ -45,10 +45,10 @@ export default function TagInput({
       <input type="hidden" name={name} value={tags.join(",")} />
       <div
         onClick={() => inputRef.current?.focus()}
-        className="flex min-h-12 cursor-text flex-wrap items-center gap-1.5 rounded-xl border border-line bg-ink-2/50 px-2 py-1.5 transition focus-within:border-ice/70 focus-within:ring-4 focus-within:ring-ice/10"
+        className="flex min-h-12 cursor-text flex-wrap items-center gap-1.5 rounded-xl bg-fill px-2 py-1.5 inset-ring inset-ring-line inset-shadow-[0_1px_2px_rgb(0_0_0/0.1)] transition focus-within:bg-fill-2 focus-within:ring-2 focus-within:ring-sea/50"
       >
         {tags.map((t) => (
-          <span key={t} className="inline-flex items-center gap-1 rounded-lg border border-line bg-surface py-1 pl-2.5 pr-1 font-mono text-xs">
+          <span key={t} className="inline-flex items-center gap-1 rounded-full bg-surface py-1 pl-3 pr-1 text-[13px] font-medium shadow-[0_1px_2px_rgb(0_0_0/0.08)]">
             {t}
             <button
               type="button"
@@ -57,7 +57,7 @@ export default function TagInput({
                 setTags(tags.filter((x) => x !== t));
               }}
               aria-label={`Fjern ${t}`}
-              className="rounded-md p-0.5 text-mist hover:text-danger"
+              className="rounded-full p-0.5 text-mist hover:text-danger"
             >
               <X className="size-3" />
             </button>
@@ -98,11 +98,11 @@ export default function TagInput({
           placeholder={tags.length ? "" : "Figma, React, Blender …"}
           aria-label="Legg til teknologi"
           aria-autocomplete="list"
-          className="min-w-32 flex-1 bg-transparent px-1.5 py-1 text-[15px] text-fg outline-none placeholder:text-mist/45"
+          className="min-w-32 flex-1 bg-transparent px-1.5 py-1 text-[15px] text-fg outline-none placeholder:text-mist/60"
         />
       </div>
       {open && (
-        <ul role="listbox" className="absolute left-0 right-0 top-full z-30 mt-2 flex flex-wrap gap-1.5 rounded-2xl border border-line bg-surface p-2.5 shadow-[0_24px_48px_-20px_rgb(0_0_0/0.6)]">
+        <ul role="listbox" className="glass-strong absolute left-0 right-0 top-full z-30 mt-2 flex flex-wrap gap-1.5 rounded-[20px] p-2.5">
           {matches.map((m, i) => (
             <li key={m}>
               <button
@@ -113,8 +113,8 @@ export default function TagInput({
                   e.preventDefault();
                   add(m);
                 }}
-                className={`inline-flex items-center gap-1 rounded-lg border px-2 py-1 font-mono text-xs transition ${
-                  i === active ? "border-ice/60 bg-ice/10 text-fg" : "border-line text-mist hover:text-fg"
+                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[13px] font-medium transition ${
+                  i === active ? "bg-fill-2 text-fg" : "bg-fill text-mist hover:text-fg"
                 }`}
               >
                 <Plus className="size-3" /> {m}

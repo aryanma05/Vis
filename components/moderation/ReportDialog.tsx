@@ -64,7 +64,7 @@ export default function ReportDialog({
               <label
                 key={r}
                 className={`flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 text-sm transition ${
-                  reason === r ? "border-ice/60 bg-ice/10 text-fg" : "border-line text-fg/90 hover:border-mist/40"
+                  reason === r ? "border-sea/60 bg-sea/10 text-fg" : "border-line text-fg/90 hover:border-mist/40"
                 }`}
               >
                 <input type="radio" name="reason" value={r} checked={reason === r} onChange={() => setReason(r)} className="accent-[var(--ice)]" />

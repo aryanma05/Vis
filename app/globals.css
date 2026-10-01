@@ -8,62 +8,118 @@
 
 :root,
 :root[data-theme="midnight"] {
-  --ink: #071a52; /* sidebakgrunn */
-  --ink-2: #061645; /* nedsenkede flater (footer, kodeblokker) */
-  --surface: #0a245e; /* kort og felter */
-  --surface-2: #0e2d6e; /* hover og hevede flater */
-  --line: #174b76; /* streker og rammer */
-  --line-soft: rgb(199 249 255 / 0.1);
-  --mist: #b8d8e3; /* dempet tekst */
-  --fg: #ffffff; /* hovedtekst */
-  --ice: #c7f9ff; /* aksent på tekst og lenker */
-  --primary: #c7f9ff; /* knapper */
-  --on-primary: #071a52; /* tekst på knapper */
-  --sea: #086788;
-  --danger: #ff8a80;
-  --success: #7ef0d0;
-  --warn: #ffd98a;
-  --grain-opacity: 0.05;
+  --ink: #060b1d; /* sidebakgrunn */
+  --ink-2: #040817; /* nedsenkede flater (kodeblokker) */
+  --surface: #0f1833; /* tette flater (bildeplassholdere, CV-papir) */
+  --surface-2: #16213f;
+  --line: rgb(255 255 255 / 0.09); /* streker og rammer */
+  --line-soft: rgb(255 255 255 / 0.05);
+  --fill: rgb(170 190 255 / 0.1); /* knapper, felter og hover */
+  --fill-2: rgb(170 190 255 / 0.17);
+  --thumb: rgb(255 255 255 / 0.16); /* markøren i segmenterte valg */
+  --mist: #9ba7c7; /* dempet tekst */
+  --fg: #f3f6fd; /* hovedtekst */
+  --ice: #8ccbff; /* lenker */
+  --primary: #f3f6fd; /* hovedknapper */
+  --on-primary: #060b1d;
+  --sea: #4b93ff;
+  --danger: #ff6b61;
+  --success: #34d399;
+  --warn: #ffd166;
+
+  /* Liquid glass. Kortene er gjennomskinnelige uten uskarphet (bakgrunnen er allerede
+     myk), det som flyter over innholdet gjør innholdet bak uskarpt. */
+  --card: rgb(255 255 255 / 0.05);
+  --card-hover: rgb(255 255 255 / 0.08);
+  --glass: rgb(255 255 255 / 0.07);
+  --glass-strong: rgb(16 24 54 / 0.8);
+  --rim: rgb(255 255 255 / 0.1); /* kanten rundt */
+  --rim-top: rgb(255 255 255 / 0.24); /* lyset som treffer overkanten */
+  --rim-bottom: rgb(255 255 255 / 0.06);
+  --sheen: rgb(255 255 255 / 0.07); /* refleks øverst til venstre */
+  --glass-shadow: 0 20px 50px -24px rgb(0 0 0 / 0.7);
+  --card-shadow: 0 12px 30px -22px rgb(0 0 0 / 0.6);
+
+  /* Bakgrunnen bak glasset: blått lys ovenfra, som en kveld i skogen. */
+  --ambient:
+    radial-gradient(70% 55% at 50% -10%, rgb(86 140 255 / 0.32), transparent 70%),
+    radial-gradient(45% 45% at 92% 28%, rgb(30 170 210 / 0.16), transparent 70%),
+    radial-gradient(50% 50% at 6% 85%, rgb(70 60 200 / 0.2), transparent 70%);
   color-scheme: dark;
 }
 
 :root[data-theme="dark"] {
-  --ink: #050816;
-  --ink-2: #03050f;
-  --surface: #0b1220;
-  --surface-2: #111a2e;
-  --line: #1f2937;
-  --line-soft: rgb(229 240 255 / 0.08);
-  --mist: #94a3b8;
-  --fg: #e5f0ff;
-  --ice: #7dd3fc;
-  --primary: #7dd3fc;
-  --on-primary: #050816;
-  --sea: #0ea5e9;
-  --danger: #fb7185;
-  --success: #6ee7b7;
-  --warn: #fcd34d;
-  --grain-opacity: 0.04;
+  --ink: #09090b;
+  --ink-2: #050506;
+  --surface: #161618;
+  --surface-2: #202023;
+  --line: rgb(255 255 255 / 0.08);
+  --line-soft: rgb(255 255 255 / 0.05);
+  --fill: rgb(150 150 165 / 0.13);
+  --fill-2: rgb(150 150 165 / 0.21);
+  --thumb: rgb(255 255 255 / 0.15);
+  --mist: #9b9ba3;
+  --fg: #f5f5f7;
+  --ice: #5aa9ff;
+  --primary: #f5f5f7;
+  --on-primary: #09090b;
+  --sea: #0a84ff;
+  --danger: #ff453a;
+  --success: #30d158;
+  --warn: #ffd60a;
+
+  --card: rgb(255 255 255 / 0.045);
+  --card-hover: rgb(255 255 255 / 0.075);
+  --glass: rgb(255 255 255 / 0.06);
+  --glass-strong: rgb(30 30 34 / 0.82);
+  --rim: rgb(255 255 255 / 0.09);
+  --rim-top: rgb(255 255 255 / 0.2);
+  --rim-bottom: rgb(255 255 255 / 0.05);
+  --sheen: rgb(255 255 255 / 0.06);
+  --glass-shadow: 0 20px 50px -24px rgb(0 0 0 / 0.85);
+  --card-shadow: 0 12px 30px -22px rgb(0 0 0 / 0.8);
+
+  --ambient:
+    radial-gradient(60% 50% at 20% -10%, rgb(90 120 255 / 0.16), transparent 70%),
+    radial-gradient(45% 45% at 95% 60%, rgb(150 90 255 / 0.1), transparent 70%);
   color-scheme: dark;
 }
 
 :root[data-theme="light"] {
-  --ink: #f5f7fb;
-  --ink-2: #eaeef6;
+  --ink: #eef0f5;
+  --ink-2: #e6e8ee;
   --surface: #ffffff;
-  --surface-2: #eef2f9;
-  --line: #d0d7e2;
-  --line-soft: rgb(7 26 82 / 0.07);
-  --mist: #475569;
-  --fg: #071a52;
-  --ice: #086788;
-  --primary: #071a52;
+  --surface-2: #f4f5f8;
+  --line: rgb(20 30 60 / 0.09);
+  --line-soft: rgb(20 30 60 / 0.05);
+  --fill: rgb(110 118 140 / 0.1);
+  --fill-2: rgb(110 118 140 / 0.17);
+  --thumb: rgb(255 255 255 / 0.95);
+  --mist: #646a78;
+  --fg: #16181d;
+  --ice: #0062cc;
+  --primary: #16181d;
   --on-primary: #ffffff;
-  --sea: #086788;
-  --danger: #c62828;
-  --success: #047857;
-  --warn: #92400e;
-  --grain-opacity: 0.025;
+  --sea: #0071e3;
+  --danger: #d70015;
+  --success: #248a3d;
+  --warn: #b25000;
+
+  --card: rgb(255 255 255 / 0.62);
+  --card-hover: rgb(255 255 255 / 0.8);
+  --glass: rgb(255 255 255 / 0.5);
+  --glass-strong: rgb(255 255 255 / 0.84);
+  --rim: rgb(20 30 60 / 0.07);
+  --rim-top: rgb(255 255 255 / 1);
+  --rim-bottom: rgb(255 255 255 / 0.5);
+  --sheen: rgb(255 255 255 / 0.5);
+  --glass-shadow: 0 18px 44px -20px rgb(30 40 80 / 0.28);
+  --card-shadow: 0 10px 28px -20px rgb(30 40 80 / 0.25);
+
+  --ambient:
+    radial-gradient(55% 50% at 12% -8%, rgb(120 170 255 / 0.4), transparent 70%),
+    radial-gradient(45% 45% at 95% 35%, rgb(255 185 150 / 0.32), transparent 70%),
+    radial-gradient(50% 45% at 35% 105%, rgb(175 145 255 / 0.26), transparent 70%);
   color-scheme: light;
 }
 
@@ -74,6 +130,11 @@
   --color-surface-2: var(--surface-2);
   --color-line: var(--line);
   --color-line-soft: var(--line-soft);
+  --color-fill: var(--fill);
+  --color-fill-2: var(--fill-2);
+  --color-thumb: var(--thumb);
+  --color-card: var(--card);
+  --color-card-hover: var(--card-hover);
   --color-mist: var(--mist);
   --color-fg: var(--fg);
   --color-ice: var(--ice);
@@ -86,37 +147,120 @@
   /* Aksentfargen på en profil (settes med style på profilsiden, ellers ice). */
   --color-accent: var(--accent, var(--ice));
 
-  --font-sans: var(--font-schibsted), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-schibsted), ui-sans-serif, system-ui, sans-serif;
-  --font-serif: var(--font-instrument), ui-serif, Georgia, serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  /* Geist (nær Aeonik i formen). Systemfonten er reserve mens den lastes. */
+  --font-sans: var(--font-geist), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-display: var(--font-geist), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
 
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 /* Små, gjenbrukbare byggeklosser. */
-@utility label-mono {
-  font-family: var(--font-mono);
-  font-size: 11px;
+
+/* Liten overskrift over en seksjon eller et felt. */
+@utility caption {
+  font-size: 13px;
   line-height: 1.4;
-  text-transform: uppercase;
-  letter-spacing: 0.2em;
-  color: color-mix(in srgb, var(--mist) 75%, transparent);
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  color: var(--mist);
 }
 
+/* Store titler. Tett og rolig, som Aeonik-overskrifter. */
 @utility display {
   font-family: var(--font-display);
-  font-weight: 800;
-  letter-spacing: -0.035em;
-  line-height: 0.98;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  line-height: 1.02;
 }
 
-@utility serif-accent {
-  font-family: var(--font-serif);
-  font-style: italic;
-  font-weight: 400;
-  letter-spacing: -0.01em;
+/* ---------------------------------------------------------------------------
+   Liquid glass
+   Kanten er det som får glasset til å se ut som glass: lys i overkanten,
+   en svak kant rundt og litt tykkelse innover. Lyset kommer ovenfra.
+   --------------------------------------------------------------------------- */
+
+/* Navigasjon, verktøylinjer og flytende knapper: klart glass som gjør det bak uskarpt. */
+@utility glass {
+  background-color: var(--glass);
+  background-image:
+    radial-gradient(120% 90% at 10% 0%, var(--sheen), transparent 55%),
+    linear-gradient(180deg, color-mix(in srgb, var(--rim-top) 20%, transparent), transparent 40%);
+  -webkit-backdrop-filter: blur(18px) saturate(190%) brightness(1.05);
+  backdrop-filter: blur(18px) saturate(190%) brightness(1.05);
+  box-shadow:
+    inset 0 1px 0.5px 0 var(--rim-top),
+    inset 0 -1px 0.5px 0 var(--rim-bottom),
+    inset 0 0 0 1px var(--rim),
+    inset 0 0 22px 0 color-mix(in srgb, var(--rim-top) 18%, transparent),
+    var(--glass-shadow);
+}
+
+/* Menyer, dialoger og varsler: tettere glass, så teksten alltid er lesbar. */
+@utility glass-strong {
+  background-color: var(--glass-strong);
+  background-image: radial-gradient(120% 80% at 10% 0%, var(--sheen), transparent 50%);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  backdrop-filter: blur(30px) saturate(180%);
+  box-shadow:
+    inset 0 1px 0.5px 0 var(--rim-top),
+    inset 0 0 0 1px var(--rim),
+    var(--glass-shadow);
+}
+
+/* Kort og grupper i innholdet. Ingen uskarphet (bakgrunnen er myk fra før),
+   så mange kort på én side koster ingenting. */
+@utility glass-card {
+  background-color: var(--card);
+  background-image: radial-gradient(130% 90% at 0% 0%, var(--sheen), transparent 45%);
+  box-shadow:
+    inset 0 1px 0.5px 0 var(--rim-top),
+    inset 0 -1px 0.5px 0 var(--rim-bottom),
+    inset 0 0 0 1px var(--rim),
+    var(--card-shadow);
+}
+
+/* Glasskant lagt oppå et bilde (bildet dekker kortets egen kant). */
+@utility glass-rim {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow:
+    inset 0 1px 0.5px 0 rgb(255 255 255 / 0.35),
+    inset 0 0 0 1px rgb(255 255 255 / 0.12),
+    inset 0 -1px 0.5px 0 rgb(255 255 255 / 0.08);
+}
+
+/* Små glassbiter: sekundærknapper, merker og felter. */
+@utility glass-chip {
+  background-color: var(--fill);
+  box-shadow:
+    inset 0 1px 0.5px 0 color-mix(in srgb, var(--rim-top) 70%, transparent),
+    inset 0 0 0 1px var(--rim);
+}
+
+/* Markøren i segmenterte valg: en liten linse som glir mellom valgene. */
+@utility glass-thumb {
+  background-color: var(--thumb);
+  background-image: linear-gradient(180deg, rgb(255 255 255 / 0.14), transparent 60%);
+  box-shadow:
+    inset 0 1px 0.5px 0 var(--rim-top),
+    inset 0 0 0 1px var(--rim),
+    0 4px 14px -4px rgb(0 0 0 / 0.3);
+}
+
+/* Glass over bilder: alltid mørkt, så hvit tekst er lesbar uansett tema. */
+@utility glass-dark {
+  background-color: rgb(16 18 26 / 0.38);
+  background-image: radial-gradient(120% 90% at 10% 0%, rgb(255 255 255 / 0.12), transparent 55%);
+  -webkit-backdrop-filter: blur(16px) saturate(170%);
+  backdrop-filter: blur(16px) saturate(170%);
+  box-shadow:
+    inset 0 1px 0.5px 0 rgb(255 255 255 / 0.35),
+    inset 0 0 0 1px rgb(255 255 255 / 0.1);
+  color: #fff;
 }
 
 @utility hairline {
@@ -144,29 +288,35 @@ html {
 }
 
 body {
-  background: var(--ink);
+  background-color: var(--ink);
   color: var(--fg);
   font-family: var(--font-sans);
-  font-feature-settings: "ss01", "cv11";
+  font-size: 16px;
+  letter-spacing: -0.01em;
   overflow-x: hidden;
   text-rendering: optimizeLegibility;
+  -webkit-tap-highlight-color: transparent;
   transition:
     background-color 300ms,
     color 300ms;
 }
 
-/* Fint korn over hele siden, så de store flatene ikke blir helt døde. */
-body::after {
+/* Lyset bak glasset. Står fast mens innholdet blar forbi, så glassflatene
+   viser litt ulike farger avhengig av hvor de er. */
+body::before {
   content: "";
   position: fixed;
   inset: 0;
-  z-index: 100;
+  z-index: -1;
   pointer-events: none;
-  opacity: var(--grain-opacity);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background: var(--ambient);
+  transition: opacity 300ms;
 }
 
 @media print {
+  body::before {
+    display: none;
+  }
   @page {
     size: A4;
     margin: 12mm;
@@ -174,9 +324,6 @@ body::after {
   html,
   body {
     background: #fff !important;
-  }
-  body::after {
-    display: none;
   }
   .cv-paper {
     max-width: none !important;
@@ -195,18 +342,17 @@ body::after {
    outline-none fortsatt vinner over dem. */
 @layer base {
   ::selection {
-    background: var(--ice);
-    color: var(--on-primary);
+    background: color-mix(in srgb, var(--sea) 35%, transparent);
   }
 
   :focus-visible {
-    outline: 2px solid var(--ice);
+    outline: 2px solid var(--sea);
     outline-offset: 2px;
   }
 
   * {
     scrollbar-width: thin;
-    scrollbar-color: var(--line) transparent;
+    scrollbar-color: var(--fill-2) transparent;
   }
 
   h1,
@@ -232,11 +378,11 @@ body::after {
 @keyframes rise {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(8px) scale(0.985);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: none;
   }
 }
 
@@ -249,21 +395,12 @@ body::after {
   }
 }
 
-@keyframes marquee {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(-50%);
-  }
-}
-
 @keyframes pop {
   0% {
     transform: scale(1);
   }
   40% {
-    transform: scale(1.28);
+    transform: scale(1.22);
   }
   100% {
     transform: scale(1);
@@ -273,7 +410,7 @@ body::after {
 @keyframes toast-in {
   from {
     opacity: 0;
-    transform: translateY(12px) scale(0.98);
+    transform: translateY(12px) scale(0.96);
   }
   to {
     opacity: 1;
@@ -294,70 +431,29 @@ body::after {
   animation: loading-bar 1.1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
-/* Inngang når siden lastes (forsiden). */
-@keyframes line-up {
-  from {
-    transform: translateY(105%);
-  }
-  to {
-    transform: none;
-  }
-}
-
-.line-up {
-  animation: line-up 1s var(--ease-out-expo) both;
-}
-
 .fade-up {
-  animation: rise 0.8s var(--ease-out-expo) both;
+  animation: rise 0.7s var(--ease-out-expo) both;
 }
 
-/* Scroll-drevet inngang (components/ui/reveal.tsx). */
-@keyframes reveal-in {
-  from {
-    opacity: 0;
-    transform: translateY(28px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
+/* Horisontale rader som går helt ut til kanten, men starter på linje med innholdet
+   over (samme marg som max-w-7xl-sidene med sidemenyen). */
+.edge-pad {
+  padding-inline: 1.25rem;
+  scroll-padding-inline: 1.25rem;
 }
 
-@supports (animation-timeline: view()) {
-  @media (prefers-reduced-motion: no-preference) {
-    .reveal {
-      animation: reveal-in linear both;
-      animation-timeline: view();
-      animation-range: entry var(--reveal-start, 0%) entry calc(var(--reveal-start, 0%) + 55%);
-    }
+@media (min-width: 768px) {
+  .edge-pad {
+    padding-left: calc(7rem + max(0px, (100% - 9.5rem - 80rem) / 2));
+    padding-right: 2.5rem;
+    scroll-padding-left: calc(7rem + max(0px, (100% - 9.5rem - 80rem) / 2));
   }
 }
 
 .skeleton {
-  background: linear-gradient(90deg, var(--surface) 0%, var(--surface-2) 50%, var(--surface) 100%);
+  background: linear-gradient(90deg, var(--fill) 0%, var(--fill-2) 50%, var(--fill) 100%);
   background-size: 200% 100%;
   animation: shimmer 1.6s linear infinite;
-}
-
-.marquee {
-  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
-}
-
-.marquee-track {
-  animation: marquee var(--marquee-duration, 40s) linear infinite;
-}
-
-.marquee:hover .marquee-track {
-  animation-play-state: paused;
-}
-
-/* Rutenett som på «blueprint»-coverne, brukt som diskré bakgrunn. */
-.blueprint {
-  background-image:
-    linear-gradient(var(--line-soft) 1px, transparent 1px),
-    linear-gradient(90deg, var(--line-soft) 1px, transparent 1px);
-  background-size: 48px 48px;
 }
 
 dialog.modal {
@@ -370,73 +466,14 @@ dialog.modal {
 }
 
 dialog.modal::backdrop {
-  background: rgb(3 8 30 / 0.62);
-  backdrop-filter: blur(6px);
+  background: rgb(0 0 0 / 0.38);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
   animation: fade 180ms ease-out;
 }
 
 dialog.modal[open] > * {
-  animation: rise 220ms var(--ease-out-expo);
-}
-
-/* Logoen i sidemenyen (components/nav/HomeLogo.tsx): en myk glød i logofargene,
-   og V-en strekker seg som en strikk når du peker på den. */
-.home-logo-glow {
-  background: conic-gradient(from 200deg, #00eeff, #1414ff, #3a2ab2, #00eeff);
-  filter: blur(9px);
-  opacity: 0.3;
-  transition:
-    opacity 400ms,
-    transform 700ms var(--ease-out-expo);
-}
-
-.home-logo:hover .home-logo-glow,
-.home-logo:focus-visible .home-logo-glow {
-  opacity: 0.7;
-  transform: scale(1.1) rotate(60deg);
-}
-
-.home-logo-badge {
-  transition: transform 500ms var(--ease-spring);
-}
-
-.home-logo:hover .home-logo-badge {
-  transform: scale(1.07);
-}
-
-.home-logo:active .home-logo-badge {
-  transform: scale(0.92);
-  transition-duration: 120ms;
-}
-
-.home-logo-badge path {
-  transform-box: fill-box;
-}
-
-.home-logo-badge path:nth-of-type(1) {
-  transform-origin: 100% 100%;
-  --v-turn: -1;
-}
-
-.home-logo-badge path:nth-of-type(2) {
-  transform-origin: 0% 100%;
-  --v-turn: 1;
-}
-
-.home-logo:hover .home-logo-badge path {
-  animation: v-stretch 750ms var(--ease-out-expo);
-}
-
-@keyframes v-stretch {
-  30% {
-    transform: rotate(calc(var(--v-turn) * 9deg)) scaleY(1.07);
-  }
-  60% {
-    transform: rotate(calc(var(--v-turn) * -3deg)) scaleY(0.98);
-  }
-  to {
-    transform: none;
-  }
+  animation: rise 240ms var(--ease-out-expo);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -468,7 +505,7 @@ dialog.modal[open] > * {
 .markdown h3,
 .markdown h4 {
   color: var(--fg);
-  font-weight: 700;
+  font-weight: 650;
   letter-spacing: -0.02em;
   line-height: 1.25;
   margin-top: 2.25rem;
@@ -482,8 +519,6 @@ dialog.modal[open] > * {
 }
 .markdown h2 {
   font-size: 1.45rem;
-  border-bottom: 1px solid var(--line);
-  padding-bottom: 0.5rem;
 }
 .markdown h3 {
   font-size: 1.2rem;
@@ -532,15 +567,14 @@ dialog.modal[open] > * {
 .markdown code {
   font-family: var(--font-mono);
   font-size: 0.85em;
-  background: var(--ink-2);
-  border: 1px solid var(--line);
+  background: var(--fill);
   border-radius: 0.375rem;
   padding: 0.1rem 0.35rem;
 }
 .markdown pre {
   background: var(--ink-2);
   border: 1px solid var(--line);
-  border-radius: 0.875rem;
+  border-radius: 1rem;
   padding: 1rem 1.15rem;
   overflow-x: auto;
   font-size: 0.9rem;
@@ -552,7 +586,7 @@ dialog.modal[open] > * {
   padding: 0;
 }
 .markdown blockquote {
-  border-left: 2px solid var(--ice);
+  border-left: 3px solid var(--fill-2);
   padding-left: 1rem;
   color: var(--mist);
 }

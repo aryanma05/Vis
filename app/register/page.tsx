@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import AuthCard, { AuthArt } from "@/components/AuthCard";
+import AuthCard from "@/components/AuthCard";
 import { SocialLogins } from "@/components/GithubButton";
 import { isGithubConfigured, isGoogleConfigured } from "@/lib/auth";
 import { emailProviderConfigured } from "@/lib/mailer";
@@ -19,25 +19,12 @@ export default async function RegisterPage() {
 
   return (
     <AuthCard
-      title={
-        <>
-          Lag profilen din <span className="serif-accent font-normal text-ice">på to minutter</span>
-        </>
-      }
-      subtitle="Ett sted for alt du har laget – og én lenke å dele det med. Gratis."
-      aside={
-        <AuthArt
-          quote={
-            <>
-              «Endelig et sted der prosjektene mine <span className="serif-accent text-ice">faktisk</span> blir sett.»
-            </>
-          }
-        />
-      }
+      title="Lag profilen din"
+      subtitle="Ett sted for alt du har laget, og én lenke å dele. Gratis."
     >
       <SocialLogins github={isGithubConfigured} google={isGoogleConfigured} callbackURL="/velkommen" />
       <RegisterForm devHint={!emailProviderConfigured && process.env.NODE_ENV !== "production"} />
-      <p className="mt-8 text-center text-sm text-mist">
+      <p className="mt-6 text-center text-sm text-mist">
         Har du allerede en profil?{" "}
         <Link href="/logg-inn" className="font-semibold text-fg underline-offset-4 hover:underline">
           Logg inn

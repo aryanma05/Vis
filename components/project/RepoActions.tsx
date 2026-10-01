@@ -25,7 +25,7 @@ export function CloneField({ cloneUrl, zipUrl }: { cloneUrl: string; zipUrl: str
 
   return (
     <div>
-      <p className="label-mono">Klon</p>
+      <p className="caption">Klon</p>
       <div className="mt-2 flex items-center gap-1 rounded-xl border border-line bg-ink-2/70 py-1 pl-3 pr-1">
         <code className="no-scrollbar min-w-0 flex-1 overflow-x-auto whitespace-nowrap font-mono text-[11.5px] text-fg/85">{command}</code>
         <button

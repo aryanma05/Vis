@@ -20,11 +20,7 @@ export default function PrivacyPage() {
   return (
     <ProsePage
       eyebrow="Personvern"
-      title={
-        <>
-          Slik tar vi vare på <span className="serif-accent font-normal text-ice">dataene dine</span>
-        </>
-      }
+      title="Slik tar vi vare på dataene dine"
       intro="Vis er et studentprosjekt der du kan vise frem prosjektene og CV-en din. Vi lagrer bare det som trengs for at tjenesten skal virke, vi selger ingenting, og vi har ingen annonser eller sporing."
       updated="25. september 2026"
     >

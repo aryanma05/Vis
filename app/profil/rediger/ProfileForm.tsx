@@ -133,7 +133,7 @@ export default function ProfileForm({ initial, image, username }: { initial: Pro
         e.preventDefault();
         save();
       }}
-      className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_300px]"
+      className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_300px]"
     >
       <div className="min-w-0">
         <Section title="Profilbilde" description="Et tydelig bilde av deg, eller en logo. Vises på visittkortet og ved alt du gjør.">
@@ -301,7 +301,7 @@ export default function ProfileForm({ initial, image, username }: { initial: Pro
         <Section title="Egne seksjoner" description="Utmerkelser, publikasjoner, foredrag, frivillig arbeid … Hver seksjon får sin egen overskrift på profilen.">
           <div className="space-y-4">
             {values.customSections.map((s, i) => (
-              <div key={s.id} className="rounded-2xl border border-line p-4">
+              <div key={s.id} className="rounded-[18px] glass-card p-4">
                 <div className="flex gap-2">
                   <input
                     className={`${inputClass} flex-1 font-semibold`}
@@ -340,7 +340,7 @@ export default function ProfileForm({ initial, image, username }: { initial: Pro
           </div>
         </Section>
 
-        <div className="sticky bottom-24 z-20 mt-2 flex items-center justify-end gap-4 rounded-2xl border border-line bg-surface/90 px-4 py-3 shadow-[0_20px_40px_-24px_rgb(0_0_0/0.6)] backdrop-blur-xl md:bottom-6">
+        <div className="sticky bottom-24 z-20 mt-2 flex items-center justify-end gap-4 glass rounded-[26px] py-2 pl-5 pr-2 md:bottom-6">
           <p className="mr-auto text-sm text-mist">{dirty ? "Du har endringer som ikke er lagret." : "Alt er lagret."}</p>
           {dirty && (
             <Button variant="ghost" size="sm" onClick={() => setValues(saved)}>
@@ -356,11 +356,11 @@ export default function ProfileForm({ initial, image, username }: { initial: Pro
       {/* Forhåndsvisning av visittkortet mens man skriver. */}
       <aside className="hidden lg:block">
         <div className="sticky top-8 pt-10">
-          <p className="label-mono">Forhåndsvisning</p>
-          <div className="mt-4 overflow-hidden rounded-3xl border border-line bg-surface/60">
-            <div className="blueprint h-20" style={{ background: `radial-gradient(90% 140% at 90% 0%, color-mix(in srgb, ${accent.color} 45%, transparent), transparent 70%)` }} />
+          <p className="caption">Forhåndsvisning</p>
+          <div className="mt-3 overflow-hidden rounded-[22px] glass-card">
+            <div className="h-20" style={{ background: `linear-gradient(180deg, color-mix(in srgb, ${accent.color} 35%, transparent), transparent)` }} />
             <div className="-mt-10 px-5 pb-5">
-              <Avatar name={values.name || "?"} image={avatar} size={72} className="rounded-[22px] ring-4 ring-surface" />
+              <Avatar name={values.name || "?"} image={avatar} size={72} className="ring-4 ring-surface" />
               <p className="mt-3 truncate text-lg font-bold tracking-tight">{values.name || "Navnet ditt"}</p>
               <p className="text-sm text-mist">@{username}</p>
               {values.headline && <p className="mt-2 text-sm leading-6 text-fg">{values.headline}</p>}
@@ -370,7 +370,7 @@ export default function ProfileForm({ initial, image, username }: { initial: Pro
                 </p>
               )}
               {values.openTo.length > 0 && (
-                <p className="mt-3 rounded-xl border border-success/25 bg-success/[0.07] px-3 py-2 text-xs text-success">
+                <p className="mt-3 rounded-xl bg-success/10 px-3 py-2 text-xs text-success">
                   Åpen for: {values.openTo.map((o) => OPEN_TO_LABELS[o]).join(", ")}
                 </p>
               )}

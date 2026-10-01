@@ -8,12 +8,12 @@ import { log } from "@/lib/log";
 
 export const OG_SIZE = { width: 1200, height: 630 };
 
-// Schibsted Grotesk i fet og vanlig vekt, hentet én gang per serverprosess. Feiler det,
+// Geist (samme font som nettsiden) i halvfet og vanlig vekt, hentet én gang per serverprosess. Feiler det,
 // bruker bildegeneratoren sin innebygde font.
-let fontsPromise: Promise<{ name: string; data: ArrayBuffer; weight: 400 | 800; style: "normal" }[]> | null = null;
+let fontsPromise: Promise<{ name: string; data: ArrayBuffer; weight: 400 | 600; style: "normal" }[]> | null = null;
 
-async function loadGoogleFont(weight: 400 | 800) {
-  const css = await fetch(`https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@${weight}`, {
+async function loadGoogleFont(weight: 400 | 600) {
+  const css = await fetch(`https://fonts.googleapis.com/css2?family=Geist:wght@${weight}`, {
     // Eldre nettleser-ID gir TTF i stedet for WOFF2 (bildegeneratoren leser ikke WOFF2).
     headers: { "User-Agent": "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10_6_8; en-us) AppleWebKit/533.21.1 (KHTML, like Gecko) Version/5.0.5 Safari/533.21.1" },
     signal: AbortSignal.timeout(4000),
@@ -24,10 +24,10 @@ async function loadGoogleFont(weight: 400 | 800) {
 }
 
 export function ogFonts() {
-  fontsPromise ??= Promise.all([loadGoogleFont(800), loadGoogleFont(400)])
+  fontsPromise ??= Promise.all([loadGoogleFont(600), loadGoogleFont(400)])
     .then(([bold, regular]) => [
-      { name: "Schibsted", data: bold, weight: 800 as const, style: "normal" as const },
-      { name: "Schibsted", data: regular, weight: 400 as const, style: "normal" as const },
+      { name: "Geist", data: bold, weight: 600 as const, style: "normal" as const },
+      { name: "Geist", data: regular, weight: 400 as const, style: "normal" as const },
     ])
     .catch((error) => {
       log.warn("og.fonts", { error });
@@ -61,13 +61,13 @@ export async function imageDataUrl(url: string | null | undefined, { width, heig
   }
 }
 
-export const OG_COLORS = { ink: "#071a52", surface: "#0a245e", line: "#174b76", ice: "#c7f9ff", mist: "#b8d8e3" };
+export const OG_COLORS = { ink: "#060b1d", surface: "#0f1833", line: "#22305a", ice: "#8ccbff", mist: "#9ba7c7" };
 
-// Rutenettet fra «blueprint»-coverne, som bakgrunn.
-export const gridBackground = {
+// Samme bakgrunn som nettsiden (midnatt-temaet): blått lys ovenfra.
+export const ogBackground = {
   backgroundColor: OG_COLORS.ink,
-  backgroundImage: `linear-gradient(rgba(199,249,255,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(199,249,255,0.08) 1px, transparent 1px)`,
-  backgroundSize: "48px 48px",
+  backgroundImage:
+    "radial-gradient(70% 60% at 50% -10%, rgba(86,140,255,0.38), rgba(86,140,255,0) 70%), radial-gradient(50% 50% at 8% 90%, rgba(70,60,200,0.25), rgba(70,60,200,0) 70%)",
 };
 
 // Logoen (V-en i hvit sirkel) og ordmerket ved siden av.
@@ -75,7 +75,7 @@ export function Wordmark({ size = 44, color = "#ffffff" }: { size?: number; colo
   return (
     <div style={{ display: "flex", alignItems: "center" }}>
       <LogoBadge size={size * 1.1} />
-      <div style={{ display: "flex", alignItems: "baseline", fontSize: size, fontWeight: 800, letterSpacing: "-0.06em", color, marginLeft: size * 0.3 }}>
+      <div style={{ display: "flex", alignItems: "baseline", fontSize: size, fontWeight: 600, letterSpacing: "-0.055em", color, marginLeft: size * 0.3 }}>
         vis
         <div style={{ width: size * 0.2, height: size * 0.2, borderRadius: 999, background: OG_COLORS.ice, marginLeft: size * 0.08 }} />
       </div>

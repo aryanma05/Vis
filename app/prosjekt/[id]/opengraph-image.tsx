@@ -1,5 +1,5 @@
 import { ImageResponse } from "next/og";
-import { gridBackground, imageDataUrl, OG_COLORS, OG_SIZE, ogFonts, Wordmark } from "@/lib/og";
+import { ogBackground, imageDataUrl, OG_COLORS, OG_SIZE, ogFonts, Wordmark } from "@/lib/og";
 import { getProjectById } from "@/lib/projects";
 
 export const alt = "Prosjekt på Vis";
@@ -23,7 +23,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
 
   return new ImageResponse(
     (
-      <div style={{ ...gridBackground, width: "100%", height: "100%", display: "flex", fontFamily: "Schibsted", color: "#fff" }}>
+      <div style={{ ...ogBackground, width: "100%", height: "100%", display: "flex", fontFamily: "Geist", color: "#fff" }}>
         {cover && (
           <img src={cover} width={OG_SIZE.width} height={OG_SIZE.height} alt="" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%" }} />
         )}
@@ -50,14 +50,14 @@ export default async function Image({ params }: { params: Promise<{ id: string }
                 ))}
               </div>
             )}
-            <div style={{ fontSize: 84, fontWeight: 800, letterSpacing: "-0.045em", lineHeight: 0.98, maxWidth: 1000 }}>{project?.title ?? "Prosjekt på Vis"}</div>
+            <div style={{ fontSize: 84, fontWeight: 600, letterSpacing: "-0.045em", lineHeight: 0.98, maxWidth: 1000 }}>{project?.title ?? "Prosjekt på Vis"}</div>
             {project?.summary && <div style={{ marginTop: 18, fontSize: 30, color: OG_COLORS.mist, maxWidth: 950 }}>{project.summary.slice(0, 120)}</div>}
             {project && (
               <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 30, fontSize: 28 }}>
                 {avatar ? (
                   <img src={avatar} width={52} height={52} alt="" style={{ borderRadius: 999 }} />
                 ) : (
-                  <div style={{ width: 52, height: 52, borderRadius: 999, background: OG_COLORS.ice, color: OG_COLORS.ink, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 800 }}>
+                  <div style={{ width: 52, height: 52, borderRadius: 999, background: OG_COLORS.ice, color: OG_COLORS.ink, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 600 }}>
                     {initials(project.owner.name)}
                   </div>
                 )}

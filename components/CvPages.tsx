@@ -61,7 +61,7 @@ export default function CvPages({ pages, fileUrl, name }: { pages: Page[]; fileU
               unoptimized={page.url.startsWith("/filer/")}
               className="h-auto w-full"
             />
-            <span className="pointer-events-none absolute bottom-4 right-4 rounded-md bg-ink/80 px-2.5 py-1 font-mono text-[11px] text-mist opacity-0 backdrop-blur transition group-hover:opacity-100">
+            <span className="pointer-events-none absolute bottom-4 right-4 glass-dark rounded-full px-3 py-1 text-xs font-medium opacity-0 transition group-hover:opacity-100">
               Klikk for å zoome
             </span>
           </button>
@@ -71,7 +71,7 @@ export default function CvPages({ pages, fileUrl, name }: { pages: Page[]; fileU
       {open !== null && (
         <div role="dialog" aria-modal="true" aria-label="CV" className="fixed inset-0 z-50 flex flex-col bg-ink/95 backdrop-blur-sm">
           <div className="flex items-center justify-between gap-4 border-b border-line px-5 py-3 text-sm">
-            <span className="font-mono text-xs text-mist">
+            <span className="text-xs tabular-nums text-mist">
               Side {open + 1} av {pages.length}
             </span>
             <div className="flex items-center gap-2">

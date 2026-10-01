@@ -6,8 +6,8 @@ import { useId, type ReactNode } from "react";
 
 export type TabItem = { key: string; label: ReactNode; href?: string; count?: number | null };
 
-// Faner med en strek som glir mellom valgene. Med href blir de lenker (URL-styrt),
-// ellers knapper som kaller onSelect.
+// Faner som en segmentert kontroll (som i iOS): en kapsel der markøren glir mellom
+// valgene. Med href blir de lenker (URL-styrt), ellers knapper som kaller onSelect.
 export function Tabs({
   items,
   active,
@@ -24,40 +24,42 @@ export function Tabs({
   size?: "sm" | "md";
 }) {
   const layoutId = useId();
-  const pad = size === "sm" ? "pb-3 text-sm" : "pb-4 text-[15px]";
+  const pad = size === "sm" ? "h-8 px-3 text-[13px]" : "h-9 px-4 text-sm";
 
   return (
-    <nav aria-label={label} className={`no-scrollbar flex gap-7 overflow-x-auto ${className}`}>
-      {items.map((item) => {
-        const isActive = item.key === active;
-        const inner = (
-          <>
-            <span className="flex items-center gap-2">
-              {item.label}
-              {item.count != null && (
-                <span className={`font-mono text-[11px] ${isActive ? "text-mist" : "text-mist/55"}`}>{item.count}</span>
+    <nav aria-label={label} className={`no-scrollbar max-w-full overflow-x-auto ${className}`}>
+      <div className="glass-chip inline-flex gap-0.5 rounded-full p-1">
+        {items.map((item) => {
+          const isActive = item.key === active;
+          const inner = (
+            <>
+              {isActive && (
+                <motion.span
+                  layoutId={layoutId}
+                  className="glass-thumb absolute inset-0 rounded-full"
+                  transition={{ type: "spring", stiffness: 520, damping: 42 }}
+                />
               )}
-            </span>
-            {isActive && (
-              <motion.span
-                layoutId={layoutId}
-                className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-fg"
-                transition={{ type: "spring", stiffness: 500, damping: 40 }}
-              />
-            )}
-          </>
-        );
-        const cls = `relative shrink-0 font-medium transition ${pad} ${isActive ? "text-fg" : "text-mist hover:text-fg"}`;
-        return item.href ? (
-          <Link key={item.key} href={item.href} scroll={false} aria-current={isActive ? "page" : undefined} className={cls}>
-            {inner}
-          </Link>
-        ) : (
-          <button key={item.key} type="button" onClick={() => onSelect?.(item.key)} aria-pressed={isActive} className={cls}>
-            {inner}
-          </button>
-        );
-      })}
+              <span className="relative flex items-center gap-1.5">
+                {item.label}
+                {item.count != null && <span className="text-xs tabular-nums text-mist">{item.count}</span>}
+              </span>
+            </>
+          );
+          const cls = `relative flex shrink-0 items-center whitespace-nowrap rounded-full font-medium transition-colors ${pad} ${
+            isActive ? "text-fg" : "text-mist hover:text-fg"
+          }`;
+          return item.href ? (
+            <Link key={item.key} href={item.href} scroll={false} aria-current={isActive ? "page" : undefined} className={cls}>
+              {inner}
+            </Link>
+          ) : (
+            <button key={item.key} type="button" onClick={() => onSelect?.(item.key)} aria-pressed={isActive} className={cls}>
+              {inner}
+            </button>
+          );
+        })}
+      </div>
     </nav>
   );
 }
@@ -78,7 +80,7 @@ export function Segmented<T extends string>({
 }) {
   const layoutId = useId();
   return (
-    <div role="radiogroup" aria-label={label} className="inline-flex rounded-xl border border-line bg-ink-2/50 p-1">
+    <div role="radiogroup" aria-label={label} className="glass-chip inline-flex rounded-full p-1">
       {options.map((o) => {
         const on = o.value === value;
         return (
@@ -88,15 +90,15 @@ export function Segmented<T extends string>({
             role="radio"
             aria-checked={on}
             onClick={() => onChange(o.value)}
-            className={`relative rounded-lg font-medium transition ${size === "sm" ? "px-2.5 py-1 text-xs" : "px-3.5 py-1.5 text-sm"} ${
-              on ? "text-on-primary" : "text-mist hover:text-fg"
+            className={`relative rounded-full font-medium transition-colors ${size === "sm" ? "px-3 py-1 text-xs" : "px-4 py-1.5 text-sm"} ${
+              on ? "text-fg" : "text-mist hover:text-fg"
             }`}
           >
             {on && (
               <motion.span
                 layoutId={layoutId}
-                className="absolute inset-0 rounded-lg bg-primary"
-                transition={{ type: "spring", stiffness: 500, damping: 40 }}
+                className="glass-thumb absolute inset-0 rounded-full"
+                transition={{ type: "spring", stiffness: 520, damping: 42 }}
               />
             )}
             <span className="relative">{o.label}</span>

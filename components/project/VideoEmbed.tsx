@@ -40,7 +40,7 @@ export default function VideoEmbed({ url, title }: { url: string; title: string 
         href={url}
         target="_blank"
         rel="noreferrer"
-        className="group flex items-center gap-4 rounded-2xl border border-line p-4 transition hover:border-ice/50 hover:bg-surface"
+        className="group flex items-center gap-4 rounded-[20px] glass-card p-4 transition hover:bg-card-hover"
       >
         <span className="flex size-11 items-center justify-center rounded-xl bg-surface-2 text-ice">
           <PlayCircle className="size-5" />

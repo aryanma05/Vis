@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { runAction } from "@/lib/action";
 import {
   addProjectImages,
+  addProjectScreenshots,
   createProject,
   deleteProject,
   deleteProjectImage,
@@ -13,7 +14,8 @@ import {
   updateImageAlt,
   updateProject,
 } from "@/lib/projects";
-import { fail, type ActionResult } from "@/lib/result";
+import { fail, UserFacingError, type ActionResult } from "@/lib/result";
+import { assertScreenshotQuota, captureScreenshots, MAX_SCREENSHOTS } from "@/lib/screenshots";
 import { requireUserForAction } from "@/lib/session";
 import { fieldErrors, projectInput } from "@/lib/validation";
 
@@ -134,3 +136,27 @@ export async function updateImageAltAction(imageId: string, alt: string) {
   });
 }
 
+// Skjermbilder av en nettside, til skjemaet. Bildene lagres ikke her: de legges i
+// skjemaet som nye bilder, så brukeren kan fjerne, sortere og beskjære dem før lagring.
+export async function captureScreenshotsAction(url: string, max: number = MAX_SCREENSHOTS) {
+  return runAction(async () => {
+    const user = await requireUserForAction();
+    if (typeof url !== "string" || url.length > 500) throw new UserFacingError("Lenken er for lang.");
+    assertScreenshotQuota(user.id);
+    const shots = await captureScreenshots(url, { max: Math.max(1, Math.min(Number(max) || MAX_SCREENSHOTS, MAX_SCREENSHOTS)) });
+    return shots.map((shot) => ({ base64: shot.bytes.toString("base64"), type: "image/webp", width: shot.width, height: shot.height }));
+  }, "project.screenshots");
+}
+
+// Tar skjermbilder av prosjektets lenke og lagrer dem på prosjektet med en gang
+// (brukes etter import, der prosjektet allerede finnes).
+export async function addProjectScreenshotsAction(projectId: string, url: string) {
+  return runAction(async () => {
+    const user = await requireUserForAction();
+    if (typeof url !== "string" || url.length > 500) throw new UserFacingError("Lenken er for lang.");
+    assertScreenshotQuota(user.id);
+    const images = await addProjectScreenshots(user.id, String(projectId), url);
+    revalidateProject(String(projectId), user.username);
+    return images;
+  }, "project.screenshots");
+}

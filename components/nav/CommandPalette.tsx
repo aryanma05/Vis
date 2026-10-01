@@ -114,7 +114,7 @@ export default function CommandPalette({ loggedIn, username }: { loggedIn: boole
           // eslint-disable-next-line @next/next/no-img-element
           <img src={p.cover} alt="" className="size-[22px] rounded-md object-cover" />
         ) : (
-          <span className="flex size-[22px] items-center justify-center rounded-md bg-surface-2 text-[10px] font-bold text-ice">{p.title[0]}</span>
+          <span className="flex size-[22px] items-center justify-center rounded-md bg-fill text-[10px] font-semibold text-mist">{p.title[0]}</span>
         ),
         group: "Prosjekter",
       })),
@@ -159,9 +159,9 @@ export default function CommandPalette({ loggedIn, username }: { loggedIn: boole
       }}
     >
       <div className="fixed inset-0 flex items-start justify-center px-3 pt-[12vh]" onClick={(e) => e.target === e.currentTarget && setOpen(false)}>
-        <div className="w-full max-w-xl overflow-hidden rounded-3xl border border-line bg-surface shadow-[0_50px_100px_-40px_rgb(0_0_0/0.8)]">
-          <div className="flex items-center gap-3 border-b border-line px-5">
-            <Search className={`size-5 shrink-0 ${pending ? "animate-pulse text-ice" : "text-mist"}`} aria-hidden="true" />
+        <div className="glass-strong w-full max-w-xl overflow-hidden rounded-[28px]">
+          <div className="m-2 flex items-center gap-2.5 rounded-full bg-fill px-4 inset-ring inset-ring-line inset-shadow-[0_1px_2px_rgb(0_0_0/0.1)]">
+            <Search className={`size-[18px] shrink-0 text-mist ${pending ? "animate-pulse" : ""}`} aria-hidden="true" />
             <input
               ref={inputRef}
               value={query}
@@ -184,12 +184,14 @@ export default function CommandPalette({ loggedIn, username }: { loggedIn: boole
               aria-controls="cmd-list"
               role="combobox"
               aria-expanded="true"
-              className="h-14 w-full bg-transparent text-[16px] text-fg outline-none placeholder:text-mist/55"
+              className="h-11 w-full bg-transparent text-[16px] text-fg outline-none placeholder:text-mist"
             />
-            <Kbd>esc</Kbd>
+            <span className="hidden sm:block">
+              <Kbd>esc</Kbd>
+            </span>
           </div>
 
-          <div ref={listRef} id="cmd-list" role="listbox" className="max-h-[52vh] overflow-y-auto p-2">
+          <div ref={listRef} id="cmd-list" role="listbox" className="max-h-[52vh] overflow-y-auto px-2 pb-2">
             {items.length === 1 && query.trim() && !pending && (
               <p className="px-3 pb-1 pt-3 text-sm text-mist">Ingen raske treff.</p>
             )}
@@ -199,7 +201,7 @@ export default function CommandPalette({ loggedIn, username }: { loggedIn: boole
               const on = i === active;
               return (
                 <div key={item.key}>
-                  {header && <p className="px-3 pb-1.5 pt-3 label-mono">{header}</p>}
+                  {header && <p className="px-3 pb-1.5 pt-3 caption">{header}</p>}
                   <button
                     type="button"
                     id={`cmd-${item.key}`}
@@ -208,21 +210,21 @@ export default function CommandPalette({ loggedIn, username }: { loggedIn: boole
                     data-index={i}
                     onMouseMove={() => setActive(i)}
                     onClick={() => go(item)}
-                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[15px] transition ${
-                      on ? "bg-surface-2 text-fg" : "text-fg/90"
+                    className={`flex w-full items-center gap-3 rounded-[14px] px-3 py-2.5 text-left text-[15px] transition ${
+                      on ? "bg-fill text-fg" : "text-fg/90"
                     }`}
                   >
                     <span className="flex size-6 shrink-0 items-center justify-center text-mist">{item.icon}</span>
                     <span className="min-w-0 flex-1 truncate">{item.label}</span>
                     {item.hint && <span className="hidden max-w-[45%] truncate text-sm text-mist sm:block">{item.hint}</span>}
-                    {on && <ArrowRight className="size-4 shrink-0 text-ice" aria-hidden="true" />}
+                    {on && <ArrowRight className="size-4 shrink-0 text-mist" aria-hidden="true" />}
                   </button>
                 </div>
               );
             })}
           </div>
 
-          <div className="flex items-center gap-4 border-t border-line px-5 py-2.5 text-xs text-mist">
+          <div className="hidden items-center gap-4 border-t border-line px-5 py-2.5 text-xs text-mist sm:flex">
             <span className="flex items-center gap-1.5">
               <Kbd>↑</Kbd>
               <Kbd>↓</Kbd> naviger
@@ -230,7 +232,7 @@ export default function CommandPalette({ loggedIn, username }: { loggedIn: boole
             <span className="flex items-center gap-1.5">
               <Kbd>↵</Kbd> åpne
             </span>
-            <span className="ml-auto hidden sm:block">
+            <span className="ml-auto">
               Tips: trykk <Kbd>/</Kbd> hvor som helst
             </span>
           </div>

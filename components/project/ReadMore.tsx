@@ -110,7 +110,7 @@ export default function ReadMore({ children, minutes }: { children: React.ReactN
             aria-expanded={!clipped}
             aria-controls={id}
             onClick={state === "collapsed" ? expand : collapse}
-            className="group inline-flex items-center gap-2 rounded-full border border-line bg-surface px-5 py-2.5 text-sm font-semibold text-fg shadow-[0_10px_30px_-14px_rgb(0_0_0/0.6)] transition hover:border-ice/50 hover:text-ice"
+            className="glass group inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-fg transition active:scale-95"
           >
             {state === "collapsed" ? (
               <>

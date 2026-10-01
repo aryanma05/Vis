@@ -45,17 +45,17 @@ export default function Dialog({
       }}
     >
       <div className="fixed inset-0 flex items-end justify-center p-3 sm:items-center sm:p-6" onClick={(e) => e.target === e.currentTarget && onClose()}>
-        <div className={`w-full ${width} rounded-3xl border border-line bg-surface p-6 shadow-[0_40px_80px_-30px_rgb(0_0_0/0.7)] sm:p-7`}>
+        <div className={`glass-strong w-full ${width} rounded-[30px] p-6 sm:p-7`}>
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h2 className="text-xl font-semibold tracking-tight text-fg">{title}</h2>
+              <h2 className="text-lg font-semibold text-fg">{title}</h2>
               {description && <p className="mt-1.5 text-sm leading-6 text-mist">{description}</p>}
             </div>
             <button
               type="button"
               onClick={onClose}
               aria-label="Lukk"
-              className="-mr-2 -mt-1 rounded-lg p-2 text-mist transition hover:bg-surface-2 hover:text-fg"
+              className="-mr-2 -mt-1 flex size-8 items-center justify-center rounded-full bg-fill text-mist transition hover:bg-fill-2 hover:text-fg"
             >
               <X className="size-4" />
             </button>

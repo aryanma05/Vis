@@ -122,13 +122,13 @@ export default async function ProjectPage({ params }: Props) {
             <Avatar name={project.owner.name} image={project.owner.image} size={26} />
             <span className="font-medium text-fg/90 group-hover:text-fg">{project.owner.name}</span>
             {project.publishedAt && (
-              <time dateTime={project.publishedAt.toISOString()} suppressHydrationWarning className="text-mist/70">
+              <time dateTime={project.publishedAt.toISOString()} suppressHydrationWarning>
                 · {timeAgo(project.publishedAt)}
               </time>
             )}
           </Link>
-          <h1 className="mt-5 max-w-5xl display text-[clamp(2.6rem,6.5vw,5.5rem)]">{project.title}</h1>
-          {project.summary && <p className="mt-5 max-w-3xl text-xl leading-8 text-fg/80 md:text-2xl md:leading-9">{project.summary}</p>}
+          <h1 className="mt-4 max-w-5xl display text-[clamp(2.25rem,5vw,4rem)]">{project.title}</h1>
+          {project.summary && <p className="mt-4 max-w-3xl text-xl leading-8 text-mist md:text-[22px] md:leading-9">{project.summary}</p>}
 
           {/* Mobil: reaksjoner og ikonknapper på én rad, lenkene i full bredde under. */}
           <div className="mt-8 flex flex-wrap items-center gap-3">
@@ -159,18 +159,20 @@ export default async function ProjectPage({ params }: Props) {
           {project.images.length > 0 ? (
             <ProjectGallery images={project.images} title={project.title} />
           ) : (
-            <div className="aspect-[16/8] overflow-hidden rounded-3xl ring-1 ring-line">
+            <div className="aspect-[16/8] overflow-hidden rounded-[28px]">
               <ProjectCover title={project.title} label={project.tags[0]?.name} showTitle={false}>
                 {project.isOwner && (
                   <Link
                     href={`/prosjekt/${project.id}/rediger`}
                     className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-center transition hover:bg-black/10"
                   >
-                    <span className="flex size-14 items-center justify-center rounded-2xl bg-white/10 text-white backdrop-blur">
+                    <span className="glass-dark flex size-14 items-center justify-center rounded-full">
                       <ImagePlus className="size-6" />
                     </span>
                     <span className="text-2xl font-semibold text-white">Legg til bilder</span>
-                    <span className="text-sm text-white/75">Prosjekter med bilder får langt mer oppmerksomhet.</span>
+                    <span className="text-sm text-white/75">
+                      {project.demoUrl ? "Vi kan ta skjermbilder av nettsiden for deg." : "Prosjekter med bilder får langt mer oppmerksomhet."}
+                    </span>
                   </Link>
                 )}
               </ProjectCover>
@@ -185,10 +187,10 @@ export default async function ProjectPage({ params }: Props) {
         )}
 
         {/* Innholdet og faktaboksen. */}
-        <div className="mt-14 grid gap-12 lg:grid-cols-[minmax(0,1fr)_320px] xl:gap-16">
+        <div className="mt-14 grid grid-cols-1 gap-12 lg:grid-cols-[minmax(0,1fr)_320px] xl:gap-16">
           <div className="min-w-0 space-y-16">
             <section aria-label="Om prosjektet">
-              <h2 className="label-mono">Om prosjektet</h2>
+              <h2 className="caption">Om prosjektet</h2>
               <div className="mt-5">
                 {project.description.trim() ? (
                   <ReadMore minutes={readingMinutes(project.description)}>
@@ -197,7 +199,7 @@ export default async function ProjectPage({ params }: Props) {
                 ) : project.isOwner ? (
                   <p className="text-mist">
                     Ingen beskrivelse ennå.{" "}
-                    <Link href={`/prosjekt/${project.id}/rediger`} className="text-ice underline-offset-4 hover:underline">
+                    <Link href={`/prosjekt/${project.id}/rediger`} className="text-sea underline-offset-4 hover:underline">
                       Skriv hva du laget, hvorfor, og hva du lærte
                     </Link>
                     .
@@ -213,14 +215,14 @@ export default async function ProjectPage({ params }: Props) {
 
           {/* Repo-panelet gjør kolonnen høy, da blir den ikke stående fast (bunnen ville vært utenfor skjermen). */}
           <aside className={`space-y-6 lg:self-start ${repoName ? "" : "lg:sticky lg:top-8"}`}>
-            <section className="rounded-3xl border border-line bg-surface/50 p-5">
-              <p className="label-mono">Laget av</p>
+            <section className="rounded-[22px] glass-card p-5">
+              <p className="caption">Laget av</p>
               <div className="mt-4 flex items-center gap-3">
                 <Link href={`/@${project.owner.username}`} className="shrink-0">
                   <Avatar name={project.owner.name} image={project.owner.image} size={48} />
                 </Link>
                 <div className="min-w-0">
-                  <Link href={`/@${project.owner.username}`} className="block truncate font-semibold hover:text-ice">
+                  <Link href={`/@${project.owner.username}`} className="block truncate font-semibold">
                     {project.owner.name}
                   </Link>
                   <p className="truncate text-sm text-mist">{project.owner.headline ?? `@${project.owner.username}`}</p>
@@ -236,16 +238,16 @@ export default async function ProjectPage({ params }: Props) {
               </div>
             </section>
 
-            <dl className="space-y-4 rounded-3xl border border-line p-5 text-sm">
+            <dl className="space-y-4 rounded-[22px] glass-card p-5 text-sm">
               {project.role && (
                 <div>
-                  <dt className="label-mono">Rolle</dt>
+                  <dt className="caption">Rolle</dt>
                   <dd className="mt-1.5 text-fg">{project.role}</dd>
                 </div>
               )}
               {date && (
                 <div>
-                  <dt className="label-mono">Laget</dt>
+                  <dt className="caption">Laget</dt>
                   <dd className="mt-1.5 flex items-center gap-2 text-fg">
                     <CalendarDays className="size-4 text-mist" aria-hidden="true" /> {date}
                   </dd>
@@ -253,7 +255,7 @@ export default async function ProjectPage({ params }: Props) {
               )}
               {project.tags.length > 0 && (
                 <div>
-                  <dt className="label-mono">Laget med</dt>
+                  <dt className="caption">Laget med</dt>
                   <dd className="mt-2.5 flex flex-wrap gap-1.5">
                     {project.tags.map((t) => (
                       <Tag key={t.slug} href={`/tag/${t.slug}`}>
@@ -265,15 +267,15 @@ export default async function ProjectPage({ params }: Props) {
               )}
               {(project.demoUrl || project.repoUrl || project.githubFullName) && (
                 <div>
-                  <dt className="label-mono">Lenker</dt>
+                  <dt className="caption">Lenker</dt>
                   <dd className="mt-2 space-y-1.5">
                     {project.demoUrl && (
-                      <a href={project.demoUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2 truncate text-ice hover:underline">
+                      <a href={project.demoUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2 truncate text-sea hover:underline">
                         <ArrowUpRight className="size-4 shrink-0" /> {project.demoUrl.replace(/^https?:\/\/(www\.)?/, "")}
                       </a>
                     )}
                     {project.repoUrl && (
-                      <a href={project.repoUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2 truncate text-ice hover:underline">
+                      <a href={project.repoUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2 truncate text-sea hover:underline">
                         {repoName ? <GithubMark className="size-4 shrink-0" /> : <Code2 className="size-4 shrink-0" />}{" "}
                         {repoName ?? project.repoUrl.replace(/^https?:\/\/(www\.)?/, "")}
                       </a>
@@ -302,12 +304,12 @@ export default async function ProjectPage({ params }: Props) {
         {more.length > 0 && (
           <section className="mt-24 border-t border-line pt-12">
             <div className="flex flex-wrap items-end justify-between gap-4">
-              <h2 className="text-2xl font-bold tracking-tight">Mer fra {project.owner.name.split(" ")[0]}</h2>
+              <h2 className="text-2xl font-bold tracking-[-0.025em]">Mer fra {project.owner.name.split(" ")[0]}</h2>
               <Link href={`/@${project.owner.username}?fane=prosjekter`} className="text-sm text-mist hover:text-fg">
                 Alle prosjekter <ArrowRight className="inline size-3.5" />
               </Link>
             </div>
-            <div className="mt-8 grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="mt-8 grid grid-cols-1 gap-x-5 gap-y-9 sm:grid-cols-2 lg:grid-cols-3">
               {more.map((p) => (
                 <ProjectCard key={p.id} project={p} showOwner={false} />
               ))}
@@ -317,8 +319,8 @@ export default async function ProjectPage({ params }: Props) {
 
         {related.length > 0 && (
           <section className="mt-20">
-            <h2 className="text-2xl font-bold tracking-tight">Lignende prosjekter</h2>
-            <div className="mt-8 grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
+            <h2 className="text-2xl font-bold tracking-[-0.025em]">Lignende prosjekter</h2>
+            <div className="mt-8 grid grid-cols-1 gap-x-5 gap-y-9 sm:grid-cols-2 lg:grid-cols-3">
               {related.map((p) => (
                 <ProjectCard key={p.id} project={p} />
               ))}

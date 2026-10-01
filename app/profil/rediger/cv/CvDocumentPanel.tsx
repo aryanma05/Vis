@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
-import { FileUp, Sparkles, Trash2 } from "lucide-react";
+import { FileUp, ScanText, Trash2 } from "lucide-react";
 import { addCvPageAction, deleteCvDocumentAction, setCvVisibilityAction, uploadCvDocumentAction } from "@/app/actions/cv";
 import { Button, Spinner } from "@/components/ui/button";
 import Switch from "@/components/ui/switch";
@@ -151,8 +151,8 @@ export default function CvDocumentPanel({
             const file = e.dataTransfer.files?.[0];
             if (file) handleFile(file);
           }}
-          className={`blueprint flex w-full flex-col items-center justify-center rounded-3xl border-2 border-dashed px-6 py-14 text-center transition ${
-            dragging ? "border-ice bg-ice/10" : "border-line hover:border-ice/50"
+          className={`flex w-full flex-col items-center justify-center rounded-3xl border-2 border-dashed px-6 py-14 text-center transition ${
+            dragging ? "border-sea bg-sea/10" : "border-line hover:border-mist/60"
           }`}
         >
           {busy ? (
@@ -162,7 +162,7 @@ export default function CvDocumentPanel({
             </>
           ) : (
             <>
-              <span className="flex size-12 items-center justify-center rounded-2xl border border-line bg-surface text-ice">
+              <span className="flex size-12 items-center justify-center rounded-full glass-chip text-fg">
                 <FileUp className="size-5" />
               </span>
               <span className="mt-4 text-lg font-semibold">Slipp CV-en her</span>
@@ -205,7 +205,7 @@ export default function CvDocumentPanel({
       <div className="mt-6 flex flex-wrap items-center gap-2">
         {canParse && (
           <Button size="sm" onClick={onAutofill} loading={autofilling}>
-            <Sparkles className="size-4" /> {autofilling ? "Leser CV-en …" : "Fyll ut feltene fra CV-en"}
+            <ScanText className="size-4" /> {autofilling ? "Leser CV-en …" : "Fyll ut feltene fra CV-en"}
           </Button>
         )}
         <Button size="sm" variant="secondary" onClick={() => inputRef.current?.click()}>

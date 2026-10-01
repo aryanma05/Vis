@@ -1,8 +1,9 @@
 import type { Metadata, Viewport } from "next";
-import { Geist_Mono, Instrument_Serif, Schibsted_Grotesk } from "next/font/google";
+import { Geist } from "next/font/google";
 import "./globals.css";
 import MobileNav from "@/components/MobileNav";
 import CommandPalette from "@/components/nav/CommandPalette";
+import HomeLogo from "@/components/nav/HomeLogo";
 import Sidebar from "@/components/Sidebar";
 import SiteFooter from "@/components/SiteFooter";
 import { ThemeProvider } from "@/components/ThemeProvider";
@@ -12,15 +13,9 @@ import { getUnreadCount } from "@/lib/notifications";
 import { getCurrentUser } from "@/lib/session";
 import { SITE_DESCRIPTION, SITE_NAME, siteUrl } from "@/lib/site";
 
-const sans = Schibsted_Grotesk({ variable: "--font-schibsted", subsets: ["latin", "latin-ext"], display: "swap" });
-const serif = Instrument_Serif({
-  variable: "--font-instrument",
-  subsets: ["latin"],
-  weight: "400",
-  style: ["normal", "italic"],
-  display: "swap",
-});
-const mono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"], display: "swap" });
+// Geist: en ren grotesk som ligger nær Aeonik (som er en betalt font). Se README for
+// hvordan man bytter til Aeonik med lisens.
+const sans = Geist({ variable: "--font-geist", subsets: ["latin", "latin-ext"], display: "swap" });
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
@@ -40,8 +35,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: dark)", color: "#071a52" },
-    { media: "(prefers-color-scheme: light)", color: "#f5f7fb" },
+    { media: "(prefers-color-scheme: dark)", color: "#060b1d" },
+    { media: "(prefers-color-scheme: light)", color: "#eef0f5" },
   ],
 };
 
@@ -64,7 +59,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="nb"
       data-theme="midnight"
-      className={`${sans.variable} ${serif.variable} ${mono.variable} min-h-screen antialiased`}
+      className={`${sans.variable} min-h-screen antialiased`}
       suppressHydrationWarning
     >
       <head>
@@ -74,10 +69,11 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <ThemeProvider>
           <a
             href="#innhold"
-            className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-xl focus:bg-primary focus:px-4 focus:py-2 focus:text-on-primary"
+            className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-full focus:bg-primary focus:px-4 focus:py-2 focus:text-on-primary"
           >
             Hopp til innholdet
           </a>
+          <HomeLogo />
           <Sidebar user={navUser} />
           <MobileNav user={navUser} />
           <div id="innhold">{children}</div>

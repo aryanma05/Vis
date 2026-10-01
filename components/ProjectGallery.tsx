@@ -40,7 +40,7 @@ export default function ProjectGallery({ images, title }: { images: Image[]; tit
       type="button"
       onClick={() => setOpen(i)}
       aria-label={`Vis bilde ${i + 1} i fullskjerm`}
-      className={`group relative block cursor-zoom-in overflow-hidden rounded-2xl bg-surface ring-1 ring-line/60 md:rounded-3xl ${className}`}
+      className={`group relative block cursor-zoom-in overflow-hidden rounded-[20px] glass-card md:rounded-[28px] ${className}`}
     >
       {/* Bildene kan ligge hos mange ulike verter (README-er), derfor vanlig <img>. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -52,7 +52,8 @@ export default function ProjectGallery({ images, title }: { images: Image[]; tit
         decoding="async"
         className="size-full object-cover transition duration-700 ease-[var(--ease-out-expo)] group-hover:scale-[1.02]"
       />
-      <span className="absolute right-3 top-3 flex size-9 items-center justify-center rounded-full bg-black/45 text-white opacity-0 backdrop-blur transition group-hover:opacity-100">
+      <span className="glass-rim" aria-hidden="true" />
+      <span className="glass-dark absolute right-3 top-3 flex size-9 items-center justify-center rounded-full opacity-0 transition group-hover:opacity-100">
         <Expand className="size-4" aria-hidden="true" />
       </span>
     </button>
@@ -77,7 +78,7 @@ export default function ProjectGallery({ images, title }: { images: Image[]; tit
               <button
                 type="button"
                 onClick={() => setOpen(3)}
-                className="absolute inset-0 flex items-center justify-center rounded-2xl bg-black/55 text-2xl font-bold text-white backdrop-blur-[2px] transition hover:bg-black/45 md:rounded-3xl"
+                className="absolute inset-0 flex items-center justify-center rounded-[20px] bg-black/45 text-2xl font-semibold text-white backdrop-blur-md transition hover:bg-black/35 md:rounded-[28px]"
               >
                 +{count - 3}
                 <span className="sr-only"> bilder til</span>
@@ -92,7 +93,7 @@ export default function ProjectGallery({ images, title }: { images: Image[]; tit
           role="dialog"
           aria-modal="true"
           aria-label={`${title} – bilde ${open + 1} av ${count}`}
-          className="fixed inset-0 z-[80] flex animate-[fade_200ms_ease-out] flex-col bg-[#02061a]/95 backdrop-blur-sm"
+          className="fixed inset-0 z-[80] flex animate-[fade_200ms_ease-out] flex-col bg-black/90 backdrop-blur-xl"
           onClick={() => setOpen(null)}
           onTouchStart={(e) => (touchX.current = e.touches[0].clientX)}
           onTouchEnd={(e) => {
@@ -103,7 +104,7 @@ export default function ProjectGallery({ images, title }: { images: Image[]; tit
           }}
         >
           <div className="flex items-center justify-between px-5 py-4 text-sm text-white/80">
-            <span className="font-mono text-xs">
+            <span className="text-xs tabular-nums">
               {open + 1} / {count}
             </span>
             <span className="hidden max-w-[50%] truncate md:block">{alt(current, open)}</span>
@@ -111,7 +112,7 @@ export default function ProjectGallery({ images, title }: { images: Image[]; tit
               type="button"
               onClick={() => setOpen(null)}
               aria-label="Lukk"
-              className="flex size-10 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20"
+              className="flex size-10 items-center justify-center glass-dark rounded-full transition hover:bg-white/20"
             >
               <X className="size-5" />
             </button>
@@ -134,7 +135,7 @@ export default function ProjectGallery({ images, title }: { images: Image[]; tit
                     go(-1);
                   }}
                   aria-label="Forrige bilde"
-                  className="absolute left-3 top-1/2 flex size-12 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20 md:left-6"
+                  className="absolute left-3 top-1/2 flex size-12 -translate-y-1/2 items-center justify-center glass-dark rounded-full transition hover:bg-white/20 md:left-6"
                 >
                   <ChevronLeft className="size-6" />
                 </button>
@@ -145,7 +146,7 @@ export default function ProjectGallery({ images, title }: { images: Image[]; tit
                     go(1);
                   }}
                   aria-label="Neste bilde"
-                  className="absolute right-3 top-1/2 flex size-12 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20 md:right-6"
+                  className="absolute right-3 top-1/2 flex size-12 -translate-y-1/2 items-center justify-center glass-dark rounded-full transition hover:bg-white/20 md:right-6"
                 >
                   <ChevronRight className="size-6" />
                 </button>

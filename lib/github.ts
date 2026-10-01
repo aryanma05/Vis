@@ -5,6 +5,7 @@ import { db, schema } from "@/db";
 import { auth } from "@/lib/auth";
 import {
   addExternalProjectImages,
+  addProjectScreenshots,
   createProject,
   findProjectByGithubRepo,
   getImportedRepoIds,
@@ -14,6 +15,7 @@ import {
 } from "@/lib/projects";
 import { log } from "@/lib/log";
 import { UserFacingError } from "@/lib/result";
+import { assertScreenshotQuota } from "@/lib/screenshots";
 import { projectInput } from "@/lib/validation";
 
 const API = "https://api.github.com";
@@ -524,7 +526,7 @@ export async function importGithubRepo(
   if (repo.private) throw new UserFacingError("Bare offentlige repoer kan importeres.");
 
   const existing = await findProjectByGithubRepo(userId, repo.id);
-  if (existing) return { projectId: existing, alreadyImported: true };
+  if (existing) return { projectId: existing, alreadyImported: true, screenshots: 0 };
 
   const draft = await buildRepoImport(repo.full_name, token);
   let projectId: string;
@@ -537,12 +539,23 @@ export async function importGithubRepo(
   } catch (error) {
     // Samme repo importert to ganger samtidig (f.eks. dobbeltklikk).
     const duplicate = await findProjectByGithubRepo(userId, repo.id);
-    if (duplicate) return { projectId: duplicate, alreadyImported: true };
+    if (duplicate) return { projectId: duplicate, alreadyImported: true, screenshots: 0 };
     throw error;
   }
   await addExternalProjectImages(projectId, draft.images);
 
-  return { projectId, alreadyImported: false };
+  // Ingen bilder i README-en, men repoet har en nettside: ta skjermbilder av den.
+  let screenshots = 0;
+  if (draft.images.length === 0 && draft.input.demoUrl) {
+    try {
+      assertScreenshotQuota(userId);
+      screenshots = (await addProjectScreenshots(userId, projectId, draft.input.demoUrl)).length;
+    } catch (error) {
+      log.warn("github.import.screenshots", { error, repo: draft.fullName });
+    }
+  }
+
+  return { projectId, alreadyImported: false, screenshots };
 }
 
 /* -------------------------------------------------------------------------- */

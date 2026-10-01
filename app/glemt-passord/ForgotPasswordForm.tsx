@@ -156,7 +156,7 @@ export default function ForgotPasswordForm({ devHint }: { devHint: boolean }) {
           {error && !pending && <p className="text-danger">{error}</p>}
         </div>
         {devHint && (
-          <p className="mt-2 rounded-xl border border-dashed border-line px-3.5 py-2.5 text-[13px] text-mist">
+          <p className="mt-2 rounded-xl bg-fill px-3.5 py-2.5 text-[13px] text-mist">
             Utviklingsmodus: koden står i terminalen der <code className="font-mono">npm run dev</code> kjører.
           </p>
         )}

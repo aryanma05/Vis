@@ -26,14 +26,14 @@ export default async function Comments({
     <section id="kommentarer" className="scroll-mt-24" aria-label="Kommentarer">
       <div className="flex items-baseline justify-between gap-4">
         <h2 className="text-2xl font-bold tracking-tight">Kommentarer</h2>
-        <span className="font-mono text-xs text-mist">{total}</span>
+        <span className="text-sm tabular-nums text-mist">{total}</span>
       </div>
 
       <div className="mt-6">
         {me ? (
           <CommentForm projectId={projectId} viewer={me} />
         ) : (
-          <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-dashed border-line px-5 py-4">
+          <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-fill px-5 py-4">
             <p className="text-mist">Logg inn for å kommentere og svare.</p>
             <Link href={`/logg-inn?neste=/prosjekt/${projectId}%23kommentarer`} className="text-sm font-semibold text-ice hover:underline">
               Logg inn
