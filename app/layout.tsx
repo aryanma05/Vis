@@ -24,14 +24,14 @@ const mono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"], dis
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
-  title: { default: "Vis – din faglige identitet på ett sted", template: "%s · Vis" },
+  title: { default: "Vis – prosjektene dine, vist frem", template: "%s · Vis" },
   description: SITE_DESCRIPTION,
   applicationName: SITE_NAME,
   openGraph: {
     type: "website",
     siteName: SITE_NAME,
     locale: "nb_NO",
-    title: "Vis – din faglige identitet på ett sted",
+    title: "Vis – prosjektene dine, vist frem",
     description: SITE_DESCRIPTION,
   },
   twitter: { card: "summary_large_image" },

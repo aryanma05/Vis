@@ -4,7 +4,7 @@
 export const OPEN_TO = ["jobb", "freelance", "samarbeid", "mentor", "prat"] as const;
 export type OpenTo = (typeof OPEN_TO)[number];
 export const OPEN_TO_LABELS: Record<OpenTo, string> = {
-  jobb: "Ny jobb",
+  jobb: "Nye muligheter",
   freelance: "Frilansoppdrag",
   samarbeid: "Samarbeid",
   mentor: "Mentoring",

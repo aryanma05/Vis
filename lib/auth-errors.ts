@@ -35,6 +35,7 @@ const ERRORS: Record<string, { message: string; field?: AuthField }> = {
   OTP_EXPIRED: { message: "Koden har gått ut. Be om en ny." },
   TOO_MANY_ATTEMPTS: { message: "For mange feil forsøk. Be om en ny kode." },
   USER_NOT_FOUND: { message: "Fant ingen konto med den e-posten." },
+  EMAIL_SEND_FAILED: { message: "Vi fikk ikke sendt e-posten akkurat nå. Prøv igjen om litt, eller si fra til oss hvis det fortsetter." },
   BANNED_USER: { message: "Kontoen din er stengt av en moderator. Ta kontakt hvis du mener det er feil." },
 };
 

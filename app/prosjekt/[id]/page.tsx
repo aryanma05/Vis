@@ -1,15 +1,19 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import { ArrowRight, ArrowUpRight, CalendarDays, Code2, Eye, ImagePlus, MessageCircle, UserRound } from "lucide-react";
 import Avatar from "@/components/Avatar";
 import Comments from "@/components/comments/Comments";
+import { GithubMark } from "@/components/icons";
 import Markdown from "@/components/Markdown";
 import ProjectCard from "@/components/ProjectCard";
 import ProjectCover from "@/components/ProjectCover";
 import ProjectGallery from "@/components/ProjectGallery";
+import GithubRepoPanel, { GithubRepoPanelSkeleton } from "@/components/project/GithubRepoPanel";
 import ProjectMenu from "@/components/project/ProjectMenu";
 import ReactionBar from "@/components/project/ReactionBar";
+import ReadMore from "@/components/project/ReadMore";
 import VideoEmbed from "@/components/project/VideoEmbed";
 import FollowButton from "@/components/social/FollowButton";
 import ShareButton from "@/components/social/ShareButton";
@@ -19,6 +23,7 @@ import ViewTracker from "@/components/ViewTracker";
 import { isAdmin } from "@/lib/admin";
 import { countComments } from "@/lib/comments";
 import { formatYearMonth, timeAgo } from "@/lib/format";
+import { projectRepoName } from "@/lib/github";
 import { getMoreFromOwner, getProjectById, getRelatedProjects } from "@/lib/projects";
 import { getReactionSummary } from "@/lib/reactions";
 import { getCurrentUser } from "@/lib/session";
@@ -27,6 +32,17 @@ import { isFollowing } from "@/lib/social";
 import ProjectOwnerActions from "./ProjectOwnerActions";
 
 type Props = { params: Promise<{ id: string }> };
+
+// Omtrent hvor lenge det tar å lese beskrivelsen (200 ord i minuttet, uten kode og lenker).
+function readingMinutes(markdown: string) {
+  const words = markdown
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/<[^>]+>/g, " ")
+    .split(/\s+/)
+    .filter((w) => /\p{L}/u.test(w)).length;
+  return Math.max(1, Math.round(words / 200));
+}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
@@ -58,6 +74,7 @@ export default async function ProjectPage({ params }: Props) {
   ]);
 
   const date = formatYearMonth(project.projectDate);
+  const repoName = projectRepoName(project);
   const published = project.status === "published" && !project.removed;
   const jsonLd = {
     "@context": "https://schema.org",
@@ -129,7 +146,7 @@ export default async function ProjectPage({ params }: Props) {
                 )}
                 {project.repoUrl && (
                   <a href={project.repoUrl} target="_blank" rel="noreferrer" className={`${buttonClass({ variant: "secondary" })} max-sm:flex-1`}>
-                    <Code2 className="size-4" /> Kode
+                    {repoName ? <GithubMark className="size-4" /> : <Code2 className="size-4" />} {repoName ? "GitHub" : "Kode"}
                   </a>
                 )}
               </div>
@@ -174,7 +191,9 @@ export default async function ProjectPage({ params }: Props) {
               <h2 className="label-mono">Om prosjektet</h2>
               <div className="mt-5">
                 {project.description.trim() ? (
-                  <Markdown>{project.description}</Markdown>
+                  <ReadMore minutes={readingMinutes(project.description)}>
+                    <Markdown>{project.description}</Markdown>
+                  </ReadMore>
                 ) : project.isOwner ? (
                   <p className="text-mist">
                     Ingen beskrivelse ennå.{" "}
@@ -192,7 +211,8 @@ export default async function ProjectPage({ params }: Props) {
             <Comments projectId={project.id} viewer={viewer} isAdmin={admin} />
           </div>
 
-          <aside className="space-y-6 lg:sticky lg:top-8 lg:self-start">
+          {/* Repo-panelet gjør kolonnen høy, da blir den ikke stående fast (bunnen ville vært utenfor skjermen). */}
+          <aside className={`space-y-6 lg:self-start ${repoName ? "" : "lg:sticky lg:top-8"}`}>
             <section className="rounded-3xl border border-line bg-surface/50 p-5">
               <p className="label-mono">Laget av</p>
               <div className="mt-4 flex items-center gap-3">
@@ -254,7 +274,8 @@ export default async function ProjectPage({ params }: Props) {
                     )}
                     {project.repoUrl && (
                       <a href={project.repoUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2 truncate text-ice hover:underline">
-                        <Code2 className="size-4 shrink-0" /> {project.githubFullName ?? project.repoUrl.replace(/^https?:\/\/(www\.)?/, "")}
+                        {repoName ? <GithubMark className="size-4 shrink-0" /> : <Code2 className="size-4 shrink-0" />}{" "}
+                        {repoName ?? project.repoUrl.replace(/^https?:\/\/(www\.)?/, "")}
                       </a>
                     )}
                   </dd>
@@ -269,6 +290,12 @@ export default async function ProjectPage({ params }: Props) {
                 </a>
               </div>
             </dl>
+
+            {repoName && (
+              <Suspense fallback={<GithubRepoPanelSkeleton />}>
+                <GithubRepoPanel fullName={repoName} projectId={project.id} isOwner={project.isOwner} />
+              </Suspense>
+            )}
           </aside>
         </div>
 

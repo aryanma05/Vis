@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { FolderOpen, ImagePlus } from "lucide-react";
-import { OAuthButton } from "@/components/GithubButton";
 import { GithubMark } from "@/components/icons";
 import ProjectForm from "@/components/ProjectForm";
 import { isGithubConfigured } from "@/lib/auth";
-import { hasGithubAccount } from "@/lib/github";
+import { githubLoginFromLinks, hasGithubAccount } from "@/lib/github";
+import { getOwnProfile } from "@/lib/profiles";
 import { getPopularTags, MAX_PROJECT_IMAGES } from "@/lib/projects";
 import { requireUser } from "@/lib/session";
 import FolderImport from "./FolderImport";
@@ -17,7 +17,7 @@ export const metadata: Metadata = { title: "Del prosjekt", robots: { index: fals
 const SOURCES = [
   { key: "manuell", label: "Med bilder", text: "Dra inn skjermbilder og skriv litt om det.", Icon: ImagePlus },
   { key: "mappe", label: "Fra en mappe", text: "Vi leser README og finner skjermbilder. Koden lastes ikke opp.", Icon: FolderOpen },
-  { key: "github", label: "Fra GitHub", text: "Velg blant de offentlige repoene dine.", Icon: GithubMark },
+  { key: "github", label: "Fra GitHub", text: "Skriv brukernavnet ditt eller lim inn en repo-lenke.", Icon: GithubMark },
 ] as const;
 
 type Source = (typeof SOURCES)[number]["key"];
@@ -26,7 +26,11 @@ export default async function NewProjectPage({ searchParams }: { searchParams: P
   const user = await requireUser();
   const { fra } = await searchParams;
   const source: Source = fra === "github" || fra === "mappe" ? fra : "manuell";
-  const [githubLinked, tags] = await Promise.all([source === "github" ? hasGithubAccount(user.id) : false, getPopularTags(40)]);
+  const [githubLinked, ownProfile, tags] = await Promise.all([
+    source === "github" ? hasGithubAccount(user.id) : false,
+    source === "github" ? getOwnProfile(user.id) : null,
+    getPopularTags(40),
+  ]);
 
   return (
     <main className="px-5 pb-28 pt-8 md:pb-16 md:pl-28 md:pr-10 md:pt-12">
@@ -59,17 +63,13 @@ export default async function NewProjectPage({ searchParams }: { searchParams: P
 
         <div className="mt-12">
           {source === "mappe" && <FolderImport />}
-          {source === "github" &&
-            (githubLinked ? (
-              <GithubImporter />
-            ) : isGithubConfigured ? (
-              <div className="max-w-sm space-y-4 rounded-3xl border border-line p-6">
-                <p className="text-mist">Koble til GitHub for å velge hvilke repoer du vil vise frem. Vi ber bare om tilgang til offentlige repoer.</p>
-                <OAuthButton provider="github" mode="link" callbackURL="/ny?fra=github" label="Koble til GitHub" />
-              </div>
-            ) : (
-              <p className="text-mist">GitHub-innlogging er ikke satt opp ennå (GITHUB_CLIENT_ID mangler).</p>
-            ))}
+          {source === "github" && (
+            <GithubImporter
+              linked={githubLinked}
+              canLink={isGithubConfigured}
+              suggestedLogin={githubLoginFromLinks(ownProfile?.links ?? [])}
+            />
+          )}
           {source === "manuell" && <ProjectForm maxImages={MAX_PROJECT_IMAGES} tagSuggestions={tags.map((t) => t.name)} />}
         </div>
       </div>

@@ -8,12 +8,20 @@ import {
   createProject,
   findProjectByGithubRepo,
   getImportedRepoIds,
+  getProjectById,
   MAX_PROJECT_IMAGES,
+  replaceProjectDescription,
 } from "@/lib/projects";
+import { log } from "@/lib/log";
 import { UserFacingError } from "@/lib/result";
 import { projectInput } from "@/lib/validation";
 
 const API = "https://api.github.com";
+
+// Valgfri nøkkel for serveren (en «fine-grained» token uten noen tilganger holder). Den
+// brukes til offentlige data når brukeren ikke har koblet til GitHub. Uten den deler alle
+// besøkende GitHubs grense på 60 forespørsler i timen fra serverens IP-adresse.
+const SERVER_TOKEN = process.env.GITHUB_TOKEN?.trim() || null;
 
 /* -------------------------------------------------------------------------- */
 /*  Tilgang                                                                   */
@@ -48,13 +56,24 @@ async function requireGithubToken(userId: string) {
   return token;
 }
 
+// Tokenet til brukeren hvis de har koblet til GitHub, ellers ingen (serverens nøkkel brukes da).
+async function optionalGithubToken(userId: string | null | undefined) {
+  if (!userId) return null;
+  try {
+    return await getGithubToken(userId);
+  } catch {
+    return null;
+  }
+}
+
 async function gh<T>(path: string, token: string | null, accept = "application/vnd.github+json"): Promise<T> {
+  const auth = token ?? SERVER_TOKEN;
   const res = await fetch(path.startsWith("http") ? path : `${API}${path}`, {
     headers: {
       Accept: accept,
       "X-GitHub-Api-Version": "2022-11-28",
       "User-Agent": "vis-app",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(auth ? { Authorization: `Bearer ${auth}` } : {}),
     },
     signal: AbortSignal.timeout(10_000),
     cache: "no-store",
@@ -62,7 +81,8 @@ async function gh<T>(path: string, token: string | null, accept = "application/v
 
   if (res.ok) return (accept.includes("json") ? res.json() : res.text()) as Promise<T>;
 
-  if (res.status === 401) throw new UserFacingError("GitHub-tilgangen har utløpt. Koble til GitHub på nytt.");
+  if (res.status === 401 && token) throw new UserFacingError("GitHub-tilgangen har utløpt. Koble til GitHub på nytt.");
+  if (res.status === 401) throw new Error("GITHUB_TOKEN er ugyldig eller utløpt.");
   if (res.status === 404) throw new GithubNotFound();
   if (res.status === 403 || res.status === 429) {
     throw new UserFacingError("GitHub begrenser antall forespørsler akkurat nå. Prøv igjen om litt.");
@@ -96,8 +116,12 @@ type ApiRepo = {
   pushed_at: string | null;
   created_at: string;
   default_branch: string;
-  owner: { login: string };
+  owner: { login: string; avatar_url?: string };
   permissions?: { admin: boolean; push: boolean; pull: boolean };
+  forks_count?: number;
+  subscribers_count?: number;
+  open_issues_count?: number;
+  license?: { spdx_id: string | null; name: string } | null;
 };
 
 export type RepoSummary = {
@@ -129,21 +153,88 @@ export async function listImportableRepos(userId: string): Promise<RepoSummary[]
   }
 
   const imported = await getImportedRepoIds(userId);
-  return repos
-    .filter((r) => !r.private && (r.permissions?.push || r.permissions?.admin))
-    .map((r) => ({
-      id: r.id,
-      name: r.name,
-      fullName: r.full_name,
-      description: r.description,
-      url: r.html_url,
-      language: r.language,
-      stars: r.stargazers_count,
-      fork: r.fork,
-      archived: r.archived,
-      pushedAt: r.pushed_at,
-      alreadyImported: imported.has(r.id),
-    }));
+  return repos.filter((r) => !r.private && (r.permissions?.push || r.permissions?.admin)).map((r) => toSummary(r, imported));
+}
+
+function toSummary(r: ApiRepo, imported: Set<number>): RepoSummary {
+  return {
+    id: r.id,
+    name: r.name,
+    fullName: r.full_name,
+    description: r.description,
+    url: r.html_url,
+    language: r.language,
+    stars: r.stargazers_count,
+    fork: r.fork,
+    archived: r.archived,
+    pushedAt: r.pushed_at,
+    alreadyImported: imported.has(r.id),
+  };
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Offentlige repoer, uten å koble til GitHub                                */
+/* -------------------------------------------------------------------------- */
+
+const LOGIN = /^[a-z\d](?:[a-z\d]|-(?=[a-z\d])){0,38}$/i;
+const REPO_NAME = /^[\w.-]{1,100}$/;
+
+export type GithubQuery = { kind: "repo"; fullName: string } | { kind: "user"; login: string };
+
+// Forstår «brukernavn», «eier/repo», github.com-lenker (også til undermapper og
+// filer) og git@github.com:eier/repo.git.
+export function parseGithubInput(input: string): GithubQuery | null {
+  const text = input
+    .trim()
+    .replace(/^git@github\.com:/i, "https://github.com/")
+    .replace(/^@/, "");
+  const url = /^(?:https?:\/\/)?(?:www\.)?github\.com\/([^/?#\s]+)(?:\/([^/?#\s]+))?/i.exec(text);
+  const [owner, rawRepo] = url ? [url[1], url[2]] : text.split("/");
+  const repo = rawRepo?.replace(/\.git$/i, "");
+  if (owner && repo && LOGIN.test(owner) && REPO_NAME.test(repo)) return { kind: "repo", fullName: `${owner}/${repo}` };
+  if (owner && !repo && LOGIN.test(owner)) return { kind: "user", login: owner };
+  return null;
+}
+
+// GitHub-brukernavnet fra en lenke på profilen (github.com/navn), hvis det finnes en.
+export function githubLoginFromLinks(links: { url: string }[]): string | null {
+  for (const { url } of links) {
+    const parsed = /^(?:https?:\/\/)?(?:www\.)?github\.com\/([^/?#\s]+)\/?$/i.exec(url.trim());
+    if (parsed && LOGIN.test(parsed[1])) return parsed[1];
+  }
+  return null;
+}
+
+export type GithubLookup =
+  | { kind: "user"; login: string; avatar: string | null; repos: RepoSummary[] }
+  | { kind: "repo"; repos: RepoSummary[] };
+
+// Søket i «Fra GitHub»: et brukernavn gir de offentlige repoene til brukeren,
+// en repo-lenke gir det ene repoet.
+export async function lookupGithub(userId: string, input: string): Promise<GithubLookup> {
+  const query = parseGithubInput(input);
+  if (!query) throw new UserFacingError("Skriv et GitHub-brukernavn eller lim inn en lenke til et repo.");
+  const [token, imported] = await Promise.all([optionalGithubToken(userId), getImportedRepoIds(userId)]);
+
+  if (query.kind === "repo") {
+    const repo = await gh<ApiRepo>(`/repos/${query.fullName}`, token);
+    if (repo.private) throw new UserFacingError("Repoet er privat. Bare offentlige repoer kan vises på Vis.");
+    return { kind: "repo", repos: [toSummary(repo, imported)] };
+  }
+
+  let repos: ApiRepo[];
+  try {
+    repos = await gh<ApiRepo[]>(`/users/${query.login}/repos?type=owner&sort=pushed&per_page=100`, token);
+  } catch (error) {
+    if (error instanceof GithubNotFound) throw new UserFacingError(`Fant ingen GitHub-bruker som heter «${query.login}».`);
+    throw error;
+  }
+  return {
+    kind: "user",
+    login: repos[0]?.owner.login ?? query.login,
+    avatar: repos[0]?.owner.avatar_url ?? null,
+    repos: repos.filter((r) => !r.private).map((r) => toSummary(r, imported)),
+  };
 }
 
 /* -------------------------------------------------------------------------- */
@@ -324,25 +415,17 @@ export type RepoImportDraft = {
   images: { url: string; alt: string | null }[];
 };
 
-// Henter alt vi trenger fra GitHub og gjør det om til et prosjekt, uten å lagre noe.
-export async function buildRepoImport(fullName: string, token: string | null): Promise<RepoImportDraft> {
-  if (!/^[\w.-]+\/[\w.-]+$/.test(fullName)) throw new UserFacingError("Ugyldig reponavn.");
-
-  const repo = await gh<ApiRepo>(`/repos/${fullName}`, token);
-  if (repo.private) throw new UserFacingError("Bare offentlige repoer kan importeres.");
-
-  const [languages, readme, sha, ogImage] = await Promise.all([
-    gh<Record<string, number>>(`/repos/${repo.full_name}/languages`, token).catch(() => ({})),
-    gh<{ content: string; encoding: string; path: string }>(`/repos/${repo.full_name}/readme`, token).catch(
-      (e) => {
-        if (e instanceof GithubNotFound) return null;
-        throw e;
-      },
-    ),
+// README-en som prosjektbeskrivelse: relative bilder og lenker gjøres om til faste
+// adresser (låst til siste commit), og en innledende overskrift med reponavnet fjernes.
+async function fetchReadme(repo: ApiRepo, token: string | null) {
+  const [readme, sha] = await Promise.all([
+    gh<{ content: string; encoding: string; path: string }>(`/repos/${repo.full_name}/readme`, token).catch((e) => {
+      if (e instanceof GithubNotFound) return null;
+      throw e;
+    }),
     gh<string>(`/repos/${repo.full_name}/commits/${repo.default_branch}`, token, "application/vnd.github.sha").catch(
       () => repo.default_branch,
     ),
-    token ? fetchCustomSocialImage(repo.full_name, token) : Promise.resolve(null),
   ]);
 
   const [owner, name] = repo.full_name.split("/");
@@ -354,11 +437,28 @@ export async function buildRepoImport(fullName: string, token: string | null): P
     dir: readmePath.includes("/") ? readmePath.slice(0, readmePath.lastIndexOf("/") + 1) : "",
   };
 
-  const rawReadme = readme ? Buffer.from(readme.content, "base64").toString("utf8") : "";
-  let description = absolutizeReadme(stripLeadingTitle(rawReadme, repo.name), ref);
+  const raw = readme ? Buffer.from(readme.content, "base64").toString("utf8") : "";
+  let description = absolutizeReadme(stripLeadingTitle(raw, repo.name), ref);
   if (description.length > MAX_DESCRIPTION) {
     description = `${description.slice(0, MAX_DESCRIPTION - 80)}\n\n…\n\n[Les hele README-en på GitHub](${repo.html_url}#readme)`;
   }
+  return { raw, description, ref, found: Boolean(readme) };
+}
+
+// Henter alt vi trenger fra GitHub og gjør det om til et prosjekt, uten å lagre noe.
+export async function buildRepoImport(fullName: string, token: string | null): Promise<RepoImportDraft> {
+  if (!/^[\w.-]+\/[\w.-]+$/.test(fullName)) throw new UserFacingError("Ugyldig reponavn.");
+
+  const repo = await gh<ApiRepo>(`/repos/${fullName}`, token);
+  if (repo.private) throw new UserFacingError("Bare offentlige repoer kan importeres.");
+
+  const socialToken = token ?? SERVER_TOKEN;
+  const [languages, readme, ogImage] = await Promise.all([
+    gh<Record<string, number>>(`/repos/${repo.full_name}/languages`, token).catch(() => ({})),
+    fetchReadme(repo, token),
+    socialToken ? fetchCustomSocialImage(repo.full_name, socialToken) : Promise.resolve(null),
+  ]);
+  const { raw: rawReadme, description, ref } = readme;
 
   const topLanguages = Object.entries(languages)
     .filter(([lang]) => !NOISE_LANGUAGES.has(lang))
@@ -409,18 +509,19 @@ async function fetchCustomSocialImage(fullName: string, token: string): Promise<
   }
 }
 
+// Importerer et offentlig repo som prosjekt. Har brukeren koblet til GitHub, brukes
+// tokenet deres (høyere grense hos GitHub), ellers hentes repoet som offentlige data.
 export async function importGithubRepo(
   userId: string,
   fullName: string,
   { publish = false }: { publish?: boolean } = {},
 ) {
-  const token = await requireGithubToken(userId);
+  const query = parseGithubInput(fullName);
+  if (query?.kind !== "repo") throw new UserFacingError("Ugyldig reponavn.");
+  const token = await optionalGithubToken(userId);
 
-  // Bare repoer brukeren har skrivetilgang til, så ingen kan "låne" andres prosjekter.
-  const repo = await gh<ApiRepo>(`/repos/${fullName}`, token);
-  if (!repo.permissions?.push && !repo.permissions?.admin) {
-    throw new UserFacingError("Du kan bare importere repoer du selv har skrevet til.");
-  }
+  const repo = await gh<ApiRepo>(`/repos/${query.fullName}`, token);
+  if (repo.private) throw new UserFacingError("Bare offentlige repoer kan importeres.");
 
   const existing = await findProjectByGithubRepo(userId, repo.id);
   if (existing) return { projectId: existing, alreadyImported: true };
@@ -442,4 +543,192 @@ export async function importGithubRepo(
   await addExternalProjectImages(projectId, draft.images);
 
   return { projectId, alreadyImported: false };
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Hent README på nytt                                                       */
+/* -------------------------------------------------------------------------- */
+
+// Repoet et prosjekt peker til: det det ble importert fra, eller kode-lenken hvis den går til GitHub.
+export function projectRepoName(project: { githubFullName: string | null; repoUrl: string | null }) {
+  if (project.githubFullName) return project.githubFullName;
+  if (!project.repoUrl || !/github\.com\//i.test(project.repoUrl)) return null;
+  const query = parseGithubInput(project.repoUrl);
+  return query?.kind === "repo" ? query.fullName : null;
+}
+
+// Bytter beskrivelsen med den nyeste README-en i repoet.
+export async function syncProjectReadme(userId: string, projectId: string) {
+  const project = await getProjectById(projectId, userId);
+  if (!project?.isOwner) throw new UserFacingError("Fant ikke prosjektet.");
+  const fullName = projectRepoName(project);
+  if (!fullName) throw new UserFacingError("Prosjektet er ikke koblet til et repo på GitHub.");
+
+  const token = await optionalGithubToken(userId);
+  const repo = await gh<ApiRepo>(`/repos/${fullName}`, token);
+  if (repo.private) throw new UserFacingError("Repoet er privat.");
+  const readme = await fetchReadme(repo, token);
+  if (!readme.found) throw new UserFacingError("Repoet har ingen README.");
+  await replaceProjectDescription(userId, projectId, readme.description);
+  insightCache.delete(repo.full_name.toLowerCase());
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Repo-info på prosjektsiden                                                */
+/* -------------------------------------------------------------------------- */
+
+// Fargene GitHub bruker for de vanligste språkene.
+const LANGUAGE_COLORS: Record<string, string> = {
+  TypeScript: "#3178c6",
+  JavaScript: "#f1e05a",
+  Python: "#3572A5",
+  Java: "#b07219",
+  Kotlin: "#A97BFF",
+  Swift: "#F05138",
+  "Objective-C": "#438eff",
+  Dart: "#00B4AB",
+  Go: "#00ADD8",
+  Rust: "#dea584",
+  C: "#555555",
+  "C++": "#f34b7d",
+  "C#": "#178600",
+  Ruby: "#701516",
+  PHP: "#4F5D95",
+  HTML: "#e34c26",
+  CSS: "#663399",
+  SCSS: "#c6538c",
+  Vue: "#41b883",
+  Svelte: "#ff3e00",
+  Astro: "#ff5a03",
+  Shell: "#89e051",
+  Dockerfile: "#384d54",
+  "Jupyter Notebook": "#DA5B0B",
+  R: "#198CE7",
+  Lua: "#000080",
+  Elixir: "#6e4a7e",
+  Haskell: "#5e5086",
+  Scala: "#c22d40",
+  Zig: "#ec915c",
+  GDScript: "#355570",
+  MDX: "#fcb32c",
+};
+const FALLBACK_COLORS = ["#5eb8d4", "#9fe0a8", "#b9a6ff", "#ffc27a", "#ff9fb5"];
+
+export type RepoInsights = {
+  fullName: string;
+  url: string;
+  cloneUrl: string;
+  zipUrl: string;
+  homepage: string | null;
+  stars: number;
+  forks: number;
+  watchers: number;
+  openIssues: number;
+  license: string | null;
+  archived: boolean;
+  fork: boolean;
+  defaultBranch: string;
+  pushedAt: string | null;
+  createdAt: string;
+  topics: string[];
+  languages: { name: string; percent: number; color: string }[];
+  commits: { sha: string; message: string; url: string; date: string | null; author: string; avatar: string | null }[];
+  contributors: { login: string; avatar: string; url: string; contributions: number }[];
+  release: { tag: string; name: string; url: string; publishedAt: string | null } | null;
+};
+
+type ApiCommit = {
+  sha: string;
+  html_url: string;
+  commit: { message: string; author: { name: string; date: string } | null };
+  author: { login: string; avatar_url: string } | null;
+};
+type ApiContributor = { login: string; avatar_url: string; html_url: string; contributions: number; type: string };
+type ApiRelease = { tag_name: string; name: string | null; html_url: string; published_at: string | null };
+
+// Svarene caches i minnet, så en populær prosjektside ikke bruker opp grensen hos GitHub.
+// Feil caches kortere, så siden prøver igjen litt senere.
+const insightCache = new Map<string, { at: number; ttl: number; value: Promise<RepoInsights | null> }>();
+const INSIGHT_TTL = 30 * 60_000;
+const INSIGHT_ERROR_TTL = 5 * 60_000;
+
+export function getRepoInsights(fullName: string): Promise<RepoInsights | null> {
+  const key = fullName.toLowerCase();
+  const cached = insightCache.get(key);
+  if (cached && Date.now() - cached.at < cached.ttl) return cached.value;
+
+  const entry = { at: Date.now(), ttl: INSIGHT_TTL, value: Promise.resolve<RepoInsights | null>(null) };
+  entry.value = loadRepoInsights(fullName).catch((error) => {
+    log.warn("github.insights", { error, fullName });
+    entry.ttl = INSIGHT_ERROR_TTL;
+    return null;
+  });
+  insightCache.set(key, entry);
+  if (insightCache.size > 500) insightCache.delete(insightCache.keys().next().value!);
+  return entry.value;
+}
+
+async function loadRepoInsights(fullName: string): Promise<RepoInsights | null> {
+  if (parseGithubInput(fullName)?.kind !== "repo") return null;
+  let repo: ApiRepo;
+  try {
+    repo = await gh<ApiRepo>(`/repos/${fullName}`, null);
+  } catch (error) {
+    if (error instanceof GithubNotFound) return null;
+    throw error;
+  }
+  if (repo.private) return null;
+
+  const base = `/repos/${repo.full_name}`;
+  const [languages, commits, contributors, release] = await Promise.all([
+    gh<Record<string, number>>(`${base}/languages`, null).catch(() => ({})),
+    // Tomme repoer svarer 409 her.
+    gh<ApiCommit[]>(`${base}/commits?per_page=4`, null).catch(() => []),
+    // Store repoer kan svare 202 mens GitHub regner, da kommer det ingen liste.
+    gh<ApiContributor[]>(`${base}/contributors?per_page=12`, null).catch(() => []),
+    gh<ApiRelease>(`${base}/releases/latest`, null).catch(() => null),
+  ]);
+
+  const total = Object.values(languages).reduce((sum, bytes) => sum + bytes, 0);
+  const sorted = Object.entries(languages).sort((a, b) => b[1] - a[1]);
+  const top = sorted.slice(0, 5).map(([name, bytes], i) => ({
+    name,
+    percent: total ? (bytes / total) * 100 : 0,
+    color: LANGUAGE_COLORS[name] ?? FALLBACK_COLORS[i % FALLBACK_COLORS.length],
+  }));
+  const rest = sorted.slice(5).reduce((sum, [, bytes]) => sum + bytes, 0);
+  if (total && rest / total >= 0.005) top.push({ name: "Annet", percent: (rest / total) * 100, color: "#8b949e" });
+
+  return {
+    fullName: repo.full_name,
+    url: repo.html_url,
+    cloneUrl: `${repo.html_url}.git`,
+    zipUrl: `${repo.html_url}/archive/refs/heads/${encodeURIComponent(repo.default_branch)}.zip`,
+    homepage: repo.homepage && /^https?:\/\//i.test(repo.homepage) ? repo.homepage : null,
+    stars: repo.stargazers_count,
+    forks: repo.forks_count ?? 0,
+    watchers: repo.subscribers_count ?? 0,
+    openIssues: repo.open_issues_count ?? 0,
+    license: repo.license && repo.license.spdx_id !== "NOASSERTION" ? (repo.license.spdx_id ?? repo.license.name) : null,
+    archived: repo.archived,
+    fork: repo.fork,
+    defaultBranch: repo.default_branch,
+    pushedAt: repo.pushed_at,
+    createdAt: repo.created_at,
+    topics: (repo.topics ?? []).filter((t) => !NOISE_TOPICS.test(t)).slice(0, 8),
+    languages: top,
+    commits: (Array.isArray(commits) ? commits : []).slice(0, 4).map((c) => ({
+      sha: c.sha.slice(0, 7),
+      message: c.commit.message.split("\n")[0].slice(0, 120),
+      url: c.html_url,
+      date: c.commit.author?.date ?? null,
+      author: c.author?.login ?? c.commit.author?.name ?? "ukjent",
+      avatar: c.author?.avatar_url ?? null,
+    })),
+    contributors: (Array.isArray(contributors) ? contributors : [])
+      .filter((c) => c.type !== "Bot")
+      .slice(0, 8)
+      .map((c) => ({ login: c.login, avatar: c.avatar_url, url: c.html_url, contributions: c.contributions })),
+    release: release ? { tag: release.tag_name, name: release.name || release.tag_name, url: release.html_url, publishedAt: release.published_at } : null,
+  };
 }

@@ -379,6 +379,66 @@ dialog.modal[open] > * {
   animation: rise 220ms var(--ease-out-expo);
 }
 
+/* Logoen i sidemenyen (components/nav/HomeLogo.tsx): en myk glød i logofargene,
+   og V-en strekker seg som en strikk når du peker på den. */
+.home-logo-glow {
+  background: conic-gradient(from 200deg, #00eeff, #1414ff, #3a2ab2, #00eeff);
+  filter: blur(9px);
+  opacity: 0.3;
+  transition:
+    opacity 400ms,
+    transform 700ms var(--ease-out-expo);
+}
+
+.home-logo:hover .home-logo-glow,
+.home-logo:focus-visible .home-logo-glow {
+  opacity: 0.7;
+  transform: scale(1.1) rotate(60deg);
+}
+
+.home-logo-badge {
+  transition: transform 500ms var(--ease-spring);
+}
+
+.home-logo:hover .home-logo-badge {
+  transform: scale(1.07);
+}
+
+.home-logo:active .home-logo-badge {
+  transform: scale(0.92);
+  transition-duration: 120ms;
+}
+
+.home-logo-badge path {
+  transform-box: fill-box;
+}
+
+.home-logo-badge path:nth-of-type(1) {
+  transform-origin: 100% 100%;
+  --v-turn: -1;
+}
+
+.home-logo-badge path:nth-of-type(2) {
+  transform-origin: 0% 100%;
+  --v-turn: 1;
+}
+
+.home-logo:hover .home-logo-badge path {
+  animation: v-stretch 750ms var(--ease-out-expo);
+}
+
+@keyframes v-stretch {
+  30% {
+    transform: rotate(calc(var(--v-turn) * 9deg)) scaleY(1.07);
+  }
+  60% {
+    transform: rotate(calc(var(--v-turn) * -3deg)) scaleY(0.98);
+  }
+  to {
+    transform: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

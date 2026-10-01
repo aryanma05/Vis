@@ -575,6 +575,12 @@ export async function updateProject(ownerId: string, projectId: string, input: P
   });
 }
 
+// Ny README fra GitHub. Bytter bare beskrivelsen; tittel, bilder og tagger kan eieren ha endret selv.
+export async function replaceProjectDescription(ownerId: string, projectId: string, description: string) {
+  await assertOwner(ownerId, projectId);
+  await db.update(project).set({ description, githubSyncedAt: new Date() }).where(eq(project.id, projectId));
+}
+
 export async function setProjectStatus(
   ownerId: string,
   projectId: string,

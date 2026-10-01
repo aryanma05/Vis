@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Wordmark } from "@/components/Logo";
+import { LogoLockup } from "@/components/Logo";
 
 const COLUMNS = [
   {
@@ -35,9 +35,9 @@ export default function SiteFooter() {
     <footer className="border-t border-line bg-ink-2/60 pb-28 md:pb-0 md:pl-24 print:hidden">
       <div className="mx-auto grid max-w-7xl gap-12 px-6 py-14 md:grid-cols-[1.3fr_2fr] md:px-10">
         <div>
-          <Wordmark className="text-3xl" />
+          <LogoLockup size="lg" />
           <p className="mt-4 max-w-xs text-sm leading-6 text-mist">
-            Visittkort, CV og prosjekter på ett sted. Laget for folk som lager digitalt i Norden.
+            Et sted å vise frem det du lager. For utviklere, designere og alle som skaper digitalt i Norden.
           </p>
         </div>
         <div className="grid grid-cols-2 gap-8 sm:grid-cols-3">

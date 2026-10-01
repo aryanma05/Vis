@@ -24,7 +24,7 @@ export default async function RegisterPage() {
           Lag profilen din <span className="serif-accent font-normal text-ice">på to minutter</span>
         </>
       }
-      subtitle="Én lenke med visittkort, CV og alt du har laget. Gratis."
+      subtitle="Ett sted for alt du har laget – og én lenke å dele det med. Gratis."
       aside={
         <AuthArt
           quote={

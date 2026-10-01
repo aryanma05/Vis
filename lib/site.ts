@@ -20,9 +20,9 @@ export function siteUrl(): string {
 export const siteHost = () => new URL(siteUrl()).host;
 
 export const SITE_NAME = "Vis";
-export const SITE_TAGLINE = "Din faglige identitet, samlet på ett sted.";
+export const SITE_TAGLINE = "Prosjektene dine, samlet på ett sted.";
 export const SITE_DESCRIPTION =
-  "Vis er stedet for utviklere, designere og alle som lager digitalt i Norden: et visuelt visittkort, en ryddig CV og prosjektene dine – samlet i én profil.";
+  "Vis er stedet der utviklere, designere og alle som lager digitalt i Norden viser frem prosjektene sine – med bilder, historien bak og én lenke å dele.";
 
 // Lenke til en profil, uten domenet: /@brukernavn.
 export const profilePath = (username: string) => `/@${username}`;

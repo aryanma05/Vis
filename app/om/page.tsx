@@ -6,21 +6,21 @@ import { getPlatformStats } from "@/lib/profiles";
 
 export const metadata: Metadata = {
   title: "Om Vis",
-  description: "Vis er et norsk sted for din faglige identitet: visittkort, CV og prosjekter samlet på én lenke.",
+  description: "Vis er et norsk sted for å vise frem det du lager: prosjektene dine, historien bak dem og én lenke å dele.",
 };
 
 const PRINCIPLES = [
   {
     title: "Prosjektene først",
-    text: "En CV forteller hva du har gjort. Prosjektene viser hvordan. Derfor er bildene store, README-en er en fin side, og alt annet står rundt.",
+    text: "Det du har laget sier mer enn en liste over hva du kan. Derfor er bildene store, beskrivelsen blir en fin side, og alt annet står rundt.",
   },
   {
     title: "Laget for Norden",
-    text: "Norsk språk, norske datoer og norsk personvern. Profiler med sted og «åpen for jobb», så det er lett å finne folk i nærheten.",
+    text: "Norsk språk, norske datoer og norsk personvern. Profiler med sted og hva du er åpen for, så det er lett å finne folk å lage ting med i nærheten.",
   },
   {
     title: "For alle som lager digitalt",
-    text: "Utviklere, designere, dataforskere, spillutviklere og studenter. Du trenger ikke GitHub for å høre hjemme her.",
+    text: "Utviklere, designere, dataforskere, spillutviklere og studenter. Kode, skisser, prototyper og hobbyprosjekter hører hjemme her.",
   },
   {
     title: "Du eier dataene dine",
@@ -35,11 +35,11 @@ export default async function AboutPage() {
       <div className="mx-auto max-w-6xl">
         <p className="label-mono">Om Vis</p>
         <h1 className="mt-5 max-w-5xl display text-[clamp(3rem,8vw,7rem)]">
-          GitHub for hele <span className="serif-accent font-normal text-ice">deg</span>.
+          Et hjem for alt du <span className="serif-accent font-normal text-ice">lager</span>.
         </h1>
         <p className="mt-8 max-w-2xl text-xl leading-9 text-fg/80">
-          Vis samler den faglige identiteten din på ett sted: et visuelt visittkort, en ryddig CV og prosjektene du har laget.
-          Folk kan følge deg, se hva du bygger og gi deg tilbakemeldinger – og du får én lenke å sende til arbeidsgivere.
+          Vis er stedet for prosjektene dine: bildene, videoene og historien bak det du har laget, samlet i én profil. Folk
+          kan følge deg, se hva du bygger og gi deg tilbakemeldinger – og du får én lenke å dele med hvem du vil.
         </p>
 
         <dl className="mt-14 grid grid-cols-3 gap-px overflow-hidden rounded-3xl border border-line bg-line">

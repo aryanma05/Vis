@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { Wordmark } from "@/components/Logo";
+import { LogoLockup } from "@/components/Logo";
 
 // Ramme for innlogging, registrering og sidene rundt kontoen: skjemaet til venstre
 // og et visuelt panel til høyre på store skjermer.
@@ -19,8 +19,8 @@ export default function AuthCard({
     <main className="px-4 pb-28 pt-8 md:py-10 md:pl-28 md:pr-8">
       <div className="mx-auto grid min-h-[calc(100vh-5rem)] max-w-6xl overflow-hidden rounded-[28px] border border-line bg-surface/40 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
         <section className="flex flex-col px-6 py-10 sm:px-12 md:py-14">
-          <Link href="/" className="inline-flex w-fit items-center text-sm text-mist transition hover:text-fg">
-            <Wordmark className="text-2xl" />
+          <Link href="/" aria-label="Vis – til forsiden" className="inline-flex w-fit items-center rounded-full transition hover:opacity-90">
+            <LogoLockup />
           </Link>
           <div className="group mx-auto flex w-full max-w-sm flex-1 flex-col justify-center py-10">
             {/* Tittelen skjules mens man skriver inn koden fra e-posten (components/auth/VerifyEmailCode.tsx). */}
@@ -87,7 +87,7 @@ export function AuthArt({ quote }: { quote?: ReactNode }) {
             <span className="text-mist">
               <span className="font-semibold text-fg">12</span> prosjekter
             </span>
-            <span className="rounded-full bg-success/15 px-2.5 py-0.5 text-xs font-medium text-success">Åpen for jobb</span>
+            <span className="rounded-full bg-success/15 px-2.5 py-0.5 text-xs font-medium text-success">Åpen for samarbeid</span>
           </div>
         </div>
       </div>
@@ -95,7 +95,7 @@ export function AuthArt({ quote }: { quote?: ReactNode }) {
       <p className="relative max-w-sm text-2xl font-semibold leading-snug tracking-tight">
         {quote ?? (
           <>
-            Visittkort, CV og prosjekter. <span className="serif-accent text-ice">Ett sted</span> å peke folk til.
+            Alt du har laget. <span className="serif-accent text-ice">Ett sted</span> å vise det frem.
           </>
         )}
       </p>

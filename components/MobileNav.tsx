@@ -4,8 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Bell, Compass, Home, LogIn, Palette, Plus, Search } from "lucide-react";
 import Avatar from "@/components/Avatar";
-import { Wordmark } from "@/components/Logo";
-import NavUserMenu, { ThemeButtons, type NavUser } from "@/components/nav/NavUserMenu";
+import { LogoLockup } from "@/components/Logo";
+import NavUserMenu, { type NavUser } from "@/components/nav/NavUserMenu";
+import ThemeSwitch from "@/components/nav/ThemeSwitch";
 import { openSearch } from "@/components/nav/search-events";
 import { Menu } from "@/components/ui/menu";
 
@@ -40,8 +41,8 @@ export default function MobileNav({ user = null }: { user?: NavUser }) {
   return (
     <>
       <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-line/60 bg-ink/85 px-4 backdrop-blur-xl md:hidden print:hidden">
-        <Link href="/" aria-label="Vis – forsiden">
-          <Wordmark className="text-[22px]" />
+        <Link href="/" aria-label="Vis – forsiden" className="rounded-full focus-visible:outline-offset-4">
+          <LogoLockup size="sm" />
         </Link>
         <div className="flex items-center gap-1">
           <button
@@ -58,7 +59,7 @@ export default function MobileNav({ user = null }: { user?: NavUser }) {
                 label="Tema"
                 side="bottom"
                 align="end"
-                className="w-56 p-2"
+                className="w-52 p-2"
                 trigger={({ open, toggle }) => (
                   <button
                     type="button"
@@ -72,7 +73,7 @@ export default function MobileNav({ user = null }: { user?: NavUser }) {
                   </button>
                 )}
               >
-                <ThemeButtons />
+                <ThemeSwitch />
               </Menu>
               <Link href="/logg-inn" className="ml-1 rounded-lg px-3 py-2 text-sm font-semibold text-fg">
                 Logg inn

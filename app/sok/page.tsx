@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { SearchX, Users } from "lucide-react";
-import { ProjectGrid } from "@/components/ProjectCard";
+import ProjectMasonry from "@/components/ProjectMasonry";
 import { PersonTile } from "@/components/social/PersonRow";
 import { ButtonLink } from "@/components/ui/button";
 import { EmptyState, Tag } from "@/components/ui/misc";
@@ -123,7 +123,7 @@ export default async function SearchPage({ searchParams }: Props) {
 
           {state.type === "prosjekter" ? (
             projects.length > 0 ? (
-              <ProjectGrid projects={projects} />
+              <ProjectMasonry projects={projects} />
             ) : (
               <EmptyState icon={<SearchX className="size-5" />} title="Ingen prosjekter passet søket">
                 Prøv et annet ord, fjern et filter, eller søk etter personer i stedet.

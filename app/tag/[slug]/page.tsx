@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight, Hash } from "lucide-react";
 import Avatar from "@/components/Avatar";
-import { ProjectGrid } from "@/components/ProjectCard";
+import ProjectMasonry from "@/components/ProjectMasonry";
 import { ButtonLink } from "@/components/ui/button";
 import { EmptyState, Tag } from "@/components/ui/misc";
 import { getRelatedTags, getTagBySlug, getTopCreatorsForTag, searchProjects } from "@/lib/projects";
@@ -79,7 +79,7 @@ export default async function TagPage({ params, searchParams }: Props) {
             ))}
           </div>
           {projects.length > 0 ? (
-            <ProjectGrid projects={projects} columns={2} />
+            <ProjectMasonry projects={projects} columns={2} />
           ) : (
             <EmptyState title={`Ingen publiserte prosjekter med ${tag.name} ennå`} action={<ButtonLink href="/ny">Del et prosjekt</ButtonLink>} />
           )}
