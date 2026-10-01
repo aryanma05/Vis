@@ -42,7 +42,7 @@ const subscribe = (fn: () => void) => {
 const EMPTY: Toast[] = [];
 
 const ICONS = { success: CheckCircle2, error: TriangleAlert, info: Info };
-const TONE = { success: "text-success", error: "text-danger", info: "text-ice" };
+const TONE = { success: "text-success", error: "text-danger", info: "text-sea" };
 
 export function Toaster() {
   // Serveren og første klientgjengivelse ser en tom liste, så de er like.
@@ -60,7 +60,7 @@ export function Toaster() {
           <div
             key={t.id}
             role={t.kind === "error" ? "alert" : "status"}
-            className="pointer-events-auto flex w-full max-w-sm animate-[toast-in_260ms_var(--ease-out-expo)] items-start gap-3 rounded-2xl border border-line bg-surface/95 px-4 py-3 text-sm shadow-[0_24px_48px_-24px_rgb(0_0_0/0.6)] backdrop-blur-xl"
+            className="glass-strong pointer-events-auto flex w-full max-w-sm animate-[toast-in_300ms_var(--ease-out-expo)] items-start gap-3 rounded-[22px] px-4 py-3 text-sm"
           >
             <Icon className={`mt-0.5 size-4 shrink-0 ${TONE[t.kind]}`} aria-hidden="true" />
             <div className="min-w-0 flex-1">
@@ -71,7 +71,7 @@ export function Toaster() {
               type="button"
               onClick={() => dismiss(t.id)}
               aria-label="Lukk"
-              className="-mr-1 rounded-md p-1 text-mist transition hover:bg-surface-2 hover:text-fg"
+              className="-mr-1 rounded-full p-1 text-mist transition hover:bg-fill hover:text-fg"
             >
               <X className="size-3.5" />
             </button>

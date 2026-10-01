@@ -9,14 +9,15 @@ function initials(name: string) {
   );
 }
 
-// Faste fargepar, valgt ut fra navnet, så samme person alltid får samme farge.
+// Dempede fargepar (som monogrammene i Kontakter), valgt ut fra navnet, så samme
+// person alltid får samme farge.
 const PAIRS = [
-  ["#c7f9ff", "#5eb8d4"],
-  ["#b9a6ff", "#6f8cff"],
-  ["#9fe0a8", "#3fb6a8"],
-  ["#ffc27a", "#ff8f70"],
-  ["#ff9fb5", "#b9a6ff"],
-  ["#a5d8ff", "#c7f9ff"],
+  ["#a7b0c0", "#7c8698"],
+  ["#8fb3d9", "#5d86b8"],
+  ["#9cc5b0", "#6a9c84"],
+  ["#d3ae8b", "#b0845f"],
+  ["#c6a2c9", "#9b74a0"],
+  ["#d49b9b", "#b06f6f"],
 ];
 
 function hash(text: string) {
@@ -45,8 +46,8 @@ export default function Avatar({
   return (
     <span
       aria-hidden="true"
-      style={{ ...style, background: `linear-gradient(135deg, ${from}, ${to})` }}
-      className={`flex shrink-0 select-none items-center justify-center rounded-full font-bold tracking-tight text-[#071a52] ${className}`}
+      style={{ ...style, background: `linear-gradient(180deg, ${from}, ${to})` }}
+      className={`flex shrink-0 select-none items-center justify-center rounded-full font-semibold tracking-tight text-white ${className}`}
     >
       {initials(name)}
     </span>

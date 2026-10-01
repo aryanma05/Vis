@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
-import { Check, FileUp, Printer, Sparkles } from "lucide-react";
+import { Check, FileUp, Printer } from "lucide-react";
 import { applyCvImportAction, importCvAction, parseStoredCvAction, saveCvAction } from "@/app/actions/cv";
 import { setCvTemplateAction } from "@/app/actions/profile";
 import { Button, ButtonLink } from "@/components/ui/button";
@@ -269,7 +269,7 @@ export default function CvStudio({
                 role="radio"
                 aria-checked={on}
                 onClick={() => chooseTemplate(t)}
-                className={`group rounded-2xl border p-2 text-left transition ${on ? "border-ice/70 bg-ice/[0.06]" : "border-line hover:border-mist/50"}`}
+                className={`group rounded-[20px] p-2 text-left ring-inset transition ${on ? "bg-sea/10 ring-2 ring-sea/70" : "ring-1 ring-line hover:bg-fill"}`}
               >
                 <span className="block aspect-[210/150] overflow-hidden rounded-xl ring-1 ring-black/10">
                   <TemplateThumb template={t} />
@@ -306,9 +306,9 @@ export default function CvStudio({
 
       <Section title="Innhold" description="Erfaring, utdanning og ferdigheter. Dra i håndtaket eller bruk pilene for å endre rekkefølgen.">
         {draft && (
-          <div className="mb-8 rounded-2xl border border-ice/40 bg-ice/[0.06] p-5">
+          <div className="mb-8 rounded-[20px] bg-sea/10 p-5">
             <p className="flex items-center gap-2 font-medium">
-              <Sparkles className="size-4 text-ice" /> Vi fant {draft.parsed.experience.length} erfaringer, {draft.parsed.education.length} utdanninger og{" "}
+              <Check className="size-4 text-success" /> Vi fant {draft.parsed.experience.length} erfaringer, {draft.parsed.education.length} utdanninger og{" "}
               {draft.parsed.skills.length} ferdigheter.
             </p>
             <p className="mt-1 text-sm text-mist">Du har allerede fylt ut noe. Hva vil du gjøre?</p>
@@ -352,7 +352,7 @@ export default function CvStudio({
         )}
       </Section>
 
-      <div className="sticky bottom-24 z-20 mt-2 flex items-center justify-end gap-4 rounded-2xl border border-line bg-surface/90 px-4 py-3 shadow-[0_20px_40px_-24px_rgb(0_0_0/0.6)] backdrop-blur-xl md:bottom-6">
+      <div className="sticky bottom-24 z-20 mt-2 flex items-center justify-end gap-4 glass rounded-[26px] py-2 pl-5 pr-2 md:bottom-6">
         <p className="mr-auto text-sm text-mist">{dirty || applied ? "Du har endringer som ikke er lagret." : "Alt er lagret."}</p>
         <Link href={`/@${username}?fane=cv`} className="hidden text-sm text-mist hover:text-fg sm:block">
           Se CV-en

@@ -43,7 +43,7 @@ export default async function AccountPage() {
           <Section title="Innlogging" description="Koble til GitHub for å importere repoer, eller for å logge inn uten passord.">
             <ul className="max-w-md space-y-3">
               {isGithubConfigured && (
-                <li className="flex items-center justify-between gap-4 rounded-2xl border border-line px-4 py-3">
+                <li className="flex items-center justify-between gap-4 rounded-[18px] glass-card px-4 py-3">
                   <span className="flex items-center gap-3 text-sm font-medium">
                     <GithubMark className="size-5" /> GitHub
                   </span>
@@ -51,7 +51,7 @@ export default async function AccountPage() {
                 </li>
               )}
               {isGoogleConfigured && (
-                <li className="flex items-center justify-between gap-4 rounded-2xl border border-line px-4 py-3">
+                <li className="flex items-center justify-between gap-4 rounded-[18px] glass-card px-4 py-3">
                   <span className="text-sm font-medium">Google</span>
                   {info.google ? <span className="text-sm text-success">Koblet til</span> : <OAuthButton provider="google" mode="link" callbackURL="/profil/rediger/konto" label="Koble til" />}
                 </li>

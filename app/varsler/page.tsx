@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AtSign, Bell, Heart, Lightbulb, MessageCircle, Reply, Settings, Sparkles, UserPlus } from "lucide-react";
+import { AtSign, Bell, Heart, Lightbulb, MessageCircle, Reply, Settings, Star, UserPlus } from "lucide-react";
 import Avatar from "@/components/Avatar";
 import { EmptyState } from "@/components/ui/misc";
 import { Tabs } from "@/components/ui/tabs";
@@ -23,7 +23,7 @@ function describe(n: NotificationItem) {
     case "follow":
       return { Icon: UserPlus, tone: "text-success", text: <>begynte å følge deg</> };
     case "reaction": {
-      const Icon = n.reaction === "Nyttig" ? Lightbulb : n.reaction === "Inspirerende" ? Sparkles : Heart;
+      const Icon = n.reaction === "Nyttig" ? Lightbulb : n.reaction === "Inspirerende" ? Star : Heart;
       return {
         Icon,
         tone: "text-[#ff9fb5]",
@@ -76,7 +76,7 @@ export default async function NotificationsPage({ searchParams }: { searchParams
       <div className="mx-auto max-w-3xl">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="label-mono">Innboks</p>
+            <p className="caption">Innboks</p>
             <h1 className="mt-3 text-4xl font-bold tracking-tight md:text-5xl">Varsler</h1>
           </div>
           <Link href="/profil/rediger/konto#varsler" className="inline-flex items-center gap-2 text-sm text-mist transition hover:text-fg">
@@ -84,7 +84,7 @@ export default async function NotificationsPage({ searchParams }: { searchParams
           </Link>
         </div>
 
-        <div className="mt-8 border-b border-line">
+        <div className="mt-8">
           <Tabs
             label="Filtrer varsler"
             active={unreadOnly ? "uleste" : "alle"}
@@ -102,13 +102,13 @@ export default async function NotificationsPage({ searchParams }: { searchParams
         ) : (
           groups.map((group) => (
             <section key={group.label} className="mt-8">
-              <h2 className="label-mono">{group.label}</h2>
-              <ul className="mt-3 divide-y divide-line overflow-hidden rounded-3xl border border-line">
+              <h2 className="caption">{group.label}</h2>
+              <ul className="mt-3 divide-y divide-line overflow-hidden rounded-[22px] glass-card">
                 {group.items.map((n) => {
                   const { Icon, tone, text } = describe(n);
                   return (
                     <li key={n.id}>
-                      <Link href={href(n)} className={`relative flex gap-4 px-4 py-4 transition hover:bg-surface/70 md:px-5 ${n.unread ? "bg-ice/[0.04]" : ""}`}>
+                      <Link href={href(n)} className={`relative flex gap-4 px-4 py-4 transition hover:bg-surface/70 md:px-5 ${n.unread ? "bg-sea/[0.06]" : ""}`}>
                         <span className="relative shrink-0">
                           <Avatar name={n.actor.name} image={n.actor.image} size={42} />
                           <span className={`absolute -bottom-1 -right-1 flex size-5 items-center justify-center rounded-full bg-surface ring-2 ring-ink ${tone}`}>
@@ -124,7 +124,7 @@ export default async function NotificationsPage({ searchParams }: { searchParams
                             {timeAgo(n.createdAt)}
                           </p>
                         </div>
-                        {n.unread && <span className="mt-2 size-2.5 shrink-0 rounded-full bg-ice" aria-label="Ulest" />}
+                        {n.unread && <span className="mt-2 size-2.5 shrink-0 rounded-full bg-sea" aria-label="Ulest" />}
                       </Link>
                     </li>
                   );

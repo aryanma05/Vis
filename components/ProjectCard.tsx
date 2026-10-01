@@ -7,7 +7,7 @@ import { timeAgo } from "@/lib/format";
 import type { ProjectCard as Card } from "@/lib/projects";
 
 // Bildet er hovedsaken på kortet. Under står tittel, hvem som laget det og tall for
-// reaksjoner og kommentarer. Prosjekter uten bilder får et generert cover.
+// reaksjoner og kommentarer. Prosjekter uten bilder får et enkelt fargecover.
 // `fill`: bildet fyller høyden kortet får av rutenettet (ProjectMasonry) i stedet for et fast format.
 export default function ProjectCard({
   project,
@@ -30,7 +30,7 @@ export default function ProjectCard({
       <Link
         href={href}
         aria-label={`Åpne prosjektet ${project.title}`}
-        className={`relative block overflow-hidden rounded-[20px] bg-surface ring-1 ring-line/60 transition duration-500 ease-out group-hover:ring-ice/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ice ${
+        className={`glass-card relative block overflow-hidden rounded-[22px] transition duration-500 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sea ${
           fill ? "min-h-0 flex-1" : ""
         }`}
       >
@@ -42,41 +42,43 @@ export default function ProjectCard({
               alt=""
               loading={priority ? "eager" : "lazy"}
               decoding="async"
-              className="size-full object-cover transition duration-[900ms] ease-[var(--ease-out-expo)] group-hover:scale-[1.045]"
+              className="size-full object-cover transition duration-700 ease-[var(--ease-out-expo)] group-hover:scale-[1.025]"
             />
           ) : (
-            <div className="size-full transition duration-[900ms] ease-[var(--ease-out-expo)] group-hover:scale-[1.045]">
+            <div className="size-full transition duration-700 ease-[var(--ease-out-expo)] group-hover:scale-[1.025]">
               <ProjectCover title={project.title} label={project.tags[0]?.name} />
             </div>
           )}
 
-          {/* Mørk kant nederst, så tallene alltid er lesbare. */}
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/55 to-transparent opacity-0 transition duration-300 group-hover:opacity-100" />
-
           <div className="absolute left-3 top-3 flex gap-1.5">
             {project.status === "draft" && (
-              <span className="rounded-md bg-warn px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-widest text-[#3a2104]">Utkast</span>
+              <span className="glass-dark inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold">
+                <span className="size-1.5 rounded-full bg-[#ffd60a]" aria-hidden="true" /> Utkast
+              </span>
             )}
             {project.removed && (
-              <span className="rounded-md bg-danger px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-widest text-white">Fjernet</span>
+              <span className="glass-dark inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold">
+                <span className="size-1.5 rounded-full bg-[#ff453a]" aria-hidden="true" /> Fjernet
+              </span>
             )}
             {project.pinned && !showOwner && (
-              <span className="inline-flex items-center gap-1 rounded-md bg-ink/80 px-2 py-0.5 font-mono text-[10px] uppercase tracking-widest text-fg backdrop-blur">
+              <span className="glass-dark inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold">
                 <Pin className="size-3" aria-hidden="true" /> Festet
               </span>
             )}
           </div>
 
           {project.tags.length > 0 && project.coverImageUrl && (
-            <div className="absolute bottom-3 left-3 flex translate-y-2 gap-1.5 opacity-0 transition duration-300 group-hover:translate-y-0 group-hover:opacity-100">
+            <div className="absolute bottom-3 left-3 flex translate-y-1 gap-1.5 opacity-0 transition duration-300 group-hover:translate-y-0 group-hover:opacity-100">
               {project.tags.slice(0, 2).map((t) => (
-                <span key={t.slug} className="rounded-md bg-black/45 px-2 py-0.5 font-mono text-[10.5px] text-white backdrop-blur">
+                <span key={t.slug} className="glass-dark rounded-full px-2.5 py-1 text-[11px] font-medium">
                   {t.name}
                 </span>
               ))}
             </div>
           )}
         </div>
+        <span className="glass-rim" aria-hidden="true" />
       </Link>
 
       <div className="mt-3.5 flex items-start gap-3">
@@ -86,7 +88,7 @@ export default function ProjectCard({
           </Link>
         )}
         <div className="min-w-0 flex-1">
-          <Link href={href} className="block truncate font-semibold tracking-tight text-fg transition group-hover:text-ice">
+          <Link href={href} className="block truncate text-[15px] font-semibold text-fg">
             {project.title}
           </Link>
           <p className="mt-0.5 truncate text-[13px] text-mist">
@@ -98,7 +100,7 @@ export default function ProjectCard({
               project.summary ?? project.tags.map((t) => t.name).slice(0, 3).join(" · ")
             )}
             {showOwner && (
-              <time dateTime={new Date(when).toISOString()} suppressHydrationWarning className="text-mist/60">
+              <time dateTime={new Date(when).toISOString()} suppressHydrationWarning>
                 {" "}
                 · {timeAgo(when)}
               </time>
@@ -140,7 +142,7 @@ export function ProjectGrid({
   columns?: 2 | 3;
 }) {
   return (
-    <div className={`grid gap-x-6 gap-y-10 sm:grid-cols-2 ${columns === 3 ? "xl:grid-cols-3" : ""}`}>
+    <div className={`grid grid-cols-1 gap-x-5 gap-y-9 sm:grid-cols-2 ${columns === 3 ? "xl:grid-cols-3" : ""}`}>
       {projects.map((p, i) => (
         <ProjectCard key={p.id} project={p} showOwner={showOwner} priority={i < 3} />
       ))}

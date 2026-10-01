@@ -35,7 +35,7 @@ export default function DailyBars({ title, days }: { title: string; days: Day[] 
         <div className="relative ml-9 h-44">
           {ticks.map((t) => (
             <div key={t} className="absolute inset-x-0 border-t border-line/70" style={{ bottom: `${(t / max) * 100}%` }} aria-hidden="true">
-              <span className="absolute -left-9 -translate-y-1/2 font-mono text-[10.5px] tabular-nums text-mist/70">{t.toLocaleString("nb-NO")}</span>
+              <span className="absolute -left-9 -translate-y-1/2 text-[10.5px] tabular-nums text-mist">{t.toLocaleString("nb-NO")}</span>
             </div>
           ))}
           <div className="absolute inset-0 flex items-end gap-[2px]" onMouseLeave={() => setActive(null)}>
@@ -51,11 +51,11 @@ export default function DailyBars({ title, days }: { title: string; days: Day[] 
               >
                 <span
                   className={`block w-full max-w-6 rounded-t-[4px] transition-[height,background-color] duration-500 ${
-                    active === i ? "bg-fg" : "bg-ice"
+                    active === i ? "bg-fg" : "bg-sea"
                   } ${d.views === 0 ? "opacity-0" : ""}`}
                   style={{ height: `${Math.max((d.views / max) * 100, d.views > 0 ? 2 : 0)}%` }}
                 />
-                <span className="absolute inset-x-0 bottom-0 top-0 rounded-md group-focus-visible:ring-2 group-focus-visible:ring-ice" />
+                <span className="absolute inset-x-0 bottom-0 top-0 rounded-md group-focus-visible:ring-2 group-focus-visible:ring-sea" />
               </button>
             ))}
           </div>
@@ -70,7 +70,7 @@ export default function DailyBars({ title, days }: { title: string; days: Day[] 
             </div>
           )}
         </div>
-        <div className="ml-9 mt-2 flex justify-between font-mono text-[10.5px] text-mist/70" aria-hidden="true">
+        <div className="ml-9 mt-2 flex justify-between text-[10.5px] text-mist" aria-hidden="true">
           <span>{fmtDay(days[0].day, { day: "numeric", month: "short" })}</span>
           <span>{fmtDay(days[Math.floor(days.length / 2)].day, { day: "numeric", month: "short" })}</span>
           <span>I dag</span>

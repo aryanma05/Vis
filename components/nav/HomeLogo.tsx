@@ -2,27 +2,26 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogoBadge } from "@/components/Logo";
+import { LogoLockup } from "@/components/Logo";
 
-// Logoen øverst i sidemenyen. Tar deg til forsiden, eller til toppen hvis du allerede er der.
-export default function HomeLogo({ label, className = "" }: { label: string; className?: string }) {
+// Logoen øverst til venstre på desktop. Den følger siden når man blar (står ikke fast),
+// og tar deg til forsiden, eller til toppen hvis du allerede er der.
+export default function HomeLogo() {
   const pathname = usePathname();
 
   return (
     <Link
       href="/"
-      aria-label={label}
+      aria-label={pathname === "/" ? "Vis – til toppen" : "Vis – til forsiden"}
       onClick={(event) => {
         if (pathname !== "/" || event.metaKey || event.ctrlKey || event.shiftKey) return;
         event.preventDefault();
         const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
         window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
       }}
-      className={`home-logo relative block rounded-full focus-visible:outline-offset-4 ${className}`}
+      className="absolute left-6 top-6 z-40 hidden rounded-full transition active:scale-95 focus-visible:outline-offset-4 md:block print:!hidden"
     >
-      {/* Myk glød i logofargene som vokser når du peker på den. */}
-      <span aria-hidden="true" className="home-logo-glow absolute -inset-1 rounded-full" />
-      <LogoBadge className="home-logo-badge relative size-full rounded-full ring-1 ring-line" />
+      <LogoLockup size="sm" />
     </Link>
   );
 }

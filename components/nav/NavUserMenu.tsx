@@ -53,8 +53,8 @@ export default function NavUserMenu({
         </MenuItem>
       )}
       <MenuSeparator />
-      <MenuLabel>Tema</MenuLabel>
-      <div className="px-2 pb-2">
+      <MenuLabel>Utseende</MenuLabel>
+      <div className="px-2 pb-2 pt-1">
         <ThemeSwitch />
       </div>
       <MenuSeparator />

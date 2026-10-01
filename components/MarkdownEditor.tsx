@@ -75,7 +75,7 @@ export default function MarkdownEditor({
   }
 
   return (
-    <div className={`overflow-hidden rounded-2xl border bg-ink-2/50 transition focus-within:border-ice/60 focus-within:ring-4 focus-within:ring-ice/10 ${invalid ? "border-danger/70" : "border-line"}`}>
+    <div className={`overflow-hidden rounded-[18px] bg-fill inset-ring inset-shadow-[0_1px_2px_rgb(0_0_0/0.1)] transition focus-within:bg-fill-2 focus-within:ring-2 focus-within:ring-sea/50 ${invalid ? "inset-ring-danger/70" : "inset-ring-line"}`}>
       <div className="flex flex-wrap items-center gap-1 border-b border-line px-2 py-1.5">
         <div role="tablist" className="mr-2 flex rounded-lg bg-ink/60 p-0.5">
           {(["write", "preview"] as const).map((t) => (

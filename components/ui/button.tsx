@@ -5,25 +5,27 @@ export type ButtonVariant = "primary" | "secondary" | "outline" | "ghost" | "dan
 export type ButtonSize = "xs" | "sm" | "md" | "lg" | "icon" | "icon-sm";
 
 const base =
-  "relative inline-flex select-none items-center justify-center gap-2 whitespace-nowrap font-semibold transition duration-200 ease-out disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50";
+  "relative inline-flex select-none items-center justify-center gap-2 whitespace-nowrap font-semibold tracking-[-0.01em] transition duration-200 ease-out active:scale-[0.97] disabled:pointer-events-none disabled:opacity-45 aria-disabled:pointer-events-none aria-disabled:opacity-45";
 
+// Kapsler, som knappene i iOS.
 const sizes: Record<ButtonSize, string> = {
-  xs: "h-8 rounded-lg px-2.5 text-xs",
-  sm: "h-9 rounded-lg px-3.5 text-sm",
-  md: "h-11 rounded-xl px-5 text-[15px]",
-  lg: "h-13 rounded-xl px-7 text-base",
-  icon: "size-10 rounded-xl",
-  "icon-sm": "size-8 rounded-lg",
+  xs: "h-8 rounded-full px-3 text-xs",
+  sm: "h-9 rounded-full px-4 text-sm",
+  md: "h-11 rounded-full px-5 text-[15px]",
+  lg: "h-12 rounded-full px-6 text-base",
+  icon: "size-10 rounded-full",
+  "icon-sm": "size-8 rounded-full",
 };
 
+// Hovedknappen er farget glass (lys kant øverst), de andre er klart glass.
 const variants: Record<ButtonVariant, string> = {
   primary:
-    "bg-primary text-on-primary shadow-[inset_0_1px_0_rgb(255_255_255/0.25)] hover:brightness-[1.08] active:scale-[0.98]",
-  secondary: "border border-line bg-surface text-fg hover:border-ice/50 hover:bg-surface-2 active:scale-[0.98]",
-  outline: "border border-line text-fg hover:border-ice/50 hover:bg-surface/60 active:scale-[0.98]",
-  ghost: "text-mist hover:bg-surface/80 hover:text-fg",
-  danger: "border border-danger/40 text-danger hover:bg-danger/10",
-  link: "h-auto px-0 text-ice underline-offset-4 hover:underline",
+    "bg-primary bg-linear-to-b from-white/15 to-transparent text-on-primary inset-shadow-[0_1px_0.5px_rgb(255_255_255/0.45)] shadow-[0_8px_20px_-10px_rgb(0_0_0/0.45)] hover:opacity-90",
+  secondary: "glass-chip text-fg hover:bg-fill-2",
+  outline: "text-fg inset-ring inset-ring-line hover:bg-fill",
+  ghost: "text-mist hover:bg-fill hover:text-fg",
+  danger: "bg-danger/10 text-danger inset-ring inset-ring-danger/20 hover:bg-danger/15",
+  link: "h-auto px-0 text-ice underline-offset-4 hover:underline active:scale-100",
 };
 
 export function buttonClass({

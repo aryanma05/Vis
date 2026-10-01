@@ -90,7 +90,7 @@ export default function ProjectOwnerActions({
             variant={draft ? "primary" : "secondary"}
             disabled={pending}
             className="max-sm:flex-1"
-            onClick={() => run(() => setProjectStatusAction(projectId, draft ? "published" : "draft"), draft ? "Prosjektet er publisert 🎉" : "Gjort om til utkast")}
+            onClick={() => run(() => setProjectStatusAction(projectId, draft ? "published" : "draft"), draft ? "Prosjektet er publisert" : "Gjort om til utkast")}
           >
             {draft ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
             {draft ? "Publiser" : <><span className="sm:hidden">Utkast</span><span className="max-sm:hidden">Gjør til utkast</span></>}

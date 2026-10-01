@@ -8,8 +8,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: SITE_DESCRIPTION,
     start_url: "/",
     display: "standalone",
-    background_color: "#071a52",
-    theme_color: "#071a52",
+    background_color: "#060b1d",
+    theme_color: "#060b1d",
     lang: "nb",
     // Logoen har god luft rundt seg, så de samme filene kan beskjæres av telefonen (maskable).
     icons: [

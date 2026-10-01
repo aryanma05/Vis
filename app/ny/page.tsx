@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { FolderOpen, ImagePlus } from "lucide-react";
-import { GithubMark } from "@/components/icons";
 import ProjectForm from "@/components/ProjectForm";
+import { Tabs } from "@/components/ui/tabs";
 import { isGithubConfigured } from "@/lib/auth";
 import { githubLoginFromLinks, hasGithubAccount } from "@/lib/github";
 import { getOwnProfile } from "@/lib/profiles";
@@ -13,11 +11,13 @@ import GithubImporter from "./GithubImporter";
 
 export const metadata: Metadata = { title: "Del prosjekt", robots: { index: false } };
 
-// Bilder først: det er det folk ser på.
+// Skjermbildene av en nettside kan ta litt tid å lage.
+export const maxDuration = 60;
+
 const SOURCES = [
-  { key: "manuell", label: "Med bilder", text: "Dra inn skjermbilder og skriv litt om det.", Icon: ImagePlus },
-  { key: "mappe", label: "Fra en mappe", text: "Vi leser README og finner skjermbilder. Koden lastes ikke opp.", Icon: FolderOpen },
-  { key: "github", label: "Fra GitHub", text: "Skriv brukernavnet ditt eller lim inn en repo-lenke.", Icon: GithubMark },
+  { key: "manuell", label: "Lenke og bilder", text: "Lim inn lenken til prosjektet, så tar vi skjermbilder. Eller dra inn egne bilder." },
+  { key: "mappe", label: "Fra en mappe", text: "Vi leser README og finner skjermbilder. Koden lastes ikke opp." },
+  { key: "github", label: "Fra GitHub", text: "Skriv brukernavnet ditt eller lim inn en repo-lenke." },
 ] as const;
 
 type Source = (typeof SOURCES)[number]["key"];
@@ -31,38 +31,24 @@ export default async function NewProjectPage({ searchParams }: { searchParams: P
     source === "github" ? getOwnProfile(user.id) : null,
     getPopularTags(40),
   ]);
+  const current = SOURCES.find((s) => s.key === source)!;
 
   return (
-    <main className="px-5 pb-28 pt-8 md:pb-16 md:pl-28 md:pr-10 md:pt-12">
+    <main className="px-5 pb-28 pt-6 md:pb-16 md:pl-28 md:pr-10 md:pt-14">
       <div className="mx-auto max-w-5xl">
-        <p className="label-mono">Nytt prosjekt</p>
-        <h1 className="mt-3 text-4xl font-bold tracking-tight md:text-6xl">
-          Hva vil du <span className="serif-accent font-normal text-ice">vise frem</span>?
-        </h1>
+        <h1 className="display text-[34px] md:text-5xl">Nytt prosjekt</h1>
 
-        <nav aria-label="Hvor prosjektet kommer fra" className="mt-10 grid gap-3 sm:grid-cols-3">
-          {SOURCES.map(({ key, label, text, Icon }) => {
-            const active = key === source;
-            return (
-              <Link
-                key={key}
-                href={`/ny?fra=${key}`}
-                scroll={false}
-                aria-current={active ? "page" : undefined}
-                className={`group rounded-2xl border p-4 transition ${active ? "border-ice/60 bg-ice/[0.06]" : "border-line hover:border-mist/50 hover:bg-surface/50"}`}
-              >
-                <span className={`flex size-10 items-center justify-center rounded-xl border ${active ? "border-ice/40 bg-ice/10 text-ice" : "border-line text-mist group-hover:text-fg"}`}>
-                  <Icon className="size-5" />
-                </span>
-                <p className="mt-3 font-semibold">{label}</p>
-                <p className="mt-1 text-sm leading-5 text-mist">{text}</p>
-              </Link>
-            );
-          })}
-        </nav>
+        <div className="mt-6">
+          <Tabs
+            label="Hvor prosjektet kommer fra"
+            active={source}
+            items={SOURCES.map((s) => ({ key: s.key, label: s.label, href: `/ny?fra=${s.key}` }))}
+          />
+          <p className="mt-3 text-sm text-mist">{current.text}</p>
+        </div>
 
-        <div className="mt-12">
-          {source === "mappe" && <FolderImport />}
+        <div className="mt-10">
+          {source === "mappe" && <FolderImport maxImages={MAX_PROJECT_IMAGES} />}
           {source === "github" && (
             <GithubImporter
               linked={githubLinked}

@@ -28,7 +28,7 @@ function Delta({ current, previous }: { current: number; previous: number }) {
 
 function StatTile({ label, value, current, previous, hint }: { label: string; value: number; current: number; previous: number; hint?: string }) {
   return (
-    <div className="rounded-3xl border border-line bg-surface/50 p-4 sm:p-5">
+    <div className="rounded-[22px] glass-card p-4 sm:p-5">
       <p className="text-sm text-mist">{label}</p>
       <p className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">{value.toLocaleString("nb-NO")}</p>
       <div className="mt-2">
@@ -49,7 +49,7 @@ export default async function InsightsPage() {
       <div className="mx-auto max-w-6xl">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="label-mono">Siste 30 dager</p>
+            <p className="caption">Siste 30 dager</p>
             <h1 className="mt-3 text-4xl font-bold tracking-tight md:text-5xl">Innsikt</h1>
           </div>
           <ButtonLink href={`/@${user.username}`} variant="outline" size="sm">
@@ -77,14 +77,14 @@ export default async function InsightsPage() {
         </section>
 
         <section className="mt-6 grid gap-4 lg:grid-cols-2">
-          <div className="rounded-3xl border border-line p-6">
+          <div className="rounded-[22px] glass-card p-6">
             <h2 className="font-semibold tracking-tight">Profilvisninger per dag</h2>
             <p className="mt-1 text-sm text-mist">Hvor mange som har åpnet profilen din.</p>
             <div className="mt-8">
               <DailyBars title="Profilvisninger per dag" days={data.profileViews.days} />
             </div>
           </div>
-          <div className="rounded-3xl border border-line p-6">
+          <div className="rounded-[22px] glass-card p-6">
             <h2 className="font-semibold tracking-tight">Prosjektvisninger per dag</h2>
             <p className="mt-1 text-sm text-mist">Alle prosjektene dine til sammen.</p>
             <div className="mt-8">
@@ -93,7 +93,7 @@ export default async function InsightsPage() {
           </div>
         </section>
 
-        <section className="mt-6 rounded-3xl border border-line p-6">
+        <section className="mt-6 rounded-[22px] glass-card p-6">
           <h2 className="font-semibold tracking-tight">Prosjektene dine</h2>
           <p className="mt-1 text-sm text-mist">Sortert etter visninger de siste 30 dagene.</p>
           {data.topProjects.length === 0 ? (
@@ -117,12 +117,12 @@ export default async function InsightsPage() {
                         <Link href={`/prosjekt/${p.id}`} className="font-medium text-fg hover:text-ice">
                           {p.title}
                         </Link>
-                        {p.status === "draft" && <span className="ml-2 font-mono text-[10px] uppercase tracking-widest text-warn">Utkast</span>}
+                        {p.status === "draft" && <span className="ml-2 rounded-full bg-warn/15 px-2 py-0.5 text-[11px] font-medium text-warn">Utkast</span>}
                       </td>
                       <td className="py-3 pr-4">
                         <div className="flex items-center gap-3">
                           <div className="h-2 flex-1 overflow-hidden rounded-full bg-ink-2" aria-hidden="true">
-                            <div className="h-full rounded-full bg-ice" style={{ width: `${(p.views30 / maxViews) * 100}%` }} />
+                            <div className="h-full rounded-full bg-sea" style={{ width: `${(p.views30 / maxViews) * 100}%` }} />
                           </div>
                           <span className="w-10 text-right">{p.views30}</span>
                         </div>

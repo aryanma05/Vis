@@ -93,7 +93,7 @@ export default function UsernameField({
                 key={s}
                 type="button"
                 onClick={() => onChange(s)}
-                className="rounded-md border border-line px-2 py-0.5 font-mono text-xs text-fg transition hover:border-ice hover:text-ice"
+                className="rounded-full bg-fill px-2.5 py-0.5 text-xs font-medium text-fg transition hover:bg-fill-2"
               >
                 {s}
               </button>
@@ -111,7 +111,7 @@ export default function UsernameField({
       </label>
       <div
         className={`flex items-center rounded-xl border bg-ink-2/50 transition focus-within:ring-4 ${
-          invalid ? "border-danger/70 focus-within:ring-danger/10" : "border-line hover:border-mist/35 focus-within:border-ice/70 focus-within:ring-ice/10"
+          invalid ? "border-danger/70 focus-within:ring-danger/10" : "border-line hover:border-mist/35 focus-within:border-sea/70 focus-within:ring-sea/10"
         }`}
       >
         <span className="select-none pl-4 text-[15px] text-mist/80">vis.no/@</span>

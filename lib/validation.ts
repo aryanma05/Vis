@@ -12,6 +12,11 @@ const optionalText = (max: number) =>
     .nullish()
     .transform(emptyToNull);
 
+// Under utvikling godtas også lenker til egen maskin («localhost:5173»), så man kan
+// teste prosjekter som kjører lokalt. I produksjon gir de ingen mening for andre.
+const allowLocalLinks = process.env.NODE_ENV !== "production";
+const LOCAL_LINK = /^(https?:\/\/)?(localhost|127\.0\.0\.1)(:\d+)?(\/\S*)?$/i;
+
 // Godtar "vis.no" og legger til https:// selv, siden folk sjelden skriver det.
 const optionalUrl = z
   .string()
@@ -19,8 +24,15 @@ const optionalUrl = z
   .max(500)
   .nullish()
   .transform(emptyToNull)
-  .transform((v) => (v && !/^https?:\/\//i.test(v) && /^[\w-]+(\.[\w-]+)+/.test(v) ? `https://${v}` : v))
-  .refine((v) => v === null || /^https?:\/\/[^\s]+\.[^\s]+/i.test(v), "Lenken må starte med http:// eller https://");
+  .transform((v) => {
+    if (!v || /^https?:\/\//i.test(v)) return v;
+    if (allowLocalLinks && LOCAL_LINK.test(v)) return `http://${v}`;
+    return /^[\w-]+(\.[\w-]+)+/.test(v) ? `https://${v}` : v;
+  })
+  .refine(
+    (v) => v === null || /^https?:\/\/[^\s]+\.[^\s]+/i.test(v) || (allowLocalLinks && LOCAL_LINK.test(v)),
+    "Lenken må starte med http:// eller https://",
+  );
 
 // "2024-05" eller "2024".
 export const yearMonth = z

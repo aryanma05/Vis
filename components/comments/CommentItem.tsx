@@ -66,7 +66,7 @@ export default function CommentItem({
 
   return (
     <li id={`kommentar-${comment.id}`} className="scroll-mt-28">
-      <div className="group flex gap-3.5 rounded-2xl transition target:bg-ice/5">
+      <div className="group flex gap-3.5 rounded-2xl transition target:bg-sea/5">
         <Link href={`/@${comment.author.username}`} className="mt-0.5 shrink-0">
           <Avatar name={comment.author.name} image={comment.author.image} size={isReply ? 30 : 38} />
         </Link>
@@ -76,7 +76,7 @@ export default function CommentItem({
               {comment.author.name}
             </Link>
             {comment.isProjectOwner && (
-              <span className="rounded-md border border-ice/40 bg-ice/10 px-1.5 py-px font-mono text-[10px] uppercase tracking-wider text-ice">Skaper</span>
+              <span className="rounded-full bg-sea/15 px-2 py-px text-[11px] font-medium text-sea">Skaper</span>
             )}
             <time dateTime={new Date(comment.createdAt).toISOString()} suppressHydrationWarning className="text-mist/70">
               {timeAgo(comment.createdAt)}
@@ -121,7 +121,7 @@ export default function CommentItem({
                 onChange={(e) => setBody(e.target.value)}
                 rows={3}
                 maxLength={2000}
-                className="w-full rounded-2xl border border-line bg-ink-2/50 px-4 py-3 text-[15px] text-fg outline-none focus:border-ice/60"
+                className="w-full rounded-2xl bg-fill px-4 py-3 text-[15px] text-fg outline-none inset-ring inset-ring-line inset-shadow-[0_1px_2px_rgb(0_0_0/0.1)] focus:ring-2 focus:ring-sea/50"
               />
               <div className="mt-2 flex gap-2">
                 <Button size="xs" onClick={save} loading={pending} disabled={!body.trim()}>

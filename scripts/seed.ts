@@ -61,7 +61,7 @@ const USERS: DemoUser[] = [
     headline: "Produktdesigner som liker rolige grensesnitt",
     location: "Bergen",
     bio: "Designer med fem år i produktteam. Jeg jobber mest med designsystemer, tilgjengelighet og apper folk bruker hver dag.",
-    readme: "Jeg tror de beste produktene føles *enkle*, selv når de ikke er det under panseret.\n\n- Designsystemer og komponentbibliotek\n- Universell utforming (WCAG 2.2)\n- Prototyper i Figma og React",
+    readme: "Jeg tror de beste produktene føles enkle, selv når de ikke er det under panseret.\n\n- Designsystemer og komponentbibliotek\n- Universell utforming (WCAG 2.2)\n- Prototyper i Figma og React",
     lookingFor: "Et produktteam i Bergen eller remote, gjerne i offentlig sektor eller klima.",
     openTo: ["jobb", "samarbeid"],
     accent: "rose",

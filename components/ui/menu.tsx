@@ -69,7 +69,7 @@ export function Menu({
           id={id}
           role="menu"
           aria-label={label}
-          className={`absolute z-50 min-w-56 origin-top animate-[rise_160ms_var(--ease-out-expo)] overflow-hidden rounded-2xl border border-line bg-surface/95 p-1.5 shadow-[0_24px_48px_-20px_rgb(0_0_0/0.55)] backdrop-blur-xl ${position} ${className}`}
+          className={`glass-strong absolute z-50 min-w-56 origin-top animate-[rise_180ms_var(--ease-out-expo)] overflow-hidden rounded-[22px] p-1.5 ${position} ${className}`}
         >
           <MenuContext.Provider value={{ close }}>{children}</MenuContext.Provider>
         </div>
@@ -79,7 +79,7 @@ export function Menu({
 }
 
 const itemClass =
-  "flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm text-fg outline-none transition hover:bg-surface-2 focus-visible:bg-surface-2 focus-visible:outline-none";
+  "flex w-full items-center gap-3 rounded-[14px] px-3 py-2 text-left text-[15px] text-fg outline-none transition hover:bg-fill focus-visible:bg-fill focus-visible:outline-none";
 
 export function MenuItem({
   children,
@@ -128,9 +128,9 @@ export function MenuItem({
 }
 
 export function MenuSeparator() {
-  return <div role="separator" className="my-1.5 h-px bg-line" />;
+  return <div role="separator" className="mx-3 my-1 h-px bg-line" />;
 }
 
 export function MenuLabel({ children }: { children: ReactNode }) {
-  return <div className="px-3 pb-1 pt-2 label-mono">{children}</div>;
+  return <div className="px-3 pb-1 pt-2 caption">{children}</div>;
 }

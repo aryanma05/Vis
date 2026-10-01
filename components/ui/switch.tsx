@@ -30,13 +30,13 @@ export default function Switch({
       </span>
       <span
         aria-hidden="true"
-        className={`relative mt-0.5 inline-flex h-6 w-11 shrink-0 rounded-full border transition ${
-          checked ? "border-primary bg-primary" : "border-line bg-ink-2"
+        className={`relative mt-0.5 inline-flex h-[31px] w-[51px] shrink-0 rounded-full transition-colors duration-200 ${
+          checked ? "bg-success" : "bg-fill-2"
         }`}
       >
         <span
-          className={`absolute top-0.5 size-[18px] rounded-full shadow-sm transition-all duration-200 ease-[var(--ease-spring)] ${
-            checked ? "left-[22px] bg-on-primary" : "left-0.5 bg-mist/70"
+          className={`absolute top-0.5 size-[27px] rounded-full bg-white shadow-[0_3px_8px_rgb(0_0_0/0.15),0_1px_1px_rgb(0_0_0/0.16)] transition-all duration-300 ease-[var(--ease-spring)] ${
+            checked ? "left-[22px]" : "left-0.5"
           }`}
         />
       </span>

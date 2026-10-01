@@ -20,7 +20,7 @@ export default async function GithubRepoPanel({
   const url = repo?.url ?? `https://github.com/${fullName}`;
 
   return (
-    <section aria-label="Repoet på GitHub" className="overflow-hidden rounded-3xl border border-line">
+    <section aria-label="Repoet på GitHub" className="overflow-hidden rounded-[22px] glass-card">
       <a href={url} target="_blank" rel="noreferrer" className="group flex items-center gap-3 border-b border-line bg-surface/50 px-5 py-4 transition hover:bg-surface">
         <GithubMark className="size-5 shrink-0 text-fg" />
         <span className="min-w-0 flex-1">
@@ -45,7 +45,7 @@ export default async function GithubRepoPanel({
               { label: "Følger", value: repo.watchers, Icon: Eye, href: `${url}/watchers` },
             ].map(({ label, value, Icon, href }) => (
               <li key={label}>
-                <a href={href} target="_blank" rel="noreferrer" title={`${value} ${label.toLowerCase()}`} className="block rounded-2xl border border-line px-1 py-2.5 transition hover:border-ice/40 hover:bg-surface/60">
+                <a href={href} target="_blank" rel="noreferrer" title={`${value} ${label.toLowerCase()}`} className="block rounded-2xl bg-fill px-1 py-2.5 transition hover:bg-fill-2">
                   <span className="flex items-center justify-center gap-1 font-semibold tabular-nums text-fg">
                     <Icon className="size-3.5 text-mist" aria-hidden="true" />
                     {compactNumber(value)}
@@ -58,7 +58,7 @@ export default async function GithubRepoPanel({
 
           {repo.languages.length > 0 && (
             <div>
-              <p className="label-mono">Språk</p>
+              <p className="caption">Språk</p>
               <div className="mt-2.5 flex h-2 gap-px overflow-hidden rounded-full" role="img" aria-label={repo.languages.map((l) => `${l.name} ${Math.round(l.percent)} %`).join(", ")}>
                 {repo.languages.map((l) => (
                   <span key={l.name} style={{ width: `${l.percent}%`, background: l.color }} className="h-full min-w-[3px]" />
@@ -79,7 +79,7 @@ export default async function GithubRepoPanel({
           {(repo.license || repo.release) && (
             <div className="flex flex-wrap gap-2 text-xs">
               {repo.release && (
-                <a href={repo.release.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-full border border-line px-2.5 py-1 text-fg/90 transition hover:border-ice/40 hover:text-ice">
+                <a href={repo.release.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-full bg-fill px-2.5 py-1 text-fg/90 transition hover:bg-fill-2">
                   <TagIcon className="size-3.5" aria-hidden="true" /> {repo.release.tag}
                   {repo.release.publishedAt && (
                     <span className="text-mist" suppressHydrationWarning>
@@ -99,7 +99,7 @@ export default async function GithubRepoPanel({
           {repo.commits.length > 0 && (
             <div>
               <div className="flex items-baseline justify-between">
-                <p className="label-mono">Siste endringer</p>
+                <p className="caption">Siste endringer</p>
                 <a href={`${url}/commits/${encodeURIComponent(repo.defaultBranch)}`} target="_blank" rel="noreferrer" className="text-xs text-mist hover:text-ice">
                   Alle
                 </a>
@@ -131,7 +131,7 @@ export default async function GithubRepoPanel({
 
           {repo.contributors.length > 1 && (
             <div>
-              <p className="label-mono">Bidragsytere</p>
+              <p className="caption">Bidragsytere</p>
               <ul className="mt-2.5 flex flex-wrap -space-x-1.5">
                 {repo.contributors.map((c) => (
                   <li key={c.login}>
@@ -149,7 +149,7 @@ export default async function GithubRepoPanel({
             <ul className="flex flex-wrap gap-1.5">
               {repo.topics.map((t) => (
                 <li key={t}>
-                  <a href={`https://github.com/topics/${encodeURIComponent(t)}`} target="_blank" rel="noreferrer" className="block rounded-full bg-ice/10 px-2.5 py-0.5 font-mono text-[11px] text-ice transition hover:bg-ice/20">
+                  <a href={`https://github.com/topics/${encodeURIComponent(t)}`} target="_blank" rel="noreferrer" className="block rounded-full bg-fill px-2.5 py-0.5 text-[11px] font-medium text-fg/80 transition hover:bg-fill-2">
                     {t}
                   </a>
                 </li>
@@ -174,7 +174,7 @@ export default async function GithubRepoPanel({
 
 export function GithubRepoPanelSkeleton() {
   return (
-    <div className="space-y-4 rounded-3xl border border-line p-5" aria-hidden="true">
+    <div className="space-y-4 rounded-[22px] glass-card p-5" aria-hidden="true">
       <Skeleton className="h-6 w-2/3" />
       <div className="grid grid-cols-4 gap-2">
         {[0, 1, 2, 3].map((i) => (

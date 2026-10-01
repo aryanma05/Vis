@@ -4,7 +4,7 @@ import { useId } from "react";
 // «vis»-ordmerket. Prikken over i-en er aksentfargen.
 export function Wordmark({ className = "text-xl" }: { className?: string }) {
   return (
-    <span className={`relative inline-flex items-baseline font-extrabold tracking-[-0.06em] text-fg ${className}`}>
+    <span className={`relative inline-flex items-baseline font-bold tracking-[-0.055em] text-fg ${className}`}>
       v<span className="relative">ı<span aria-hidden="true" className="absolute left-1/2 top-[0.12em] size-[0.2em] -translate-x-1/2 rounded-full bg-ice" /></span>s
     </span>
   );
@@ -66,7 +66,7 @@ export function LogoLockup({ size = "md", className = "" }: { size?: "sm" | "md"
   const text = { sm: "text-[21px]", md: "text-2xl", lg: "text-3xl" }[size];
   return (
     <span className={`inline-flex items-center gap-2 ${className}`}>
-      <LogoBadge className={`${badge} shrink-0 rounded-full shadow-[0_6px_18px_-8px_rgb(20_120_255/0.7)] ring-1 ring-line`} />
+      <LogoBadge className={`${badge} shrink-0 rounded-full shadow-[0_2px_8px_-2px_rgb(0_0_0/0.3)]`} />
       <Wordmark className={text} />
     </span>
   );

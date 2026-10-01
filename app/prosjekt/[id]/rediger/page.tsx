@@ -8,6 +8,9 @@ import { requireUser } from "@/lib/session";
 
 export const metadata: Metadata = { title: "Rediger prosjekt", robots: { index: false } };
 
+// Skjermbildene av en nettside kan ta litt tid å lage.
+export const maxDuration = 60;
+
 export default async function EditProjectPage({
   params,
   searchParams,
@@ -27,7 +30,7 @@ export default async function EditProjectPage({
         <Link href={`/prosjekt/${project.id}`} className="inline-flex items-center gap-2 text-sm text-mist transition hover:text-fg">
           <ArrowLeft className="size-4" /> Tilbake til prosjektet
         </Link>
-        <p className="mt-6 label-mono">Rediger prosjekt</p>
+        <h1 className="mt-4 display text-[34px] md:text-5xl">Rediger prosjekt</h1>
         <div className="mt-6">
           <ProjectForm
             projectId={project.id}

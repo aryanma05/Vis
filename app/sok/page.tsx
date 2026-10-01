@@ -64,20 +64,9 @@ export default async function SearchPage({ searchParams }: Props) {
   return (
     <main className="px-5 pb-28 pt-10 md:pb-20 md:pl-28 md:pr-10 md:pt-14">
       <div className="mx-auto max-w-7xl">
-        <p className="label-mono">Utforsk</p>
-        <h1 className="mt-3 max-w-3xl text-4xl font-bold leading-[1.05] tracking-tight md:text-6xl">
-          {state.type === "personer" ? (
-            <>
-              Finn folk som <span className="serif-accent font-normal text-ice">lager</span> ting.
-            </>
-          ) : (
-            <>
-              Finn prosjekter å bli <span className="serif-accent font-normal text-ice">inspirert</span> av.
-            </>
-          )}
-        </h1>
+        <h1 className="display text-[34px] md:text-5xl">Utforsk</h1>
 
-        <div className="mt-10">
+        <div className="mt-6">
           <ExploreFilters state={state} tags={tagList} locations={locations} />
         </div>
 
@@ -91,22 +80,22 @@ export default async function SearchPage({ searchParams }: Props) {
           </div>
         )}
 
-        <div className="mt-12">
-          <div className="mb-8 flex flex-wrap items-baseline justify-between gap-4 border-b border-line pb-4">
-            <h2 className="text-lg font-medium">
+        <div className="mt-10">
+          <div className="mb-6 flex flex-wrap items-baseline justify-between gap-4">
+            <h2 className="text-xl font-semibold tracking-[-0.02em]">
               {searching ? (
                 <>
                   {count} {count === 1 ? "treff" : "treff"}
                   {state.q && (
                     <>
                       {" "}
-                      for <span className="text-ice">«{state.q}»</span>
+                      for «{state.q}»
                     </>
                   )}
                   {activeTag && (
                     <>
                       {" "}
-                      i <span className="text-ice">{activeTag.name}</span>
+                      i {activeTag.name}
                     </>
                   )}
                   {state.sted && <> i {state.sted}</>}
@@ -130,7 +119,7 @@ export default async function SearchPage({ searchParams }: Props) {
               </EmptyState>
             )
           ) : people.length > 0 ? (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {people.map((p) => (
                 <PersonTile key={p.id} person={p} viewerId={viewer?.id} />
               ))}

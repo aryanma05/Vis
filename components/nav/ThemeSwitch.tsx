@@ -2,11 +2,11 @@
 
 import { useEffect, useRef } from "react";
 import { animate, motion, useMotionTemplate, useMotionValue, useReducedMotion, useTransform } from "framer-motion";
-import { Moon, Sparkles, Sun } from "lucide-react";
+import { Moon, MoonStar, Sun } from "lucide-react";
 import { useTheme, type Theme } from "@/components/ThemeProvider";
 
 const THEMES: { name: Theme; label: string; Icon: typeof Moon }[] = [
-  { name: "midnight", label: "Midnatt", Icon: Sparkles },
+  { name: "midnight", label: "Midnatt", Icon: MoonStar },
   { name: "dark", label: "Mørk", Icon: Moon },
   { name: "light", label: "Lys", Icon: Sun },
 ];
@@ -72,12 +72,12 @@ export default function ThemeSwitch() {
         const delta = event.key === "ArrowRight" ? 1 : -1;
         choose((index + delta + THEMES.length) % THEMES.length);
       }}
-      className="rounded-2xl border border-line bg-ink-2/60 p-1"
+      className="glass-chip rounded-full p-1"
     >
       <div className="relative grid grid-cols-3">
         <motion.span
           aria-hidden="true"
-          className="absolute inset-y-0 rounded-xl bg-primary shadow-[0_6px_16px_-6px_rgb(0_0_0/0.45),inset_0_1px_0_rgb(255_255_255/0.35)]"
+          className="glass-thumb absolute inset-y-0 rounded-full"
           style={{ left: leftPct, right: rightPct, scaleY: squash }}
         />
         {THEMES.map(({ name, label, Icon }, i) => {
@@ -96,8 +96,8 @@ export default function ThemeSwitch() {
               tabIndex={active ? 0 : -1}
               onClick={() => choose(i)}
               whileTap={reduce ? undefined : { scale: 0.86 }}
-              className={`relative z-10 flex h-9 items-center justify-center rounded-xl transition-colors duration-300 ${
-                active ? "text-on-primary" : "text-mist hover:text-fg"
+              className={`relative z-10 flex h-8 items-center justify-center rounded-full transition-colors duration-300 ${
+                active ? "text-fg" : "text-mist hover:text-fg"
               }`}
             >
               <motion.span

@@ -14,12 +14,12 @@ export function PersonRow({ person, viewerId, compact = false }: { person: Perso
         <Avatar name={person.name} image={person.image} size={compact ? 40 : 48} />
       </Link>
       <div className="min-w-0 flex-1">
-        <Link href={`/@${person.username}`} className="block truncate font-semibold text-fg transition group-hover:text-ice">
+        <Link href={`/@${person.username}`} className="block truncate font-semibold text-fg">
           {person.name}
         </Link>
         <p className="truncate text-[13px] text-mist">{person.headline ?? `@${person.username}`}</p>
         {!compact && (
-          <p className="mt-0.5 flex items-center gap-3 text-xs text-mist/75">
+          <p className="mt-0.5 flex items-center gap-3 text-xs text-mist">
             {person.location && (
               <span className="inline-flex items-center gap-1">
                 <MapPin className="size-3" aria-hidden="true" />
@@ -42,7 +42,7 @@ export function PersonRow({ person, viewerId, compact = false }: { person: Perso
 export function PersonTile({ person, viewerId }: { person: PersonCard; viewerId?: string | null }) {
   const isSelf = viewerId === person.id;
   return (
-    <article className="group relative flex flex-col rounded-3xl border border-line bg-surface/50 p-5 transition hover:-translate-y-0.5 hover:border-ice/40 hover:bg-surface">
+    <article className="group relative flex flex-col rounded-[22px] glass-card p-5 transition hover:bg-card-hover">
       <div className="flex items-start justify-between gap-3">
         <Avatar name={person.name} image={person.image} size={56} />
         {!isSelf && (
@@ -51,7 +51,7 @@ export function PersonTile({ person, viewerId }: { person: PersonCard; viewerId?
           </div>
         )}
       </div>
-      <Link href={`/@${person.username}`} className="mt-4 block font-semibold tracking-tight text-fg after:absolute after:inset-0 after:rounded-3xl">
+      <Link href={`/@${person.username}`} className="mt-4 block font-semibold text-fg after:absolute after:inset-0 after:rounded-[22px]">
         {person.name}
       </Link>
       <p className="text-[13px] text-mist">@{person.username}</p>

@@ -17,8 +17,11 @@ prosjektene dine på én lenke (`/@brukernavn`), pluss en feed der man oppdager 
   med dra-og-slipp, import fra PDF/Word/bilde (fyller ut automatisk med `ANTHROPIC_API_KEY`)
   og eksport som PDF via utskrift.
 - **Prosjekter** med markdown-beskrivelse (README-visning), tagger, rolle, dato, lenker,
-  video og bilder. Import fra GitHub (brukernavn eller repo-lenke, uten å logge inn med
-  GitHub) eller en lokal mappe. Prosjekter med et GitHub-repo viser stjerner, språk, siste
+  video og bilder. Lim inn lenken til prosjektet, så tas det skjermbilder av siden
+  automatisk (opptil tre, nedover siden), som kan fjernes, sorteres og beskjæres før
+  lagring. Import fra GitHub (brukernavn eller repo-lenke, uten å logge inn med
+  GitHub) eller en lokal mappe; har repoet en nettside og README-en ingen bilder, tas
+  det skjermbilder av nettsiden. Prosjekter med et GitHub-repo viser stjerner, språk, siste
   commits og bidragsytere, og eieren kan hente README-en på nytt.
 - **Oppdag**: nyeste, populære (trending) og «Følger»-feed, søk etter prosjekter og
   personer, tag-sider på `/tag/<navn>`.
@@ -37,7 +40,8 @@ prosjektene dine på én lenke (`/@brukernavn`), pluss en feed der man oppdager 
 - Next.js
 - TypeScript
 - Tailwind CSS
-- OGL (bølgene på forsiden), framer-motion (animasjoner) og lucide-react (ikoner)
+- framer-motion (animasjoner) og lucide-react (ikoner)
+- Playwright (`playwright-core`) for skjermbilder når en lokal Chromium er satt opp
 - Postgres (Neon på Vercel) + Drizzle ORM
 - Better Auth (e-post/passord med 6-sifret kode, GitHub, Google, admin-rolle)
 - Bilder og CV-filer i databasen, eller Vercel Blob hvis det er satt opp
@@ -72,6 +76,13 @@ med `DATABASE_URL=postgres://localhost:5432/vis`, eller en egen Neon-database/-b
 | `BREVO_API_KEY` eller `RESEND_API_KEY`, og `EMAIL_FROM` | E-post for bekreftelse og nytt passord. Uten dem skrives e-postene til terminalen under utvikling, og i produksjon er e-postbekreftelse av | Nei |
 | `CONTACT_EMAIL` | Kontaktadresse som vises på /personvern | Nei |
 | `ANTHROPIC_API_KEY` | Språkmodellen som leser CV-er | Nei, bare for CV-import |
+| `MICROLINK_API_KEY` | Skjermbilder av prosjektlenker via Microlink. Uten nøkkel: gratis, 50 sider i døgnet | Nei |
+| `SCREENSHOT_BROWSER_PATH` | Sti til Chrome/Chromium. Da tas skjermbildene lokalt i stedet for hos Microlink | Nei |
+
+Under utvikling (`npm run dev`) kan du også ta skjermbilder av prosjekter som kjører på
+din egen maskin, f.eks. `localhost:5173`. Da brukes Google Chrome på maskinen (eller
+`SCREENSHOT_BROWSER_PATH`), siden Microlink ikke når localhost. I produksjon blokkeres
+lokale adresser.
 
 GitHub OAuth-app: github.com/settings/developers → New OAuth App.
 Callback-URL: `http://localhost:3000/api/auth/callback/github` (lag en egen app for produksjon).
@@ -104,6 +115,7 @@ lib/session.ts            getCurrentUser() / requireUser() for sider og actions
 lib/projects.ts           prosjekter: lese, opprette, endre, slette, bilder, feed, søk, tagger
 lib/github.ts             GitHub-import (repoliste, README → prosjekt)
 lib/folder-import.ts      import fra lokal mappe (kjører i nettleseren, koden lastes ikke opp)
+lib/screenshots.ts        skjermbilder av prosjektlenker (Microlink eller lokal Chromium)
 lib/cv.ts, cv-parser.ts   strukturert CV: lagring, redigering og tolking av PDF/Word/bilde
 lib/cv-document.ts        CV-dokumentet som vises på profilen (PDF-sider som bilder)
 lib/pdf-pages.ts          gjør PDF-sider om til bilder i nettleseren (pdf.js)
@@ -128,7 +140,7 @@ lib/account.ts            kontosiden: dataeksport og sletting av filer
 app/filer/[...key]        serverer filer lagret i databasen (skjult CV bare for eieren)
 app/actions/*.ts          Server Actions som skjemaene kaller
 components/ui/            knapper, felt, dialoger, menyer, faner, toasts, brytere
-components/               ProjectCard, ProjectCover, CvPages, kommentarer osv.
+components/               ProjectCard, ProjectCover, ImageEditor (beskjæring), kommentarer osv.
 ```
 
 Alle Server Actions returnerer `{ ok: true, data }` eller `{ ok: false, error, fieldErrors? }`,
@@ -143,17 +155,30 @@ både klientkomponenter og server-sider farge sammen. Bruk disse klassene i ny k
 
 | Klasse | Brukes til |
 | --- | --- |
-| `bg-ink` | sidebakgrunn |
-| `bg-surface` | kort, felter og menyer |
+| `bg-ink` | sidebakgrunn (bak den står et fast «lys», `--ambient`, som glasset viser) |
+| `glass-card` | kort og grupper i innholdet (gjennomskinnelig, uten uskarphet) |
+| `glass` | navigasjon og flytende knapper (klart glass som gjør det bak uskarpt) |
+| `glass-strong` | menyer, dialoger og varsler (tettere glass) |
+| `glass-chip` | sekundærknapper, merker og sporet i segmenterte valg |
+| `glass-thumb` | markøren i segmenterte valg og valgt fane |
+| `glass-rim` | glasskant oppå et bilde (legg et tomt `<span>` sist i bildeboksen) |
+| `glass-dark` | glass over bilder (alltid mørkt, hvit tekst) |
+| `bg-fill` / `bg-fill-2` | felter og hover |
 | `border-line` | streker og rammer |
-| `text-fg` | vanlig tekst |
-| `text-mist` | dempet tekst |
-| `text-ice` | aksent på tekst og lenker |
-| `bg-primary text-on-primary` | knapper |
+| `text-fg` / `text-mist` | vanlig og dempet tekst |
+| `text-ice` | lenker |
+| `bg-primary text-on-primary` | hovedknapper |
+| `caption` / `display` | liten overskrift over en seksjon / store titler |
+
+Fonten er Geist (`next/font/google` i `app/layout.tsx`), som ligger nær Aeonik i formen.
+Aeonik fra CoType Foundry er en betalt font. Har dere lisens, legg filene i `app/fonts/`
+og bytt `Geist(...)` med `localFont({ src: [...], variable: "--font-geist" })` fra
+`next/font/local`, så brukes den overalt uten flere endringer.
 
 `components/Sidebar.tsx` (desktop) og `components/MobileNav.tsx` (mobil) ligger i
 `app/layout.tsx`, så alle sider får navigasjon automatisk. Menyvalgene endrer seg etter om
-man er logget inn. Sider legger inn `md:pl-28` for å gi plass til sidemenyen.
+man er logget inn. Logoen står øverst til venstre (`components/nav/HomeLogo.tsx`). Sider legger
+inn `md:pl-28` for å gi plass til sidemenyen.
 
 Rutene heter `/sok`, `/logg-inn`, `/ny` og `/varsler`. `/explore` og `/login` sender videre
 til de to første, så gamle lenker fortsatt virker. `/@brukernavn` skrives om til

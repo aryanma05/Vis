@@ -61,7 +61,7 @@ const paper =
   "cv-paper mx-auto w-full max-w-[820px] bg-white text-[#0f172a] shadow-[0_40px_90px_-40px_rgb(0_0_0/0.75)] ring-1 ring-black/5 [print-color-adjust:exact] [-webkit-print-color-adjust:exact]";
 
 export default function CvView({ data, template }: { data: CvViewData; template: CvTemplate }) {
-  const style = { "--cv-accent": data.accent, fontFamily: "var(--font-schibsted), system-ui, sans-serif" } as CSSProperties;
+  const style = { "--cv-accent": data.accent, fontFamily: "var(--font-sans)" } as CSSProperties;
   if (template === "moderne") return <Modern data={data} style={style} />;
   if (template === "kompakt") return <Compact data={data} style={style} />;
   return <Classic data={data} style={style} />;

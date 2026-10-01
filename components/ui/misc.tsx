@@ -15,17 +15,13 @@ export function Tag({
   size?: "xs" | "sm";
   count?: number;
 }) {
-  const cls = `inline-flex shrink-0 items-center gap-1.5 rounded-md border font-mono transition ${
-    size === "xs" ? "px-1.5 py-0.5 text-[10.5px]" : "px-2.5 py-1 text-xs"
-  } ${
-    active
-      ? "border-primary bg-primary text-on-primary"
-      : "border-line text-mist hover:border-mist/50 hover:text-fg"
-  }`;
+  const cls = `inline-flex shrink-0 items-center gap-1.5 rounded-full font-medium transition ${
+    size === "xs" ? "px-2 py-0.5 text-[11px]" : "px-2.5 py-1 text-xs"
+  } ${active ? "bg-primary text-on-primary" : "glass-chip text-fg/85 hover:bg-fill-2 hover:text-fg"}`;
   const inner = (
     <>
       {children}
-      {count !== undefined && <span className={active ? "text-on-primary/60" : "text-mist/50"}>{count}</span>}
+      {count !== undefined && <span className={`tabular-nums ${active ? "text-on-primary/60" : "text-mist"}`}>{count}</span>}
     </>
   );
   return href ? (
@@ -55,26 +51,24 @@ export function EmptyState({
   className?: string;
 }) {
   return (
-    <div className={`blueprint relative overflow-hidden rounded-3xl border border-dashed border-line px-6 py-16 text-center md:py-20 ${className}`}>
-      {icon && (
-        <div className="mx-auto mb-5 flex size-12 items-center justify-center rounded-2xl border border-line bg-surface text-ice">{icon}</div>
-      )}
-      <p className="text-xl font-semibold tracking-tight text-fg">{title}</p>
-      {children && <div className="mx-auto mt-2 max-w-md text-mist">{children}</div>}
-      {action && <div className="mt-7 flex flex-wrap justify-center gap-3">{action}</div>}
+    <div className={`rounded-3xl glass-card px-6 py-14 text-center md:py-16 ${className}`}>
+      {icon && <div className="glass-chip mx-auto mb-4 flex size-12 items-center justify-center rounded-full text-mist">{icon}</div>}
+      <p className="text-lg font-semibold text-fg">{title}</p>
+      {children && <div className="mx-auto mt-1.5 max-w-md text-[15px] leading-6 text-mist">{children}</div>}
+      {action && <div className="mt-6 flex flex-wrap justify-center gap-2">{action}</div>}
     </div>
   );
 }
 
 export function Kbd({ children }: { children: ReactNode }) {
   return (
-    <kbd className="inline-flex h-5 min-w-5 items-center justify-center rounded-md border border-line bg-ink-2 px-1.5 font-mono text-[10.5px] text-mist">
+    <kbd className="inline-flex h-5 min-w-5 items-center justify-center rounded-md bg-fill px-1.5 font-sans text-[11px] font-medium text-mist">
       {children}
     </kbd>
   );
 }
 
-// Overskrift for en seksjon: liten mono-etikett over en stor tittel.
+// Overskrift for en seksjon: valgfri liten etikett over tittelen.
 export function SectionHeading({
   eyebrow,
   title,
@@ -91,8 +85,8 @@ export function SectionHeading({
   return (
     <div className={`flex flex-wrap items-end justify-between gap-x-6 gap-y-3 ${className}`}>
       <div className="min-w-0">
-        {eyebrow && <p className="label-mono">{eyebrow}</p>}
-        <As className={`${eyebrow ? "mt-2.5" : ""} text-2xl font-bold tracking-tight text-fg md:text-3xl`}>{title}</As>
+        {eyebrow && <p className="caption">{eyebrow}</p>}
+        <As className={`${eyebrow ? "mt-1" : ""} text-2xl font-bold tracking-[-0.025em] text-fg md:text-[28px]`}>{title}</As>
       </div>
       {action}
     </div>

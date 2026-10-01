@@ -80,7 +80,7 @@ export default function VerifyEmailCode({
 
   return (
     <div data-verify-step className="animate-[rise_300ms_var(--ease-out-expo)]">
-      <div className="flex size-12 items-center justify-center rounded-2xl border border-line bg-surface-2 text-ice">
+      <div className="flex size-12 items-center justify-center rounded-full glass-chip text-fg">
         <MailCheck className="size-5" aria-hidden="true" />
       </div>
       <h1 className="mt-5 text-3xl font-bold tracking-tight md:text-[2.5rem] md:leading-[1.05]">Sjekk e-posten din</h1>
@@ -113,7 +113,7 @@ export default function VerifyEmailCode({
       </div>
 
       {devHint && (
-        <p className="mt-3 rounded-xl border border-dashed border-line px-3.5 py-2.5 text-[13px] leading-5 text-mist">
+        <p className="mt-3 rounded-xl bg-fill px-3.5 py-2.5 text-[13px] leading-5 text-mist">
           Utviklingsmodus: e-post er ikke satt opp, så koden står i terminalen der <code className="font-mono">npm run dev</code> kjører.
         </p>
       )}

@@ -70,14 +70,14 @@ export default function ExploreFilters({ state, tags, locations }: { state: Stat
         }}
         className="relative"
       >
-        <Search className={`pointer-events-none absolute left-5 top-1/2 size-5 -translate-y-1/2 ${pending ? "animate-pulse text-ice" : "text-mist"}`} />
+        <Search className={`pointer-events-none absolute left-4 top-1/2 size-[18px] -translate-y-1/2 text-mist ${pending ? "animate-pulse" : ""}`} />
         <input
           ref={inputRef}
           value={value}
           onChange={(e) => setValue(e.target.value)}
           placeholder={state.type === "personer" ? "Søk etter navn, rolle, sted eller ferdighet …" : "Søk etter prosjekt, teknologi eller person …"}
           aria-label="Søk"
-          className="h-16 w-full rounded-2xl border border-line bg-surface/60 pl-14 pr-24 text-lg text-fg outline-none transition placeholder:text-mist/50 focus:border-ice/60 focus:ring-4 focus:ring-ice/10"
+          className="h-12 w-full rounded-full bg-fill pl-12 pr-24 text-[17px] text-fg outline-none inset-ring inset-ring-line inset-shadow-[0_1px_2px_rgb(0_0_0/0.1)] transition placeholder:text-mist focus:bg-fill-2 focus:ring-2 focus:ring-sea/50"
         />
         <div className="absolute right-4 top-1/2 flex -translate-y-1/2 items-center gap-2">
           {value ? (
@@ -89,7 +89,7 @@ export default function ExploreFilters({ state, tags, locations }: { state: Stat
                 inputRef.current?.focus();
               }}
               aria-label="Tøm søket"
-              className="rounded-full p-1.5 text-mist transition hover:bg-surface-2 hover:text-fg"
+              className="rounded-full p-1.5 text-mist transition hover:bg-fill-2 hover:text-fg"
             >
               <X className="size-4" />
             </button>
@@ -102,7 +102,7 @@ export default function ExploreFilters({ state, tags, locations }: { state: Stat
       </form>
 
       <div className="mt-5 flex flex-wrap items-center gap-2">
-        <div role="tablist" aria-label="Hva du søker etter" className="mr-2 inline-flex rounded-xl border border-line bg-ink-2/50 p-1">
+        <div role="tablist" aria-label="Hva du søker etter" className="glass-chip mr-2 inline-flex rounded-full p-1">
           {(["prosjekter", "personer"] as const).map((t) => (
             <button
               key={t}
@@ -110,7 +110,7 @@ export default function ExploreFilters({ state, tags, locations }: { state: Stat
               role="tab"
               aria-selected={state.type === t}
               onClick={() => apply({ type: t, sort: "relevant" })}
-              className={`rounded-lg px-3.5 py-1.5 text-sm font-medium capitalize transition ${state.type === t ? "bg-primary text-on-primary" : "text-mist hover:text-fg"}`}
+              className={`rounded-full px-4 py-1.5 text-sm font-medium capitalize transition ${state.type === t ? "glass-thumb text-fg" : "text-mist hover:text-fg"}`}
             >
               {t}
             </button>
@@ -118,12 +118,12 @@ export default function ExploreFilters({ state, tags, locations }: { state: Stat
         </div>
 
         <Menu label="Teknologi" align="start" className="max-h-80 w-64 overflow-y-auto" trigger={(t) => <FilterPill label={activeTag?.name ?? "Teknologi"} active={Boolean(state.tag)} open={t.open} onClick={t.toggle} />}>
-          <MenuItem onSelect={() => apply({ tag: null })} hint={!state.tag ? <Check className="size-4 text-ice" /> : undefined}>
+          <MenuItem onSelect={() => apply({ tag: null })} hint={!state.tag ? <Check className="size-4 text-sea" /> : undefined}>
             Alle teknologier
           </MenuItem>
           <MenuSeparator />
           {tags.map((t) => (
-            <MenuItem key={t.slug} onSelect={() => apply({ tag: t.slug })} hint={state.tag === t.slug ? <Check className="size-4 text-ice" /> : t.count}>
+            <MenuItem key={t.slug} onSelect={() => apply({ tag: t.slug })} hint={state.tag === t.slug ? <Check className="size-4 text-sea" /> : t.count}>
               {t.name}
             </MenuItem>
           ))}
@@ -132,7 +132,7 @@ export default function ExploreFilters({ state, tags, locations }: { state: Stat
         {state.type === "prosjekter" ? (
           <Menu label="Sortering" align="start" className="w-56" trigger={(t) => <FilterPill label={SORT_LABELS[state.sort]} active={state.sort !== "relevant"} open={t.open} onClick={t.toggle} />}>
             {(Object.keys(SORT_LABELS) as ExploreSort[]).map((key) => (
-              <MenuItem key={key} onSelect={() => apply({ sort: key })} hint={state.sort === key ? <Check className="size-4 text-ice" /> : undefined}>
+              <MenuItem key={key} onSelect={() => apply({ sort: key })} hint={state.sort === key ? <Check className="size-4 text-sea" /> : undefined}>
                 {SORT_LABELS[key]}
               </MenuItem>
             ))}
@@ -140,23 +140,23 @@ export default function ExploreFilters({ state, tags, locations }: { state: Stat
         ) : (
           <>
             <Menu label="Sted" align="start" className="w-60" trigger={(t) => <FilterPill label={state.sted ?? "Sted"} active={Boolean(state.sted)} open={t.open} onClick={t.toggle} />}>
-              <MenuItem onSelect={() => apply({ sted: null })} hint={!state.sted ? <Check className="size-4 text-ice" /> : undefined}>
+              <MenuItem onSelect={() => apply({ sted: null })} hint={!state.sted ? <Check className="size-4 text-sea" /> : undefined}>
                 Hele Norden
               </MenuItem>
               {locations.length > 0 && <MenuSeparator />}
               {locations.map((l) => (
-                <MenuItem key={l.location} onSelect={() => apply({ sted: l.location })} hint={state.sted === l.location ? <Check className="size-4 text-ice" /> : l.count}>
+                <MenuItem key={l.location} onSelect={() => apply({ sted: l.location })} hint={state.sted === l.location ? <Check className="size-4 text-sea" /> : l.count}>
                   {l.location}
                 </MenuItem>
               ))}
             </Menu>
             <Menu label="Åpen for" align="start" className="w-60" trigger={(t) => <FilterPill label={state.apen ? OPEN_TO_LABELS[state.apen] : "Åpen for"} active={Boolean(state.apen)} open={t.open} onClick={t.toggle} />}>
               <MenuLabel>Vis folk som er åpne for</MenuLabel>
-              <MenuItem onSelect={() => apply({ apen: null })} hint={!state.apen ? <Check className="size-4 text-ice" /> : undefined}>
+              <MenuItem onSelect={() => apply({ apen: null })} hint={!state.apen ? <Check className="size-4 text-sea" /> : undefined}>
                 Alt
               </MenuItem>
               {OPEN_TO.map((o) => (
-                <MenuItem key={o} onSelect={() => apply({ apen: o })} hint={state.apen === o ? <Check className="size-4 text-ice" /> : undefined}>
+                <MenuItem key={o} onSelect={() => apply({ apen: o })} hint={state.apen === o ? <Check className="size-4 text-sea" /> : undefined}>
                   {OPEN_TO_LABELS[o]}
                 </MenuItem>
               ))}
@@ -189,12 +189,12 @@ function FilterPill({ label, active, open, onClick }: { label: React.ReactNode; 
       onClick={onClick}
       aria-haspopup="menu"
       aria-expanded={open}
-      className={`inline-flex h-10 items-center gap-2 rounded-xl border px-3.5 text-sm font-medium transition ${
-        active ? "border-ice/60 bg-ice/10 text-fg" : "border-line text-fg/90 hover:border-mist/50"
+      className={`inline-flex h-10 items-center gap-1.5 rounded-full px-4 text-sm font-medium transition ${
+        active ? "bg-primary text-on-primary" : "glass-chip text-fg hover:bg-fill-2"
       }`}
     >
       {label}
-      <ChevronDown className="size-4 text-mist" />
+      <ChevronDown className="size-4 opacity-60" />
     </button>
   );
 }

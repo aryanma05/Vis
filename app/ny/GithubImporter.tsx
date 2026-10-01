@@ -90,7 +90,10 @@ export default function GithubImporter({
       setImporting(null);
       return;
     }
-    toast.success(result.data.alreadyImported ? "Repoet er allerede importert" : "Importert som utkast", { description: "Se over og publiser når du er klar." });
+    const { alreadyImported, screenshots } = result.data;
+    toast.success(alreadyImported ? "Repoet er allerede importert" : "Importert som utkast", {
+      description: screenshots > 0 ? `Vi tok ${screenshots} skjermbilder av nettsiden. Se over og publiser når du er klar.` : "Se over og publiser når du er klar.",
+    });
     router.push(`/prosjekt/${result.data.projectId}`);
   }
 
@@ -123,7 +126,7 @@ export default function GithubImporter({
       </form>
 
       {!linked && canLink && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-dashed border-line px-4 py-3 text-sm text-mist">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-fill px-4 py-3 text-sm text-mist">
           <span>Koble til GitHub for å se repoer fra organisasjoner også, og slippe å skrive brukernavnet.</span>
           <div className="w-full sm:w-auto">
             <OAuthButton provider="github" mode="link" callbackURL="/ny?fra=github" label="Koble til GitHub" />
@@ -181,7 +184,7 @@ export default function GithubImporter({
           {repos.length === 0 ? (
             <p className="text-mist">Fant ingen offentlige repoer her.</p>
           ) : (
-            <ul className="divide-y divide-line overflow-hidden rounded-3xl border border-line">
+            <ul className="divide-y divide-line overflow-hidden rounded-[22px] glass-card">
               {filtered.map((repo) => (
                 <li key={repo.id} className="flex items-center justify-between gap-4 px-5 py-4 transition hover:bg-surface/50">
                   <div className="min-w-0">

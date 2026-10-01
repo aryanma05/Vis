@@ -1,21 +1,18 @@
 import Link from "next/link";
-import { ArrowRight, Compass, Flame, Sparkles, Users } from "lucide-react";
-import ProfileAccordion from "@/components/landing/ProfileAccordion";
-import { CtaBand, FeatureTrio, HowItWorks, TagMarquee } from "@/components/landing/Sections";
+import { ArrowRight, Compass, MapPin } from "lucide-react";
+import Avatar from "@/components/Avatar";
 import OnboardingChecklist from "@/components/OnboardingChecklist";
 import { ProjectGrid } from "@/components/ProjectCard";
+import ProjectCover from "@/components/ProjectCover";
 import ProjectFeed from "@/components/ProjectFeed";
 import { PersonRow } from "@/components/social/PersonRow";
 import { ButtonLink } from "@/components/ui/button";
 import { EmptyState, SectionHeading, Tag } from "@/components/ui/misc";
-import Reveal from "@/components/ui/reveal";
 import { Tabs } from "@/components/ui/tabs";
-import { ACCENTS } from "@/lib/constants";
 import { getFeaturedProfiles, getOnboarding, getPlatformStats } from "@/lib/profiles";
-import { getFollowingProjects, getLatestProjects, getPopularTags, getTrendingProjects } from "@/lib/projects";
+import { getFollowingProjects, getLatestProjects, getPopularTags, getTrendingProjects, type ProjectCard } from "@/lib/projects";
 import { getCurrentUser, type CurrentUser } from "@/lib/session";
 import { getFollowCounts, suggestPeople } from "@/lib/social";
-import HomeHero from "./HomeHero";
 
 type Props = { searchParams: Promise<{ fane?: string }> };
 
@@ -30,78 +27,152 @@ export default async function Home({ searchParams }: Props) {
 /* -------------------------------------------------------------------------- */
 
 async function Landing() {
-  const [stats, featured, trending, tags] = await Promise.all([
+  const [stats, featured, trending, latest] = await Promise.all([
     getPlatformStats(),
     getFeaturedProfiles(6),
     getTrendingProjects({ limit: 6 }),
-    getPopularTags(18),
+    getLatestProjects({ limit: 12 }),
   ]);
 
-  const profiles = featured.map((p) => ({
-    href: `/@${p.username}`,
-    name: p.name,
-    username: p.username,
-    headline: p.headline,
-    location: p.location,
-    avatar: p.image,
-    image: p.coverUrl,
-    tags: p.tags,
-    accent: ACCENTS[p.accentColor ?? "is"].color,
-    stats: `${p.projectCount} prosjekter · ${p.followerCount} følgere`,
-  }));
+  // Raden øverst viser det populære; rutenettet under det nyeste som ikke allerede står der.
+  const showcase = trending;
+  const fresh = latest.projects.filter((p) => !showcase.some((s) => s.id === p.id)).slice(0, 6);
 
   return (
-    <main>
-      <HomeHero stats={stats} />
+    <main className="pb-24">
+      <section className="px-5 pt-14 md:pl-28 md:pr-10 md:pt-24">
+        <div className="fade-up mx-auto max-w-7xl">
+          <h1 className="display max-w-3xl text-[clamp(2.6rem,6.4vw,5rem)]">Vis frem det du lager.</h1>
+          <p className="mt-5 max-w-xl text-lg leading-8 text-mist md:text-xl md:leading-9">
+            Prosjektene, CV-en og lenkene dine på én side. Hent prosjekter fra GitHub, eller lim inn en lenke, så tar vi
+            skjermbildene for deg.
+          </p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <ButtonLink href="/register" size="lg">
+              Lag profilen din <ArrowRight className="size-4" />
+            </ButtonLink>
+            <ButtonLink href="/sok" size="lg" variant="secondary">
+              Utforsk
+            </ButtonLink>
+          </div>
+          {stats.projects > 0 && (
+            <p className="mt-8 text-sm text-mist">
+              {stats.people} {stats.people === 1 ? "profil" : "profiler"} · {stats.projects} prosjekter · {stats.tags} teknologier
+            </p>
+          )}
+        </div>
+      </section>
 
-      {profiles.length >= 3 && (
-        <section className="px-5 pb-24 pt-8 md:pb-32 md:pl-28 md:pr-10">
-          <div className="mx-auto max-w-7xl">
-            <Reveal className="flex flex-wrap items-end justify-between gap-6">
-              <div>
-                <p className="label-mono">Profiler på Vis</p>
-                <h2 className="mt-4 max-w-2xl text-4xl font-bold leading-[1.05] tracking-tight md:text-6xl">
-                  Folk som viser frem <span className="serif-accent font-normal text-ice">arbeidet sitt</span>.
-                </h2>
-              </div>
-              <ButtonLink href="/sok?type=personer" variant="outline">
-                Finn flere <ArrowRight className="size-4" />
-              </ButtonLink>
-            </Reveal>
-            <Reveal className="mt-12" delay={0.1}>
-              <ProfileAccordion items={profiles} defaultIndex={Math.min(1, profiles.length - 1)} />
-            </Reveal>
+      {showcase.length > 0 && (
+        <section aria-label="Utvalgte prosjekter" className="mt-14 md:mt-16">
+          <div className="edge-pad no-scrollbar flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2">
+            {showcase.map((p, i) => (
+              <ShowcaseCard key={p.id} project={p} priority={i < 2} />
+            ))}
           </div>
         </section>
       )}
 
-      <TagMarquee tags={tags} />
-      <FeatureTrio />
-
-      {trending.length > 0 && (
-        <section className="border-t border-line px-5 py-24 md:py-32 md:pl-28 md:pr-10">
+      {fresh.length > 0 && (
+        <section className="mt-24 px-5 md:mt-32 md:pl-28 md:pr-10">
           <div className="mx-auto max-w-7xl">
-            <Reveal>
-              <SectionHeading
-                eyebrow="Trender nå"
-                title="Det folk ser på denne uka"
-                action={
-                  <ButtonLink href="/sok?sort=trending" variant="outline">
-                    Se alle <ArrowRight className="size-4" />
-                  </ButtonLink>
-                }
-              />
-            </Reveal>
-            <div className="mt-12">
-              <ProjectGrid projects={trending} />
+            <SectionHeading
+              title="Nytt på Vis"
+              action={
+                <ButtonLink href="/sok" variant="ghost" size="sm">
+                  Se alle <ArrowRight className="size-4" />
+                </ButtonLink>
+              }
+            />
+            <div className="mt-8">
+              <ProjectGrid projects={fresh} />
             </div>
           </div>
         </section>
       )}
 
-      <HowItWorks />
-      <CtaBand />
+      {featured.length > 0 && (
+        <section className="mt-24 px-5 md:mt-32 md:pl-28 md:pr-10">
+          <div className="mx-auto max-w-7xl">
+            <SectionHeading
+              title="Folk på Vis"
+              action={
+                <ButtonLink href="/sok?type=personer" variant="ghost" size="sm">
+                  Finn flere <ArrowRight className="size-4" />
+                </ButtonLink>
+              }
+            />
+            <ul className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {featured.map((p) => (
+                <li key={p.username}>
+                  <Link
+                    href={`/@${p.username}`}
+                    className="group flex h-full items-center gap-4 rounded-[22px] glass-card p-4 transition hover:bg-card-hover"
+                  >
+                    <Avatar name={p.name} image={p.image} size={52} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-semibold text-fg">{p.name}</span>
+                      <span className="block truncate text-sm text-mist">{p.headline ?? `@${p.username}`}</span>
+                      <span className="mt-1 flex items-center gap-3 text-xs text-mist">
+                        {p.location && (
+                          <span className="inline-flex min-w-0 items-center gap-1 truncate">
+                            <MapPin className="size-3 shrink-0" aria-hidden="true" /> {p.location}
+                          </span>
+                        )}
+                        <span className="shrink-0">{p.projectCount} prosjekter</span>
+                      </span>
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      )}
+
+      <section className="mt-24 px-5 md:mt-32 md:pl-28 md:pr-10">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-6 rounded-[28px] glass-card p-8 md:p-12">
+          <div>
+            <h2 className="text-2xl font-bold tracking-[-0.025em] md:text-3xl">Klar til å vise noe?</h2>
+            <p className="mt-2 text-mist">Gratis, på norsk, og ferdig på et par minutter.</p>
+          </div>
+          <ButtonLink href="/register" size="lg">
+            Lag profilen din
+          </ButtonLink>
+        </div>
+      </section>
     </main>
+  );
+}
+
+// Stort kort i raden under toppen: bildet, med tittel og navn i en glasslapp.
+function ShowcaseCard({ project, priority }: { project: ProjectCard; priority: boolean }) {
+  return (
+    <Link
+      href={`/prosjekt/${project.id}`}
+      className="group relative block aspect-[4/5] w-[78vw] max-w-[420px] shrink-0 snap-start overflow-hidden rounded-[28px] glass-card sm:aspect-[16/11] sm:w-[520px] sm:max-w-none"
+    >
+      {project.coverImageUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={project.coverImageUrl}
+          alt=""
+          loading={priority ? "eager" : "lazy"}
+          decoding="async"
+          className="size-full object-cover transition duration-700 ease-[var(--ease-out-expo)] group-hover:scale-[1.03]"
+        />
+      ) : (
+        <ProjectCover title={project.title} showTitle={false} />
+      )}
+      <span className="glass-rim" aria-hidden="true" />
+      <div className="glass-dark absolute inset-x-3 bottom-3 flex items-center gap-3 rounded-[20px] p-3">
+        <Avatar name={project.owner.name} image={project.owner.image} size={36} />
+        <div className="min-w-0">
+          <p className="truncate text-[15px] font-semibold">{project.title}</p>
+          <p className="truncate text-[13px] text-white/70">{project.owner.name}</p>
+        </div>
+      </div>
+    </Link>
   );
 }
 
@@ -137,17 +208,14 @@ async function Feed({ user, searchParams }: { user: CurrentUser; searchParams: P
   const firstName = user.name.split(" ")[0] || user.name;
 
   return (
-    <main className="px-5 pb-28 pt-8 md:pb-20 md:pl-28 md:pr-10 md:pt-14">
+    <main className="px-5 pb-28 pt-6 md:pb-20 md:pl-28 md:pr-10 md:pt-14">
       <div className="mx-auto max-w-7xl">
-        <header className="flex flex-wrap items-end justify-between gap-6">
-          <div>
-            <p className="label-mono">Strømmen</p>
-            <h1 className="mt-3 text-4xl font-bold tracking-tight md:text-6xl">
-              {greeting()}, <span className="serif-accent font-normal text-ice">{firstName}</span>.
-            </h1>
-          </div>
+        <header className="flex flex-wrap items-end justify-between gap-5">
+          <h1 className="display text-[34px] md:text-5xl">
+            {greeting()}, {firstName}
+          </h1>
           <div className="flex gap-2">
-            <ButtonLink href="/sok" variant="outline" size="sm">
+            <ButtonLink href="/sok" variant="secondary" size="sm">
               <Compass className="size-4" /> Utforsk
             </ButtonLink>
             <ButtonLink href="/ny" size="sm">
@@ -156,21 +224,21 @@ async function Feed({ user, searchParams }: { user: CurrentUser; searchParams: P
           </div>
         </header>
 
-        <div className="mt-10 grid gap-12 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="mt-8 grid grid-cols-1 gap-12 xl:grid-cols-[minmax(0,1fr)_320px]">
           <div className="min-w-0">
-            <div className="border-b border-line">
+            <div>
               <Tabs
                 label="Strømmen"
                 active={tab}
                 items={[
-                  { key: "folger", label: <span className="inline-flex items-center gap-2"><Users className="size-4" /> Følger</span>, href: "/?fane=folger" },
-                  { key: "trender", label: <span className="inline-flex items-center gap-2"><Flame className="size-4" /> Trender</span>, href: "/?fane=trender" },
-                  { key: "nyeste", label: <span className="inline-flex items-center gap-2"><Sparkles className="size-4" /> Nyeste</span>, href: "/?fane=nyeste" },
+                  { key: "folger", label: "Følger", href: "/?fane=folger" },
+                  { key: "trender", label: "Populært", href: "/?fane=trender" },
+                  { key: "nyeste", label: "Nyeste", href: "/?fane=nyeste" },
                 ]}
               />
             </div>
 
-            <div className="mt-10">
+            <div className="mt-8">
               {content.projects.length > 0 ? (
                 <ProjectFeed
                   key={tab}
@@ -181,13 +249,13 @@ async function Feed({ user, searchParams }: { user: CurrentUser; searchParams: P
                 />
               ) : tab === "folger" ? (
                 <EmptyState
-                  icon={<Users className="size-5" />}
+                  icon={<Compass className="size-5" />}
                   title={followsAnyone ? "Ingen nye prosjekter ennå" : "Du følger ingen ennå"}
                   action={
                     <>
                       <ButtonLink href="/sok?type=personer">Finn folk å følge</ButtonLink>
                       <ButtonLink href="/?fane=trender" variant="secondary">
-                        Se hva som trender
+                        Se hva som er populært
                       </ButtonLink>
                     </>
                   }
@@ -209,9 +277,9 @@ async function Feed({ user, searchParams }: { user: CurrentUser; searchParams: P
             <OnboardingChecklist steps={steps} />
 
             {people.length > 0 && (
-              <section className="rounded-3xl border border-line p-5">
+              <section className="rounded-[22px] glass-card p-5">
                 <div className="flex items-baseline justify-between">
-                  <h2 className="font-semibold tracking-tight">Folk å følge</h2>
+                  <h2 className="font-semibold">Folk å følge</h2>
                   <Link href="/sok?type=personer" className="text-sm text-mist hover:text-fg">
                     Se flere
                   </Link>
@@ -226,7 +294,7 @@ async function Feed({ user, searchParams }: { user: CurrentUser; searchParams: P
 
             {tags.length > 0 && (
               <section>
-                <h2 className="label-mono">Populære teknologier</h2>
+                <h2 className="px-1 caption">Populære teknologier</h2>
                 <div className="mt-4 flex flex-wrap gap-1.5">
                   {tags.map((t) => (
                     <Tag key={t.slug} href={`/tag/${t.slug}`} count={t.count}>

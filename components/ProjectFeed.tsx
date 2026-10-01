@@ -34,7 +34,7 @@ export default function ProjectFeed({
 
   return (
     <>
-      <div className={`grid gap-x-6 gap-y-10 sm:grid-cols-2 ${columns === 3 ? "xl:grid-cols-3" : ""}`}>
+      <div className={`grid grid-cols-1 gap-x-5 gap-y-9 sm:grid-cols-2 ${columns === 3 ? "xl:grid-cols-3" : ""}`}>
         {projects.map((p, i) => (
           <ProjectCard key={p.id} project={p} priority={i < 3} />
         ))}

@@ -106,7 +106,7 @@ function EntryShell({
         dragProps.onDragEnd();
         setArmed(false);
       }}
-      className={`rounded-2xl border bg-surface/40 transition ${highlight ? "border-ice/70" : "border-line"} ${faded ? "opacity-40" : ""}`}
+      className={`rounded-[20px] bg-surface ring-1 ring-inset transition ${highlight ? "ring-sea/70" : "ring-line"} ${faded ? "opacity-40" : ""}`}
     >
       <div className="flex items-center gap-2 px-3 py-3">
         <span onPointerDown={() => setArmed(true)} className="cursor-grab touch-none p-1 text-mist/60 hover:text-fg active:cursor-grabbing" title="Dra for å flytte" aria-hidden="true">
@@ -114,7 +114,7 @@ function EntryShell({
         </span>
         <button type="button" onClick={onToggle} className="min-w-0 flex-1 text-left" aria-expanded={open}>
           <span className="block truncate font-medium">{summary || "Ny oppføring"}</span>
-          {period && <span className="block font-mono text-xs text-mist/80">{period}</span>}
+          {period && <span className="block text-xs text-mist">{period}</span>}
         </button>
         <div className="flex shrink-0 items-center text-mist">
           <button type="button" onClick={onUp} aria-label="Flytt opp" className="rounded-lg p-1.5 hover:bg-surface-2 hover:text-fg">
@@ -183,7 +183,7 @@ function SkillsInput({ skills, onChange }: { skills: string[]; onChange: (skills
   };
 
   return (
-    <div className="rounded-2xl border border-line bg-ink-2/50 p-2 transition focus-within:border-ice/60 focus-within:ring-4 focus-within:ring-ice/10">
+    <div className="rounded-2xl bg-fill p-2 inset-ring inset-ring-line inset-shadow-[0_1px_2px_rgb(0_0_0/0.1)] transition focus-within:bg-fill-2 focus-within:ring-2 focus-within:ring-sea/50">
       <ul className="flex flex-wrap gap-1.5">
         {skills.map((s) => (
           <li key={s} className="inline-flex items-center gap-1 rounded-lg border border-line bg-surface py-1 pl-2.5 pr-1 text-sm">
@@ -267,7 +267,7 @@ export default function CvEditor({ value, onChange }: { value: CvState; onChange
     <div className="space-y-12">
       <div>
         {heading(Briefcase, "Erfaring", addExperience, "Legg til")}
-        {value.experience.length === 0 && <p className="rounded-2xl border border-dashed border-line px-4 py-6 text-center text-sm text-mist">Ingen erfaring lagt til ennå.</p>}
+        {value.experience.length === 0 && <p className="rounded-2xl bg-fill px-4 py-6 text-center text-sm text-mist">Ingen erfaring lagt til ennå.</p>}
         <ul className="space-y-2.5">
           {value.experience.map((e, i) => (
             <EntryShell
@@ -306,7 +306,7 @@ export default function CvEditor({ value, onChange }: { value: CvState; onChange
 
       <div>
         {heading(GraduationCap, "Utdanning", addEducation, "Legg til")}
-        {value.education.length === 0 && <p className="rounded-2xl border border-dashed border-line px-4 py-6 text-center text-sm text-mist">Ingen utdanning lagt til ennå.</p>}
+        {value.education.length === 0 && <p className="rounded-2xl bg-fill px-4 py-6 text-center text-sm text-mist">Ingen utdanning lagt til ennå.</p>}
         <ul className="space-y-2.5">
           {value.education.map((e, i) => (
             <EntryShell
