@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import { Bell, Compass, Home, LogIn, Palette, Plus, Search, UserPlus } from "lucide-react";
 import Avatar from "@/components/Avatar";
-import { LogoLockup } from "@/components/Logo";
+import { LogoBadge } from "@/components/Logo";
 import NavUserMenu, { type NavUser } from "@/components/nav/NavUserMenu";
 import ThemeSwitch from "@/components/nav/ThemeSwitch";
 import { openSearch } from "@/components/nav/search-events";
@@ -63,7 +63,7 @@ export default function MobileNav({ user = null }: { user?: NavUser }) {
           className="absolute inset-0 -z-10 bg-linear-to-b from-ink/80 to-transparent backdrop-blur-xl [mask-image:linear-gradient(to_bottom,black_60%,transparent)]"
         />
         <Link href="/" aria-label="Vis – forsiden" className="rounded-full focus-visible:outline-offset-4">
-          <LogoLockup size="sm" />
+          <LogoBadge className="size-11 rounded-full shadow-[0_8px_20px_-8px_rgb(0_0_0/0.45)]" />
         </Link>
         <div className="flex items-center gap-2">
           {!user && (
