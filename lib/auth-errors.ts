@@ -36,7 +36,16 @@ const ERRORS: Record<string, { message: string; field?: AuthField }> = {
   TOO_MANY_ATTEMPTS: { message: "For mange feil forsøk. Be om en ny kode." },
   USER_NOT_FOUND: { message: "Fant ingen konto med den e-posten." },
   EMAIL_SEND_FAILED: { message: "Vi fikk ikke sendt e-posten akkurat nå. Prøv igjen om litt, eller si fra til oss hvis det fortsetter." },
+  SUBSCRIPTION_CANCEL_FAILED: { message: "Vi fikk ikke avsluttet abonnementet ditt hos Stripe, så kontoen er ikke slettet. Si opp under Abonnement først, eller prøv igjen om litt." },
   BANNED_USER: { message: "Kontoen din er stengt av en moderator. Ta kontakt hvis du mener det er feil." },
+  // To-trinns innlogging.
+  INVALID_CODE: { message: "Koden stemmer ikke. Sjekk at klokka på telefonen er riktig, og prøv igjen." },
+  INVALID_BACKUP_CODE: { message: "Reservekoden stemmer ikke, eller er allerede brukt." },
+  TOTP_ALREADY_ENABLED: { message: "To-trinns innlogging er allerede på." },
+  TWO_FACTOR_NOT_ENABLED: { message: "To-trinns innlogging er ikke på for denne kontoen." },
+  INVALID_TWO_FACTOR_COOKIE: { message: "Innloggingen tok for lang tid. Start på nytt." },
+  ACCOUNT_TEMPORARILY_LOCKED: { message: "For mange feil koder. Kontoen er låst en liten stund. Prøv igjen senere." },
+  TOO_MANY_ATTEMPTS_REQUEST_NEW_CODE: { message: "For mange forsøk. Start innloggingen på nytt." },
 };
 
 // Better Auth gir VALIDATION_ERROR med meldinger som "[body.email] Invalid email address".

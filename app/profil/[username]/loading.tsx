@@ -1,8 +1,10 @@
 import { Skeleton } from "@/components/ui/misc";
+import { getT } from "@/lib/i18n/server";
 
-export default function ProfileLoading() {
+export default async function ProfileLoading() {
+  const t = await getT();
   return (
-    <main aria-busy="true" aria-label="Laster profilen" className="pb-28 md:pl-24">
+    <main aria-busy="true" aria-label={t("Laster profilen")} className="pb-28 md:pl-24">
       <div className="mx-auto max-w-7xl px-5 pt-2 md:px-10 md:pt-8">
         <Skeleton className="h-40 w-full rounded-[28px] md:h-60" />
       </div>

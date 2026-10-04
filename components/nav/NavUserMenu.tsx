@@ -1,9 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { BarChart3, FileText, LogOut, Settings, Shield, UserRound, UserPen } from "lucide-react";
+import { BarChart3, Bookmark, Building2, FileText, LogOut, Settings, Shield, Sparkles, UserRound, UserPen } from "lucide-react";
 import Avatar from "@/components/Avatar";
 import ThemeSwitch from "@/components/nav/ThemeSwitch";
+import { useT } from "@/components/LocaleProvider";
 import { Menu, MenuItem, MenuLabel, MenuSeparator } from "@/components/ui/menu";
 import { authClient } from "@/lib/auth-client";
 
@@ -22,8 +23,9 @@ export default function NavUserMenu({
   trigger: (props: { open: boolean; toggle: () => void; id: string }) => React.ReactNode;
 }) {
   const router = useRouter();
+  const t = useT();
   return (
-    <Menu label="Profilmeny" side={side} align={align} trigger={trigger} className="w-64">
+    <Menu label={t("Profilmeny")} side={side} align={align} trigger={trigger} className="w-64">
       <div className="flex items-center gap-3 px-3 pb-3 pt-2">
         <Avatar name={user.name} image={user.image} size={36} />
         <div className="min-w-0">
@@ -33,27 +35,36 @@ export default function NavUserMenu({
       </div>
       <MenuSeparator />
       <MenuItem href={`/@${user.username}`} icon={<UserRound className="size-4" />}>
-        Profilen din
+        {t("Profilen din")}
       </MenuItem>
       <MenuItem href="/innsikt" icon={<BarChart3 className="size-4" />}>
-        Innsikt
+        {t("Innsikt")}
+      </MenuItem>
+      <MenuItem href="/samlinger" icon={<Bookmark className="size-4" />}>
+        {t("Samlinger")}
       </MenuItem>
       <MenuItem href="/profil/rediger" icon={<UserPen className="size-4" />}>
-        Rediger profil
+        {t("Rediger profil")}
       </MenuItem>
       <MenuItem href="/profil/rediger/cv" icon={<FileText className="size-4" />}>
         CV
       </MenuItem>
       <MenuItem href="/profil/rediger/konto" icon={<Settings className="size-4" />}>
-        Konto og varsler
+        {t("Konto og varsler")}
+      </MenuItem>
+      <MenuItem href="/bedrifter" icon={<Building2 className="size-4" />}>
+        {t("Bedrifter")}
+      </MenuItem>
+      <MenuItem href="/priser" icon={<Sparkles className="size-4" />}>
+        Pro
       </MenuItem>
       {user.isAdmin && (
         <MenuItem href="/admin" icon={<Shield className="size-4" />}>
-          Moderering
+          {t("Admin")}
         </MenuItem>
       )}
       <MenuSeparator />
-      <MenuLabel>Utseende</MenuLabel>
+      <MenuLabel>{t("Utseende")}</MenuLabel>
       <div className="px-2 pb-2 pt-1">
         <ThemeSwitch />
       </div>
@@ -66,7 +77,7 @@ export default function NavUserMenu({
           router.refresh();
         }}
       >
-        Logg ut
+        {t("Logg ut")}
       </MenuItem>
     </Menu>
   );

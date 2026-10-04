@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AtSign, Bell, Heart, Lightbulb, MessageCircle, Reply, Settings, Star, UserPlus } from "lucide-react";
+import { AtSign, Bell, Heart, Lightbulb, Mail, MessageCircle, Reply, Settings, Sparkles, Star, UserPlus } from "lucide-react";
 import Avatar from "@/components/Avatar";
 import { EmptyState } from "@/components/ui/misc";
 import { Tabs } from "@/components/ui/tabs";
 import { timeAgo } from "@/lib/format";
+import { CONTACT_REASON_LABELS } from "@/lib/constants";
 import { listNotifications, type NotificationItem } from "@/lib/notifications";
 import { requireUser } from "@/lib/session";
 import MarkRead from "./MarkRead";
@@ -22,6 +23,14 @@ function describe(n: NotificationItem) {
       return { Icon: AtSign, tone: "text-ice", text: <>nevnte deg på <b className="font-semibold text-fg">{project}</b></> };
     case "follow":
       return { Icon: UserPlus, tone: "text-success", text: <>begynte å følge deg</> };
+    case "contact":
+      return {
+        Icon: Mail,
+        tone: "text-success",
+        text: <>vil komme i kontakt{n.contactReason ? ` (${CONTACT_REASON_LABELS[n.contactReason].toLowerCase()})` : ""}</>,
+      };
+    case "featured":
+      return { Icon: Sparkles, tone: "text-warn", text: <>valgte ut <b className="font-semibold text-fg">{project}</b>. Det vises nå på forsiden.</> };
     case "reaction": {
       const Icon = n.reaction === "Nyttig" ? Lightbulb : n.reaction === "Inspirerende" ? Star : Heart;
       return {
@@ -38,6 +47,7 @@ function describe(n: NotificationItem) {
 }
 
 function href(n: NotificationItem) {
+  if (n.type === "contact" && n.contactId) return `/kontakt/${n.contactId}`;
   if (n.type === "follow" || !n.project) return `/@${n.actor.username}`;
   if (n.commentId) return `/prosjekt/${n.project.id}#kommentar-${n.commentId}`;
   return `/prosjekt/${n.project.id}`;
@@ -97,7 +107,7 @@ export default async function NotificationsPage({ searchParams }: { searchParams
 
         {notifications.length === 0 ? (
           <EmptyState className="mt-10" icon={<Bell className="size-5" />} title={unreadOnly ? "Ingen uleste varsler" : "Ingen varsler ennå"}>
-            Når noen kommenterer, reagerer, nevner deg eller begynner å følge deg, dukker det opp her.
+            Når noen kommenterer, reagerer, nevner deg, følger deg eller vil komme i kontakt, dukker det opp her.
           </EmptyState>
         ) : (
           groups.map((group) => (
@@ -117,7 +127,7 @@ export default async function NotificationsPage({ searchParams }: { searchParams
                         </span>
                         <div className="min-w-0 flex-1">
                           <p className="text-[15px] leading-6 text-fg/85">
-                            <b className="font-semibold text-fg">{n.actor.name}</b> {text}
+                            <b className="font-semibold text-fg">{n.type === "featured" ? "Redaksjonen" : n.actor.name}</b> {text}
                           </p>
                           {n.excerpt && <p className="mt-1 line-clamp-2 text-sm text-mist">«{n.excerpt}»</p>}
                           <p className="mt-1 text-xs text-mist/70" suppressHydrationWarning>

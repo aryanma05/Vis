@@ -32,6 +32,14 @@ const MAX_DOWNLOAD_BYTES = 30 * 1024 * 1024;
 const ALLOW_LOCAL = process.env.NODE_ENV !== "production";
 
 export type Screenshot = { bytes: Buffer; width: number; height: number };
+// Tittel og beskrivelse fra siden (<title>, og:title, meta description), til å fylle ut skjemaet.
+export type PageMeta = { title: string | null; description: string | null };
+
+const cleanMeta = (value: unknown, max: number) => {
+  if (typeof value !== "string") return null;
+  const text = value.replace(/\s+/g, " ").trim();
+  return text ? text.slice(0, max) : null;
+};
 
 /* -------------------------------------------------------------------------- */
 /*  Hvilke adresser vi tar bilder av                                          */
@@ -69,7 +77,7 @@ function isPrivateHostname(host: string) {
 }
 
 // Slår opp navnet og sjekker at det ikke peker inn i et lokalt nett.
-async function resolvesToPrivate(host: string) {
+export async function resolvesToPrivate(host: string) {
   if (isPrivateHostname(host)) return true;
   if (isIP(host.replace(/^\[|\]$/g, ""))) return false;
   try {
@@ -110,27 +118,6 @@ export function normalizeProjectUrl(input: string): string {
 }
 
 /* -------------------------------------------------------------------------- */
-/*  Begrensning per bruker                                                    */
-/* -------------------------------------------------------------------------- */
-
-// Hver runde starter en nettleser (eller bruker av en gratis kvote), så hver bruker
-// får et par runder i kvarteret. Telles i minnet, per serverprosess.
-const WINDOW_MS = 15 * 60_000;
-const MAX_PER_WINDOW = 6;
-const recent = new Map<string, number[]>();
-
-export function assertScreenshotQuota(userId: string) {
-  const now = Date.now();
-  const times = (recent.get(userId) ?? []).filter((t) => now - t < WINDOW_MS);
-  if (times.length >= MAX_PER_WINDOW) {
-    throw new UserFacingError("Du har tatt mange skjermbilder på kort tid. Vent litt og prøv igjen.");
-  }
-  times.push(now);
-  recent.set(userId, times);
-  if (recent.size > 5000) recent.delete(recent.keys().next().value!);
-}
-
-/* -------------------------------------------------------------------------- */
 /*  Ta bildene                                                                */
 /* -------------------------------------------------------------------------- */
 
@@ -150,14 +137,19 @@ async function withSlot<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 // Tar skjermbilder av en offentlig nettside. Returnerer WebP-bilder i 16:10.
-export async function captureScreenshots(input: string, { max = MAX_SCREENSHOTS }: { max?: number } = {}): Promise<Screenshot[]> {
+export async function captureScreenshots(input: string, options: { max?: number } = {}): Promise<Screenshot[]> {
+  return (await capturePage(input, options)).shots;
+}
+
+// Skjermbilder pluss tittel og beskrivelse fra siden.
+export async function capturePage(input: string, { max = MAX_SCREENSHOTS }: { max?: number } = {}): Promise<{ shots: Screenshot[]; meta: PageMeta }> {
   const url = normalizeProjectUrl(input);
   const count = Math.max(1, Math.min(max, MAX_SCREENSHOTS));
   const browserPath = process.env.SCREENSHOT_BROWSER_PATH?.trim() || null;
   // Microlink når ikke maskinen din, så lokale adresser må tas med en lokal nettleser.
   const local = isPrivateHostname(new URL(url).hostname);
 
-  const frames = await withSlot(() =>
+  const { frames, meta } = await withSlot(() =>
     browserPath || local ? captureWithBrowser(url, browserPath, count) : captureWithMicrolink(url, count),
   );
 
@@ -173,13 +165,13 @@ export async function captureScreenshots(input: string, { max = MAX_SCREENSHOTS 
     shots.push({ bytes: data, width: info.width, height: info.height });
   }
   if (shots.length === 0) throw new UserFacingError("Siden ser tom ut. Sjekk at lenken virker.");
-  return shots;
+  return { shots, meta };
 }
 
 // Lokal Chrome/Chromium via Playwright. Siden blar nedover én skjermhøyde om gangen,
 // så bilder som lastes inn når man blar, rekker å komme frem. Uten executablePath
 // brukes Google Chrome som er installert på maskinen.
-async function captureWithBrowser(url: string, executablePath: string | null, count: number): Promise<Buffer[]> {
+async function captureWithBrowser(url: string, executablePath: string | null, count: number): Promise<{ frames: Buffer[]; meta: PageMeta }> {
   const { chromium } = await import("playwright-core");
   let browser;
   try {
@@ -235,6 +227,16 @@ async function captureWithBrowser(url: string, executablePath: string | null, co
     }
     await page.waitForLoadState("networkidle", { timeout: 5_000 }).catch(() => {});
     await page.addStyleTag({ content: "html{scrollbar-width:none}::-webkit-scrollbar{display:none}" }).catch(() => {});
+    const raw = await page
+      .evaluate(() => {
+        const meta = (selector: string) => document.querySelector<HTMLMetaElement>(selector)?.content ?? null;
+        return {
+          title: meta('meta[property="og:title"]') ?? document.title,
+          description: meta('meta[property="og:description"]') ?? meta('meta[name="description"]'),
+        };
+      })
+      .catch(() => ({ title: null, description: null }));
+    const meta = { title: cleanMeta(raw.title, 100), description: cleanMeta(raw.description, 200) };
 
     const frames: Buffer[] = [];
     let lastY = -1;
@@ -249,18 +251,19 @@ async function captureWithBrowser(url: string, executablePath: string | null, co
       await page.waitForTimeout(i === 0 ? 700 : 900);
       frames.push(await page.screenshot({ type: "png" }));
     }
-    return frames;
+    return { frames, meta };
   } finally {
     await browser.close().catch(() => {});
   }
 }
 
 // Microlink tar ett bilde av hele siden, som vi deler opp i skjermhøyder.
-async function captureWithMicrolink(url: string, count: number): Promise<Buffer[]> {
+async function captureWithMicrolink(url: string, count: number): Promise<{ frames: Buffer[]; meta: PageMeta }> {
   const key = process.env.MICROLINK_API_KEY?.trim();
   const api = new URL(key ? "https://pro.microlink.io/" : "https://api.microlink.io/");
   api.searchParams.set("url", url);
-  api.searchParams.set("meta", "false");
+  // Bare tittel og beskrivelse, ikke resten av metadataene (raskere).
+  api.searchParams.set("meta", JSON.stringify({ title: true, description: true }));
   api.searchParams.set("screenshot.fullPage", "true");
   api.searchParams.set("screenshot.type", "png");
   api.searchParams.set("viewport.width", String(VIEWPORT.width));
@@ -281,7 +284,7 @@ async function captureWithMicrolink(url: string, count: number): Promise<Buffer[
   const json = (await res.json().catch(() => null)) as {
     status?: string;
     message?: string;
-    data?: { screenshot?: { url?: string } };
+    data?: { screenshot?: { url?: string }; title?: string; description?: string };
   } | null;
   const shotUrl = json?.data?.screenshot?.url;
   if (!res.ok || json?.status !== "success" || !shotUrl || !/^https:\/\//.test(shotUrl)) {
@@ -295,7 +298,10 @@ async function captureWithMicrolink(url: string, count: number): Promise<Buffer[
   const bytes = Buffer.from(await image.arrayBuffer());
   if (bytes.byteLength > MAX_DOWNLOAD_BYTES) throw new UserFacingError("Siden er for lang til å ta bilder av.");
 
-  return sliceFullPage(bytes, count);
+  return {
+    frames: await sliceFullPage(bytes, count),
+    meta: { title: cleanMeta(json?.data?.title, 100), description: cleanMeta(json?.data?.description, 200) },
+  };
 }
 
 // Deler et helsidebilde i biter med samme form som skjermen (16:10).

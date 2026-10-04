@@ -99,6 +99,43 @@ function toPayload(state: CvState) {
 // Miniatyr av hver mal, så man ser forskjellen før man velger.
 function TemplateThumb({ template }: { template: CvTemplate }) {
   const line = (w: string, dark = false) => <span className={`block h-1 rounded-full ${dark ? "bg-[#0f172a]" : "bg-[#cbd5e1]"}`} style={{ width: w }} />;
+  if (template === "elegant") {
+    return (
+      <span className="flex h-full flex-col items-center space-y-1.5 bg-white p-2.5">
+        {line("55%", true)}
+        {line("35%")}
+        <span className="my-0.5 block h-px w-full bg-[#a7c7d1]" />
+        {line("80%")}
+        {line("70%")}
+        <span className="my-0.5 block h-px w-full bg-[#a7c7d1]" />
+        {line("85%")}
+        {line("60%")}
+      </span>
+    );
+  }
+  if (template === "tydelig") {
+    return (
+      <span className="flex h-full flex-col bg-white">
+        <span className="block space-y-1 bg-[#8fd8f0] p-2">
+          {line("65%", true)}
+          {line("40%", true)}
+        </span>
+        <span className="grid flex-1 grid-cols-[1fr_32%] gap-2 p-2">
+          <span className="space-y-1">
+            {line("40%", true)}
+            {line("90%")}
+            {line("80%")}
+            {line("85%")}
+          </span>
+          <span className="space-y-1">
+            {line("70%", true)}
+            {line("80%")}
+            {line("60%")}
+          </span>
+        </span>
+      </span>
+    );
+  }
   if (template === "moderne") {
     return (
       <span className="grid h-full grid-cols-[34%_1fr] bg-white">
@@ -170,13 +207,11 @@ export default function CvStudio({
   doc,
   username,
   template: initialTemplate,
-  canParse,
 }: {
   cv: Cv;
   doc: DocState;
   username: string;
   template: CvTemplate;
-  canParse: boolean;
 }) {
   const router = useRouter();
   const initial = useRef(fromSaved(cv));
@@ -275,7 +310,10 @@ export default function CvStudio({
                   <TemplateThumb template={t} />
                 </span>
                 <span className="mt-2.5 flex items-center justify-between px-1">
-                  <span className="text-sm font-semibold">{CV_TEMPLATE_LABELS[t].name}</span>
+                  <span className="flex items-center gap-1.5 text-sm font-semibold">
+                    {CV_TEMPLATE_LABELS[t].name}
+                    {CV_TEMPLATE_LABELS[t].pro && <span className="rounded-full bg-warn/15 px-1.5 py-0.5 text-[10px] font-semibold text-warn">Pro</span>}
+                  </span>
                   {on && <Check className="size-4 text-ice" />}
                 </span>
                 <span className="block px-1 pb-1 text-xs text-mist">{CV_TEMPLATE_LABELS[t].description}</span>
@@ -295,9 +333,9 @@ export default function CvStudio({
 
       <Section
         title="Importer CV"
-        description="Last opp CV-en som PDF eller bilde. Den vises på profilen, og vi kan fylle ut feltene under for deg."
+        description="Last opp CV-en som PDF eller bilde. Den vises på profilen, og fra en PDF kan vi fylle ut feltene under for deg."
       >
-        <CvDocumentPanel initial={doc} autofilling={autofilling} canParse={canParse} onAutofill={() => readCv(parseStoredCvAction)} />
+        <CvDocumentPanel initial={doc} autofilling={autofilling} onAutofill={() => readCv(parseStoredCvAction)} />
         <p className="mt-5 text-[13px] leading-5 text-mist/80">
           <span className="font-medium text-fg">Fra LinkedIn?</span> Gå til profilen din på LinkedIn, trykk «Mer» → «Lagre som PDF», og last opp
           filen her.
@@ -328,28 +366,26 @@ export default function CvStudio({
 
         <CvEditor value={state} onChange={setState} />
 
-        {canParse && (
-          <p className="mt-10 text-sm text-mist/80">
-            Har du CV-en bare i Word?{" "}
-            <button type="button" onClick={() => docxRef.current?.click()} disabled={autofilling} className="inline-flex items-center gap-1 text-ice hover:underline">
-              <FileUp className="size-3.5" /> Les inn feltene fra en .docx-fil
-            </button>
-            <input
-              ref={docxRef}
-              type="file"
-              accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                e.target.value = "";
-                if (!file) return;
-                const fd = new FormData();
-                fd.append("file", file);
-                readCv(() => importCvAction(fd));
-              }}
-            />
-          </p>
-        )}
+        <p className="mt-10 text-sm text-mist/80">
+          Har du CV-en bare i Word?{" "}
+          <button type="button" onClick={() => docxRef.current?.click()} disabled={autofilling} className="inline-flex items-center gap-1 text-ice hover:underline">
+            <FileUp className="size-3.5" /> Les inn feltene fra en .docx-fil
+          </button>
+          <input
+            ref={docxRef}
+            type="file"
+            accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              e.target.value = "";
+              if (!file) return;
+              const fd = new FormData();
+              fd.append("file", file);
+              readCv(() => importCvAction(fd));
+            }}
+          />
+        </p>
       </Section>
 
       <div className="sticky bottom-24 z-20 mt-2 flex items-center justify-end gap-4 glass rounded-[26px] py-2 pl-5 pr-2 md:bottom-6">

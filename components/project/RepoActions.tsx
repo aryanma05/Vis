@@ -4,12 +4,14 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Check, Copy, Download, RefreshCw } from "lucide-react";
 import { syncProjectReadmeAction } from "@/app/actions/github";
+import { useT } from "@/components/LocaleProvider";
 import Dialog from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
 
 // «git clone …» med kopier-knapp, og ZIP-nedlasting av hovedgrenen.
 export function CloneField({ cloneUrl, zipUrl }: { cloneUrl: string; zipUrl: string }) {
+  const t = useT();
   const [copied, setCopied] = useState(false);
   const command = `git clone ${cloneUrl}`;
 
@@ -19,27 +21,27 @@ export function CloneField({ cloneUrl, zipUrl }: { cloneUrl: string; zipUrl: str
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
     } catch {
-      toast.error("Fikk ikke kopiert. Merk teksten og kopier selv.");
+      toast.error(t("Fikk ikke kopiert. Merk teksten og kopier selv."));
     }
   }
 
   return (
     <div>
-      <p className="caption">Klon</p>
+      <p className="caption">{t("Klon")}</p>
       <div className="mt-2 flex items-center gap-1 rounded-xl border border-line bg-ink-2/70 py-1 pl-3 pr-1">
         <code className="no-scrollbar min-w-0 flex-1 overflow-x-auto whitespace-nowrap font-mono text-[11.5px] text-fg/85">{command}</code>
         <button
           type="button"
           onClick={copy}
-          aria-label={copied ? "Kopiert" : "Kopier kommandoen"}
+          aria-label={t(copied ? "Kopiert" : "Kopier kommandoen")}
           className="flex size-8 shrink-0 items-center justify-center rounded-lg text-mist transition hover:bg-surface-2 hover:text-fg"
         >
           {copied ? <Check className="size-4 text-success" /> : <Copy className="size-4" />}
         </button>
         <a
           href={zipUrl}
-          aria-label="Last ned som ZIP fra GitHub"
-          title="Last ned som ZIP"
+          aria-label={t("Last ned som ZIP fra GitHub")}
+          title={t("Last ned som ZIP")}
           className="flex size-8 shrink-0 items-center justify-center rounded-lg text-mist transition hover:bg-surface-2 hover:text-fg"
         >
           <Download className="size-4" />

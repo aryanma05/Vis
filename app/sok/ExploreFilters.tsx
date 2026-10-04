@@ -3,9 +3,10 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { Check, ChevronDown, Search, X } from "lucide-react";
+import { useT } from "@/components/LocaleProvider";
 import { Kbd } from "@/components/ui/misc";
 import { Menu, MenuItem, MenuLabel, MenuSeparator } from "@/components/ui/menu";
-import { OPEN_TO, OPEN_TO_LABELS, type OpenTo } from "@/lib/constants";
+import { FIELD_KEYS, FIELDS, OPEN_TO, OPEN_TO_LABELS, PERIODS, type FieldKey, type OpenTo, type PeriodKey } from "@/lib/constants";
 
 type Tag = { slug: string; name: string; count?: number };
 export type ExploreType = "prosjekter" | "personer";
@@ -20,11 +21,22 @@ const SORT_LABELS: Record<ExploreSort, string> = {
   az: "Navn A–Å",
 };
 
-type State = { q: string; type: ExploreType; tag: string | null; sort: ExploreSort; sted: string | null; apen: OpenTo | null };
+type State = {
+  q: string;
+  type: ExploreType;
+  tag: string | null;
+  sort: ExploreSort;
+  sted: string | null;
+  apen: OpenTo | null;
+  fag: FieldKey | null;
+  periode: PeriodKey | null;
+  utvalgt: boolean;
+};
 
 // Søk og filtre. Alt ligger i adressen, så treff kan deles og tilbake-knappen virker.
 export default function ExploreFilters({ state, tags, locations }: { state: State; tags: Tag[]; locations: { location: string; count: number }[] }) {
   const router = useRouter();
+  const t = useT();
   const [pending, startTransition] = useTransition();
   const [value, setValue] = useState(state.q);
   const [lastQuery, setLastQuery] = useState(state.q);
@@ -45,6 +57,9 @@ export default function ExploreFilters({ state, tags, locations }: { state: Stat
     if (merged.type === "prosjekter" && merged.sort !== "relevant") params.set("sort", merged.sort);
     if (merged.type === "personer" && merged.sted) params.set("sted", merged.sted);
     if (merged.type === "personer" && merged.apen) params.set("apen", merged.apen);
+    if (merged.fag) params.set("fag", merged.fag);
+    if (merged.type === "prosjekter" && merged.periode) params.set("periode", merged.periode);
+    if (merged.type === "prosjekter" && merged.utvalgt) params.set("utvalgt", "1");
     const search = params.toString();
     startTransition(() => router.replace(search ? `/sok?${search}` : "/sok", { scroll: false }));
   }
@@ -58,7 +73,9 @@ export default function ExploreFilters({ state, tags, locations }: { state: Stat
   }, [value]);
 
   const activeTag = tags.find((t) => t.slug === state.tag);
-  const hasFilters = Boolean(state.q || state.tag || state.sted || state.apen || (state.type === "prosjekter" && state.sort !== "relevant"));
+  const hasFilters = Boolean(
+    state.q || state.tag || state.sted || state.apen || state.fag || state.periode || state.utvalgt || (state.type === "prosjekter" && state.sort !== "relevant"),
+  );
 
 
   return (
@@ -75,8 +92,8 @@ export default function ExploreFilters({ state, tags, locations }: { state: Stat
           ref={inputRef}
           value={value}
           onChange={(e) => setValue(e.target.value)}
-          placeholder={state.type === "personer" ? "Søk etter navn, rolle, sted eller ferdighet …" : "Søk etter prosjekt, teknologi eller person …"}
-          aria-label="Søk"
+          placeholder={t(state.type === "personer" ? "Søk etter navn, rolle, sted eller ferdighet …" : "Søk etter prosjekt, teknologi eller person …")}
+          aria-label={t("Søk")}
           className="h-12 w-full rounded-full bg-fill pl-12 pr-24 text-[17px] text-fg outline-none inset-ring inset-ring-line inset-shadow-[0_1px_2px_rgb(0_0_0/0.1)] transition placeholder:text-mist focus:bg-fill-2 focus:ring-2 focus:ring-sea/50"
         />
         <div className="absolute right-4 top-1/2 flex -translate-y-1/2 items-center gap-2">
@@ -88,7 +105,7 @@ export default function ExploreFilters({ state, tags, locations }: { state: Stat
                 apply({ q: "" });
                 inputRef.current?.focus();
               }}
-              aria-label="Tøm søket"
+              aria-label={t("Tøm søket")}
               className="rounded-full p-1.5 text-mist transition hover:bg-fill-2 hover:text-fg"
             >
               <X className="size-4" />
@@ -102,46 +119,82 @@ export default function ExploreFilters({ state, tags, locations }: { state: Stat
       </form>
 
       <div className="mt-5 flex flex-wrap items-center gap-2">
-        <div role="tablist" aria-label="Hva du søker etter" className="glass-chip mr-2 inline-flex rounded-full p-1">
-          {(["prosjekter", "personer"] as const).map((t) => (
+        <div role="tablist" aria-label={t("Hva du søker etter")} className="glass-chip mr-2 inline-flex rounded-full p-1">
+          {(["prosjekter", "personer"] as const).map((kind) => (
             <button
-              key={t}
+              key={kind}
               type="button"
               role="tab"
-              aria-selected={state.type === t}
-              onClick={() => apply({ type: t, sort: "relevant" })}
-              className={`rounded-full px-4 py-1.5 text-sm font-medium capitalize transition ${state.type === t ? "glass-thumb text-fg" : "text-mist hover:text-fg"}`}
+              aria-selected={state.type === kind}
+              onClick={() => apply({ type: kind, sort: "relevant" })}
+              className={`rounded-full px-4 py-1.5 text-sm font-medium capitalize transition ${state.type === kind ? "glass-thumb text-fg" : "text-mist hover:text-fg"}`}
             >
-              {t}
+              {t(kind === "prosjekter" ? "Prosjekter" : "Personer")}
             </button>
           ))}
         </div>
 
-        <Menu label="Teknologi" align="start" className="max-h-80 w-64 overflow-y-auto" trigger={(t) => <FilterPill label={activeTag?.name ?? "Teknologi"} active={Boolean(state.tag)} open={t.open} onClick={t.toggle} />}>
+        <Menu label={t("Teknologi")} align="start" className="max-h-80 w-64 overflow-y-auto" trigger={(m) => <FilterPill label={activeTag?.name ?? t("Teknologi")} active={Boolean(state.tag)} open={m.open} onClick={m.toggle} />}>
           <MenuItem onSelect={() => apply({ tag: null })} hint={!state.tag ? <Check className="size-4 text-sea" /> : undefined}>
-            Alle teknologier
+            {t("Alle teknologier")}
           </MenuItem>
           <MenuSeparator />
-          {tags.map((t) => (
-            <MenuItem key={t.slug} onSelect={() => apply({ tag: t.slug })} hint={state.tag === t.slug ? <Check className="size-4 text-sea" /> : t.count}>
-              {t.name}
+          {tags.map((tag) => (
+            <MenuItem key={tag.slug} onSelect={() => apply({ tag: tag.slug })} hint={state.tag === tag.slug ? <Check className="size-4 text-sea" /> : tag.count}>
+              {tag.name}
             </MenuItem>
           ))}
         </Menu>
 
+        <Menu label={t("Fagfelt")} align="start" className="w-56" trigger={(m) => <FilterPill label={t(state.fag ? FIELDS[state.fag].label : "Fagfelt")} active={Boolean(state.fag)} open={m.open} onClick={m.toggle} />}>
+          <MenuItem onSelect={() => apply({ fag: null })} hint={!state.fag ? <Check className="size-4 text-sea" /> : undefined}>
+            {t("Alle fagfelt")}
+          </MenuItem>
+          <MenuSeparator />
+          {FIELD_KEYS.map((key) => (
+            <MenuItem key={key} onSelect={() => apply({ fag: key })} hint={state.fag === key ? <Check className="size-4 text-sea" /> : undefined}>
+              {t(FIELDS[key].label)}
+            </MenuItem>
+          ))}
+        </Menu>
+
+        {state.type === "prosjekter" && (
+          <Menu label={t("Periode")} align="start" className="w-52" trigger={(m) => <FilterPill label={t(state.periode ? PERIODS[state.periode].label : "Når")} active={Boolean(state.periode)} open={m.open} onClick={m.toggle} />}>
+            <MenuItem onSelect={() => apply({ periode: null })} hint={!state.periode ? <Check className="size-4 text-sea" /> : undefined}>
+              {t("Når som helst")}
+            </MenuItem>
+            {(Object.keys(PERIODS) as PeriodKey[]).map((key) => (
+              <MenuItem key={key} onSelect={() => apply({ periode: key })} hint={state.periode === key ? <Check className="size-4 text-sea" /> : undefined}>
+                {t(PERIODS[key].label)}
+              </MenuItem>
+            ))}
+          </Menu>
+        )}
+
+        {state.type === "prosjekter" && (
+          <button
+            type="button"
+            aria-pressed={state.utvalgt}
+            onClick={() => apply({ utvalgt: !state.utvalgt })}
+            className={`inline-flex h-10 items-center gap-1.5 rounded-full px-4 text-sm font-medium transition ${state.utvalgt ? "bg-primary text-on-primary" : "glass-chip text-fg hover:bg-fill-2"}`}
+          >
+            {t("Utvalgt")}
+          </button>
+        )}
+
         {state.type === "prosjekter" ? (
-          <Menu label="Sortering" align="start" className="w-56" trigger={(t) => <FilterPill label={SORT_LABELS[state.sort]} active={state.sort !== "relevant"} open={t.open} onClick={t.toggle} />}>
+          <Menu label={t("Sortering")} align="start" className="w-56" trigger={(m) => <FilterPill label={t(SORT_LABELS[state.sort])} active={state.sort !== "relevant"} open={m.open} onClick={m.toggle} />}>
             {(Object.keys(SORT_LABELS) as ExploreSort[]).map((key) => (
               <MenuItem key={key} onSelect={() => apply({ sort: key })} hint={state.sort === key ? <Check className="size-4 text-sea" /> : undefined}>
-                {SORT_LABELS[key]}
+                {t(SORT_LABELS[key])}
               </MenuItem>
             ))}
           </Menu>
         ) : (
           <>
-            <Menu label="Sted" align="start" className="w-60" trigger={(t) => <FilterPill label={state.sted ?? "Sted"} active={Boolean(state.sted)} open={t.open} onClick={t.toggle} />}>
+            <Menu label={t("Sted")} align="start" className="w-60" trigger={(m) => <FilterPill label={state.sted ?? t("Sted")} active={Boolean(state.sted)} open={m.open} onClick={m.toggle} />}>
               <MenuItem onSelect={() => apply({ sted: null })} hint={!state.sted ? <Check className="size-4 text-sea" /> : undefined}>
-                Hele Norden
+                {t("Hele Norden")}
               </MenuItem>
               {locations.length > 0 && <MenuSeparator />}
               {locations.map((l) => (
@@ -150,14 +203,14 @@ export default function ExploreFilters({ state, tags, locations }: { state: Stat
                 </MenuItem>
               ))}
             </Menu>
-            <Menu label="Åpen for" align="start" className="w-60" trigger={(t) => <FilterPill label={state.apen ? OPEN_TO_LABELS[state.apen] : "Åpen for"} active={Boolean(state.apen)} open={t.open} onClick={t.toggle} />}>
-              <MenuLabel>Vis folk som er åpne for</MenuLabel>
+            <Menu label={t("Åpen for")} align="start" className="w-60" trigger={(m) => <FilterPill label={t(state.apen ? OPEN_TO_LABELS[state.apen] : "Åpen for")} active={Boolean(state.apen)} open={m.open} onClick={m.toggle} />}>
+              <MenuLabel>{t("Vis folk som er åpne for")}</MenuLabel>
               <MenuItem onSelect={() => apply({ apen: null })} hint={!state.apen ? <Check className="size-4 text-sea" /> : undefined}>
-                Alt
+                {t("Alt")}
               </MenuItem>
               {OPEN_TO.map((o) => (
                 <MenuItem key={o} onSelect={() => apply({ apen: o })} hint={state.apen === o ? <Check className="size-4 text-sea" /> : undefined}>
-                  {OPEN_TO_LABELS[o]}
+                  {t(OPEN_TO_LABELS[o])}
                 </MenuItem>
               ))}
             </Menu>
@@ -173,10 +226,10 @@ export default function ExploreFilters({ state, tags, locations }: { state: Stat
             }}
             className="ml-1 text-sm text-mist underline-offset-4 transition hover:text-fg hover:underline"
           >
-            Nullstill
+            {t("Nullstill")}
           </button>
         )}
-        {pending && <span className="text-sm text-mist">Oppdaterer …</span>}
+        {pending && <span className="text-sm text-mist">{t("Oppdaterer …")}</span>}
       </div>
     </div>
   );

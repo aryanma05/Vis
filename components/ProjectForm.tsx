@@ -125,6 +125,7 @@ export default function ProjectForm({
   const [editing, setEditing] = useState<{ key: string; url: string } | null>(null);
   const autoCaptured = useRef(new Set<string>());
   const inputRef = useRef<HTMLInputElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   const isEdit = Boolean(projectId);
   const room = maxImages - items.length - preparing - (capturing?.count ?? 0);
@@ -206,7 +207,16 @@ export default function ProjectForm({
       toast.error(result.error);
       return;
     }
-    const added = result.data.map((shot, i) => {
+    // Tittel og ingress fra siden, hvis feltene er tomme (f.eks. fra Dribbble, Behance eller Figma).
+    const form = formRef.current;
+    const fill = (name: string, value: string | null) => {
+      const field = form?.elements.namedItem(name);
+      if (value && (field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement) && !field.value.trim()) field.value = value;
+    };
+    fill("title", result.data.meta.title);
+    fill("summary", result.data.meta.description);
+
+    const added = result.data.shots.map((shot, i) => {
       const file = base64ToFile(shot.base64, `skjermbilde-${i + 1}.webp`, shot.type);
       return { kind: "new" as const, key: crypto.randomUUID(), file, url: URL.createObjectURL(file) };
     });
@@ -347,7 +357,7 @@ export default function ProjectForm({
   });
 
   return (
-    <form onSubmit={onSubmit} className="pb-4">
+    <form ref={formRef} onSubmit={onSubmit} className="pb-4">
       {/* Lenken og bildene */}
       <section aria-label="Bilder" className="space-y-4">
         <input

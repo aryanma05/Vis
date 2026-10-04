@@ -3,10 +3,12 @@ import { MapPin } from "lucide-react";
 import Avatar from "@/components/Avatar";
 import FollowButton from "@/components/social/FollowButton";
 import { compactNumber } from "@/components/ui/misc";
+import { getT } from "@/lib/i18n/server";
 import type { PersonCard } from "@/lib/social";
 
 // En person i en liste (forslag, følgere, søketreff).
-export function PersonRow({ person, viewerId, compact = false }: { person: PersonCard; viewerId?: string | null; compact?: boolean }) {
+export async function PersonRow({ person, viewerId, compact = false }: { person: PersonCard; viewerId?: string | null; compact?: boolean }) {
+  const t = await getT();
   const isSelf = viewerId === person.id;
   return (
     <div className="group flex items-center gap-3.5">
@@ -26,8 +28,8 @@ export function PersonRow({ person, viewerId, compact = false }: { person: Perso
                 {person.location}
               </span>
             )}
-            <span>{compactNumber(person.projectCount)} prosjekter</span>
-            <span>{compactNumber(person.followerCount)} følgere</span>
+            <span>{t("{n} prosjekter", { n: compactNumber(person.projectCount) })}</span>
+            <span>{t("{n} følgere", { n: compactNumber(person.followerCount) })}</span>
           </p>
         )}
       </div>
@@ -39,7 +41,8 @@ export function PersonRow({ person, viewerId, compact = false }: { person: Perso
 }
 
 // Personkort i rutenett (søk etter folk, teknologisider).
-export function PersonTile({ person, viewerId }: { person: PersonCard; viewerId?: string | null }) {
+export async function PersonTile({ person, viewerId }: { person: PersonCard; viewerId?: string | null }) {
+  const t = await getT();
   const isSelf = viewerId === person.id;
   return (
     <article className="group relative flex flex-col rounded-[22px] glass-card p-5 transition hover:bg-card-hover">
@@ -64,10 +67,10 @@ export function PersonTile({ person, viewerId }: { person: PersonCard; viewerId?
           </span>
         )}
         <span>
-          <span className="font-semibold text-fg">{compactNumber(person.projectCount)}</span> prosjekter
+          <span className="font-semibold text-fg">{compactNumber(person.projectCount)}</span> {t("prosjekter")}
         </span>
         <span>
-          <span className="font-semibold text-fg">{compactNumber(person.followerCount)}</span> følgere
+          <span className="font-semibold text-fg">{compactNumber(person.followerCount)}</span> {t("følgere")}
         </span>
       </div>
     </article>

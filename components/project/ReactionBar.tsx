@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Heart, Lightbulb, Star } from "lucide-react";
 import { toggleReactionAction } from "@/app/actions/social";
 import { toast } from "@/components/ui/toast";
+import { useT } from "@/components/LocaleProvider";
 import { REACTION_LABELS, REACTION_TYPES, type ReactionType } from "@/lib/constants";
 
 const ICONS = { like: Heart, useful: Lightbulb, inspiring: Star } as const;
@@ -27,6 +28,7 @@ export default function ReactionBar({
   disabled?: boolean;
 }) {
   const router = useRouter();
+  const t = useT();
   const [state, setState] = useState(initial);
   const [popped, setPopped] = useState<ReactionType | null>(null);
   const [, startTransition] = useTransition();
@@ -59,7 +61,7 @@ export default function ReactionBar({
   }
 
   return (
-    <div role="group" aria-label="Reaksjoner" className="flex flex-wrap gap-2">
+    <div role="group" aria-label={t("Reaksjoner")} className="flex flex-wrap gap-2">
       {REACTION_TYPES.map((type) => {
         const Icon = ICONS[type];
         const on = state.mine.includes(type);
@@ -69,13 +71,13 @@ export default function ReactionBar({
             type="button"
             onClick={() => toggle(type)}
             aria-pressed={on}
-            title={disabled ? "Du kan ikke reagere på ditt eget prosjekt" : REACTION_LABELS[type]}
+            title={t(disabled ? "Du kan ikke reagere på ditt eget prosjekt" : REACTION_LABELS[type])}
             className={`inline-flex h-10 items-center gap-1.5 rounded-full px-3.5 text-sm font-medium transition active:scale-95 sm:gap-2 sm:px-4 ${
               on ? ACTIVE[type] : "glass-chip text-fg hover:bg-fill-2"
             } ${disabled ? "cursor-default opacity-80 hover:bg-fill" : ""}`}
           >
             <Icon className={`size-4 ${popped === type ? "animate-[pop_420ms_var(--ease-spring)]" : ""}`} fill={on && type !== "useful" ? "currentColor" : "none"} aria-hidden="true" />
-            <span className="max-sm:sr-only">{REACTION_LABELS[type]}</span>
+            <span className="max-sm:sr-only">{t(REACTION_LABELS[type])}</span>
             <span className={`tabular-nums ${on ? "" : "text-mist"}`}>{state.counts[type]}</span>
           </button>
         );

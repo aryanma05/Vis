@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { authClient } from "@/lib/auth-client";
 import { usernameAlternatives, usernameError } from "@/lib/username";
 import { FieldError, Hint, labelClass } from "@/components/ui/field";
+import { useT } from "@/components/LocaleProvider";
 
 export type UsernameStatus = "idle" | "checking" | "free" | "taken" | "invalid" | "error" | "current";
 
@@ -60,7 +61,7 @@ export default function UsernameField({
   onChange,
   check,
   error,
-  hint = "Lenken til profilen din. Bokstaver a–z, tall og - _ .",
+  hint,
   inputRef,
 }: {
   value: string;
@@ -71,23 +72,24 @@ export default function UsernameField({
   hint?: string;
   inputRef?: React.Ref<HTMLInputElement>;
 }) {
+  const t = useT();
   const invalid = Boolean(error) || check.status === "invalid" || check.status === "taken";
 
-  let message: React.ReactNode = <Hint>{hint}</Hint>;
+  let message: React.ReactNode = <Hint>{hint ?? t("Lenken til profilen din. Bokstaver a–z, tall og - _ .")}</Hint>;
   if (error) message = <FieldError>{error}</FieldError>;
-  else if (check.status === "checking") message = <Hint>Sjekker om det er ledig …</Hint>;
-  else if (check.status === "free") message = <p className="mt-1.5 text-[13px] font-medium text-success">✓ vis.no/@{value} er ledig</p>;
-  else if (check.status === "current") message = <Hint>Dette er brukernavnet ditt nå.</Hint>;
-  else if (check.status === "invalid") message = <FieldError>{check.problem}</FieldError>;
+  else if (check.status === "checking") message = <Hint>{t("Sjekker om det er ledig …")}</Hint>;
+  else if (check.status === "free") message = <p className="mt-1.5 text-[13px] font-medium text-success">✓ {t("vis.no/@{name} er ledig", { name: value })}</p>;
+  else if (check.status === "current") message = <Hint>{t("Dette er brukernavnet ditt nå.")}</Hint>;
+  else if (check.status === "invalid") message = <FieldError>{check.problem ? t(check.problem) : null}</FieldError>;
   else if (check.status === "error") {
-    message = <Hint>Fikk ikke sjekket om navnet er ledig akkurat nå. Du kan prøve likevel.</Hint>;
+    message = <Hint>{t("Fikk ikke sjekket om navnet er ledig akkurat nå. Du kan prøve likevel.")}</Hint>;
   } else if (check.status === "taken") {
     message = (
       <div className="mt-1.5 text-[13px]">
-        <p className="text-danger">@{value} er tatt.</p>
+        <p className="text-danger">{t("@{name} er tatt.", { name: value })}</p>
         {check.suggestions && check.suggestions.length > 0 && (
           <p className="mt-2 flex flex-wrap items-center gap-2 text-mist">
-            Ledige:
+            {t("Ledige:")}
             {check.suggestions.map((s) => (
               <button
                 key={s}
@@ -107,7 +109,7 @@ export default function UsernameField({
   return (
     <div>
       <label htmlFor="handle" className={labelClass}>
-        Brukernavn
+        {t("Brukernavn")}
       </label>
       <div
         className={`flex items-center rounded-xl border bg-ink-2/50 transition focus-within:ring-4 ${

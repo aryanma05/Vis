@@ -100,6 +100,10 @@ export default function ForgotPasswordForm({ devHint }: { devHint: boolean }) {
       return setError(authErrorMessage(error));
     }
     const signedIn = await authClient.signIn.email({ email: email.trim(), password });
+    if (signedIn.data && "twoFactorRedirect" in signedIn.data && signedIn.data.twoFactorRedirect) {
+      router.push("/logg-inn/to-trinn");
+      return;
+    }
     const username = (signedIn.data?.user as { username?: string } | undefined)?.username;
     router.push(username ? `/@${username}` : "/logg-inn");
     router.refresh();

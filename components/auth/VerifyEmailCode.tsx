@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { MailCheck } from "lucide-react";
 import { resendEmailCodeAction, verifyEmailCodeAction } from "@/app/actions/auth";
 import CodeSlots, { type CodeStatus } from "@/components/auth/CodeSlots";
+import { useT } from "@/components/LocaleProvider";
 
 // Plassen koderaden får: seks ruter som krymper på smale skjermer.
 function useSlotSize(ref: React.RefObject<HTMLDivElement | null>) {
@@ -42,6 +43,7 @@ export default function VerifyEmailCode({
   devHint?: boolean;
   initialCooldown?: number;
 }) {
+  const t = useT();
   const boxRef = useRef<HTMLDivElement>(null);
   const { slot, gap } = useSlotSize(boxRef);
   const [status, setStatus] = useState<CodeStatus>("idle");
@@ -75,7 +77,7 @@ export default function VerifyEmailCode({
     if (!result.ok) return setMessage({ ok: false, text: result.error });
     setCooldown(60);
     setStatus("idle");
-    setMessage({ ok: true, text: "Ny kode er sendt. Den forrige virker ikke lenger." });
+    setMessage({ ok: true, text: t("Ny kode er sendt. Den forrige virker ikke lenger.") });
   }
 
   return (
@@ -83,11 +85,11 @@ export default function VerifyEmailCode({
       <div className="flex size-12 items-center justify-center rounded-full glass-chip text-fg">
         <MailCheck className="size-5" aria-hidden="true" />
       </div>
-      <h1 className="mt-5 text-3xl font-bold tracking-tight md:text-[2.5rem] md:leading-[1.05]">Sjekk e-posten din</h1>
+      <h1 className="mt-5 text-3xl font-bold tracking-tight md:text-[2.5rem] md:leading-[1.05]">{t("Sjekk e-posten din")}</h1>
       <p className="mt-2 leading-7 text-mist">
-        Vi har sendt en sekssifret kode til{" "}
-        {email ? <span className="font-medium text-fg">{email}</span> : "e-postadressen på kontoen din"}. Skriv den inn for å
-        bekrefte at adressen er din.
+        {t("Vi har sendt en sekssifret kode til")}{" "}
+        {email ? <span className="font-medium text-fg">{email}</span> : t("e-postadressen på kontoen din")}.{" "}
+        {t("Skriv den inn for å bekrefte at adressen er din.")}
       </p>
 
       <div ref={boxRef} className="mt-7 w-full">
@@ -102,19 +104,19 @@ export default function VerifyEmailCode({
             if (status === "error") setStatus("idle");
           }}
           onComplete={submit}
-          ariaLabel="Sekssifret kode fra e-posten"
+          ariaLabel={t("Sekssifret kode fra e-posten")}
         />
       </div>
 
       <div className="mt-4 min-h-6 text-sm" aria-live="polite">
-        {checking && <p className="text-mist">Sjekker koden …</p>}
-        {status === "success" && <p className="font-medium text-success">E-posten er bekreftet! Logger deg inn …</p>}
-        {message && !checking && <p className={message.ok ? "text-success" : "text-danger"}>{message.text}</p>}
+        {checking && <p className="text-mist">{t("Sjekker koden …")}</p>}
+        {status === "success" && <p className="font-medium text-success">{t("E-posten er bekreftet! Logger deg inn …")}</p>}
+        {message && !checking && <p className={message.ok ? "text-success" : "text-danger"}>{t(message.text)}</p>}
       </div>
 
       {devHint && (
         <p className="mt-3 rounded-xl bg-fill px-3.5 py-2.5 text-[13px] leading-5 text-mist">
-          Utviklingsmodus: e-post er ikke satt opp, så koden står i terminalen der <code className="font-mono">npm run dev</code> kjører.
+          {t("Utviklingsmodus: e-post er ikke satt opp, så koden står i terminalen der")} <code className="font-mono">npm run dev</code> {t("kjører.")}
         </p>
       )}
 
@@ -125,15 +127,15 @@ export default function VerifyEmailCode({
           disabled={cooldown > 0 || status === "success"}
           className="font-medium text-ice underline-offset-4 hover:underline disabled:cursor-not-allowed disabled:text-mist/60 disabled:no-underline"
         >
-          {cooldown > 0 ? `Send ny kode om ${cooldown} s` : "Send ny kode"}
+          {cooldown > 0 ? t("Send ny kode om {n} s", { n: cooldown }) : t("Send ny kode")}
         </button>
         {onBack && (
           <button type="button" onClick={onBack} className="text-mist transition hover:text-fg">
-            Bruk en annen e-post
+            {t("Bruk en annen e-post")}
           </button>
         )}
       </div>
-      <p className="mt-4 text-[13px] leading-5 text-mist/75">Finner du den ikke? Se i søppelpost eller «Kampanjer». Koden virker i 10 minutter.</p>
+      <p className="mt-4 text-[13px] leading-5 text-mist/75">{t("Finner du den ikke? Se i søppelpost eller «Kampanjer». Koden virker i 10 minutter.")}</p>
     </div>
   );
 }

@@ -1,0 +1,160 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useRef, useState, useTransition } from "react";
+import { Building2, ImagePlus } from "lucide-react";
+import { createCompanyAction, deleteCompanyAction, updateCompanyAction, uploadCompanyLogoAction } from "@/app/actions/companies";
+import MarkdownEditor from "@/components/MarkdownEditor";
+import { Button } from "@/components/ui/button";
+import { Field, inputClass, labelClass } from "@/components/ui/field";
+import { toast } from "@/components/ui/toast";
+import { prepareImage } from "@/lib/prepare-image";
+
+const SIZES = ["1–10", "11–50", "51–200", "201–1000", "1000+"];
+
+export type CompanyValues = { name: string; website: string; location: string; size: string; about: string };
+
+// Lag eller rediger en bedriftsside.
+export default function CompanyForm({
+  companyId,
+  initial = { name: "", website: "", location: "", size: "", about: "" },
+  logoUrl = null,
+  canDelete = false,
+}: {
+  companyId?: string;
+  initial?: CompanyValues;
+  logoUrl?: string | null;
+  canDelete?: boolean;
+}) {
+  const router = useRouter();
+  const [values, setValues] = useState(initial);
+  const [logo, setLogo] = useState(logoUrl);
+  const [pending, start] = useTransition();
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const set = (key: keyof CompanyValues, value: string) => setValues((v) => ({ ...v, [key]: value }));
+
+  const save = (event: React.FormEvent) => {
+    event.preventDefault();
+    start(async () => {
+      if (companyId) {
+        const result = await updateCompanyAction(companyId, values);
+        if (!result.ok) {
+          toast.error(result.error);
+          return;
+        }
+        toast.success("Lagret");
+        router.refresh();
+      } else {
+        const result = await createCompanyAction(values);
+        if (!result.ok) {
+          toast.error(result.error);
+          return;
+        }
+        router.push(`/bedrift/${result.data.slug}/admin`);
+      }
+    });
+  };
+
+  async function uploadLogo(file: File) {
+    if (!companyId) return;
+    setUploading(true);
+    try {
+      const prepared = await prepareImage(file);
+      const fd = new FormData();
+      fd.append("logo", prepared);
+      const result = await uploadCompanyLogoAction(companyId, fd);
+      if (!result.ok) throw new Error(result.error);
+      setLogo(result.data.url);
+      toast.success("Logoen er lagret");
+    } catch (error) {
+      toast.error((error as Error).message || "Klarte ikke å laste opp logoen.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <form onSubmit={save} className="max-w-2xl space-y-6">
+      {companyId && (
+        <div className="flex items-center gap-4">
+          <span className="flex size-16 items-center justify-center overflow-hidden rounded-2xl bg-fill">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            {logo ? <img src={logo} alt="" className="size-full object-cover" /> : <Building2 className="size-6 text-mist" />}
+          </span>
+          <Button type="button" size="sm" variant="secondary" loading={uploading} onClick={() => fileRef.current?.click()}>
+            <ImagePlus className="size-4" /> {logo ? "Bytt logo" : "Last opp logo"}
+          </Button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              e.target.value = "";
+              if (file) uploadLogo(file);
+            }}
+          />
+        </div>
+      )}
+      <Field label="Navn">
+        <input className={inputClass} value={values.name} onChange={(e) => set("name", e.target.value)} maxLength={80} required placeholder="F.eks. Fjordkode AS" />
+      </Field>
+      <div className="grid gap-6 sm:grid-cols-2">
+        <Field label="Nettside" optional>
+          <input className={inputClass} value={values.website} onChange={(e) => set("website", e.target.value)} placeholder="fjordkode.no" />
+        </Field>
+        <Field label="Sted" optional>
+          <input className={inputClass} value={values.location} onChange={(e) => set("location", e.target.value)} maxLength={100} placeholder="Bergen" />
+        </Field>
+      </div>
+      <fieldset>
+        <legend className={labelClass}>
+          Størrelse <span className="font-normal text-mist">(valgfritt)</span>
+        </legend>
+        <div className="flex flex-wrap gap-2">
+          {SIZES.map((s) => (
+            <button
+              key={s}
+              type="button"
+              aria-pressed={values.size === s}
+              onClick={() => set("size", values.size === s ? "" : s)}
+              className={`rounded-full px-3.5 py-1.5 text-sm font-medium transition ${values.size === s ? "bg-primary text-on-primary" : "glass-chip text-fg"}`}
+            >
+              {s} ansatte
+            </button>
+          ))}
+        </div>
+      </fieldset>
+      <Field label="Om bedriften" optional hint="Hva dere lager, hvordan dere jobber og hva slags folk dere ser etter." htmlFor="bedrift-om">
+        <MarkdownEditor id="bedrift-om" value={values.about} onChange={(v) => set("about", v)} maxLength={5000} placeholder="Skriv om bedriften …" />
+      </Field>
+      <div className="flex flex-wrap items-center gap-3">
+        <Button type="submit" loading={pending}>
+          {companyId ? "Lagre" : "Lag bedriftsside"}
+        </Button>
+        {companyId && canDelete && (
+          <Button
+            type="button"
+            variant="ghost"
+            className="hover:text-danger"
+            onClick={() =>
+              start(async () => {
+                if (!window.confirm("Slette bedriftssiden med alle stillinger og lister? Dette kan ikke angres.")) return;
+                const result = await deleteCompanyAction(companyId);
+                if (!result.ok) {
+                  toast.error(result.error);
+                  return;
+                }
+                router.push("/bedrifter");
+              })
+            }
+          >
+            Slett bedriften
+          </Button>
+        )}
+      </div>
+    </form>
+  );
+}

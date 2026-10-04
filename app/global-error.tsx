@@ -1,7 +1,12 @@
 "use client";
 
+import { useEffect } from "react";
+import { reportClientError } from "@/lib/report-client-error";
+
 // Vises bare hvis selve rotlayouten feiler. Må ha sin egen <html> og enkel stil.
 export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+  useEffect(() => reportClientError(error), [error]);
+
   return (
     <html lang="nb">
       <body style={{ margin: 0, minHeight: "100vh", display: "grid", placeItems: "center", background: "#060b1d", color: "#fff", fontFamily: "-apple-system, BlinkMacSystemFont, system-ui, sans-serif" }}>

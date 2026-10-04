@@ -1,8 +1,10 @@
 import { Skeleton } from "@/components/ui/misc";
+import { getT } from "@/lib/i18n/server";
 
-export default function ProjectLoading() {
+export default async function ProjectLoading() {
+  const t = await getT();
   return (
-    <main aria-busy="true" aria-label="Laster prosjektet" className="px-5 pb-28 pt-8 md:pl-28 md:pr-10 md:pt-12">
+    <main aria-busy="true" aria-label={t("Laster prosjektet")} className="px-5 pb-28 pt-8 md:pl-28 md:pr-10 md:pt-12">
       <div className="mx-auto max-w-7xl">
         <Skeleton className="h-6 w-48" />
         <Skeleton className="mt-6 h-16 w-3/4 max-w-3xl" />

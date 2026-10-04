@@ -30,13 +30,16 @@ export const REPORT_REASON_LABELS: Record<ReportReason, string> = {
   other: "Noe annet",
 };
 
-export const CV_TEMPLATES = ["klassisk", "moderne", "kompakt"] as const;
+export const CV_TEMPLATES = ["klassisk", "moderne", "kompakt", "elegant", "tydelig"] as const;
 export type CvTemplate = (typeof CV_TEMPLATES)[number];
-export const CV_TEMPLATE_LABELS: Record<CvTemplate, { name: string; description: string }> = {
+export const CV_TEMPLATE_LABELS: Record<CvTemplate, { name: string; description: string; pro?: boolean }> = {
   klassisk: { name: "Klassisk", description: "Én kolonne, rolig og tidløs." },
   moderne: { name: "Moderne", description: "Sidekolonne med kontakt og ferdigheter." },
   kompakt: { name: "Kompakt", description: "Tett og kort, får plass til mye på én side." },
+  elegant: { name: "Elegant", description: "Klassisk typografi med serif, sentrert topp.", pro: true },
+  tydelig: { name: "Tydelig", description: "Fargebånd øverst og to kolonner. Skiller seg ut.", pro: true },
 };
+export const isProTemplate = (t: CvTemplate) => Boolean(CV_TEMPLATE_LABELS[t].pro);
 
 // Aksentfarger en profil kan velge. `ink` er fargen tekst på aksenten skal ha.
 export const ACCENTS = {
@@ -49,3 +52,33 @@ export const ACCENTS = {
 } as const;
 export type AccentKey = keyof typeof ACCENTS;
 export const ACCENT_KEYS = Object.keys(ACCENTS) as [AccentKey, ...AccentKey[]];
+
+// «Kontakt meg»: hva henvendelsen gjelder. Samme verdier som contact_reason i databasen.
+export const CONTACT_REASONS = ["jobb", "oppdrag", "samarbeid", "annet"] as const;
+export type ContactReason = (typeof CONTACT_REASONS)[number];
+export const CONTACT_REASON_LABELS: Record<ContactReason, string> = {
+  jobb: "Jobb",
+  oppdrag: "Oppdrag",
+  samarbeid: "Samarbeid",
+  annet: "Noe annet",
+};
+
+// Fagfelt i søket. Treffer rollen på prosjektet, teknologiene og tittelen på profilen.
+export const FIELDS = {
+  design: { label: "Design", words: ["design", "ux", "ui", "grafisk", "illustr", "figma"] },
+  frontend: { label: "Frontend", words: ["frontend", "front-end", "react", "vue", "svelte", "css"] },
+  backend: { label: "Backend", words: ["backend", "back-end", "api", "server", "database", "postgres"] },
+  fullstack: { label: "Fullstack", words: ["fullstack", "full-stack", "nextjs"] },
+  mobil: { label: "Mobil", words: ["mobil", "ios", "android", "swift", "kotlin", "react-native", "flutter"] },
+  data: { label: "Data og KI", words: ["data", "ml", "maskinlæring", "machine-learning", "ai", "ki", "python", "analyse"] },
+  spill: { label: "Spill", words: ["spill", "game", "unity", "unreal", "godot"] },
+} as const;
+export type FieldKey = keyof typeof FIELDS;
+export const FIELD_KEYS = Object.keys(FIELDS) as FieldKey[];
+
+export const PERIODS = { uke: { label: "Siste uke", days: 7 }, maned: { label: "Siste måned", days: 31 }, ar: { label: "Siste år", days: 366 } } as const;
+export type PeriodKey = keyof typeof PERIODS;
+
+// Stillinger. Samme nøkler som i lib/jobs.ts.
+export const JOB_TYPE_LABELS = { fulltid: "Fulltid", deltid: "Deltid", internship: "Internship", sommerjobb: "Sommerjobb", trainee: "Trainee", frilans: "Frilans" } as const;
+export const REMOTE_LABELS = { nei: "På kontoret", hybrid: "Hybrid", helt: "Helt hjemmefra" } as const;

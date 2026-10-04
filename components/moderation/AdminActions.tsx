@@ -6,9 +6,12 @@ import { Ban, Check, RotateCcw, Trash2, X } from "lucide-react";
 import {
   adminDeleteCommentAction,
   banUserAction,
+  grantPlanAction,
   removeProjectAction,
   resolveReportAction,
   restoreProjectAction,
+  revokeGrantAction,
+  setCompanyVerifiedAction,
   unbanUserAction,
 } from "@/app/actions/admin";
 import { Button } from "@/components/ui/button";
@@ -146,5 +149,80 @@ export function ResolveButtons({ reportId }: { reportId: string }) {
         <X className="size-3.5" /> Avvis
       </Button>
     </div>
+  );
+}
+
+// Gi Pro (person) eller Bedrift (bedrift) uten Stripe, f.eks. til ambassadører eller skoler.
+export function GrantPlanButton({
+  ownerType,
+  ownerId,
+  name,
+  current,
+}: {
+  ownerType: "user" | "company";
+  ownerId: string;
+  name: string;
+  current: "stripe" | "grant" | null;
+}) {
+  const { pending, run } = useRun();
+  const [open, setOpen] = useState(false);
+  const [days, setDays] = useState("365");
+  const [note, setNote] = useState("");
+  const label = ownerType === "user" ? "Pro" : "Bedrift";
+  if (current === "stripe") return <span className="rounded-full bg-success/15 px-2 py-0.5 text-[11px] font-medium text-success">{label} (betaler)</span>;
+  if (current === "grant") {
+    return (
+      <Button size="xs" variant="secondary" loading={pending} onClick={() => run(() => revokeGrantAction(ownerType, ownerId), `${label} er fjernet`)}>
+        Fjern {label}
+      </Button>
+    );
+  }
+  return (
+    <>
+      <Button size="xs" variant="secondary" onClick={() => setOpen(true)}>
+        Gi {label}
+      </Button>
+      <Dialog open={open} onClose={() => setOpen(false)} title={`Gi ${label} til ${name}`} description="Uten betaling. Kan fjernes når som helst." size="sm">
+        <div className="space-y-4">
+          <label className="block text-sm font-medium">
+            Hvor lenge
+            <select value={days} onChange={(e) => setDays(e.target.value)} className={`${selectClass} mt-2`}>
+              <option value="30">30 dager</option>
+              <option value="90">90 dager</option>
+              <option value="365">Ett år</option>
+              <option value="0">Uten sluttdato</option>
+            </select>
+          </label>
+          <label className="block text-sm font-medium">
+            Notat (bare for admin)
+            <input value={note} onChange={(e) => setNote(e.target.value)} maxLength={300} className={`${inputClass} mt-2`} placeholder="F.eks. «Ambassadør NTNU»" />
+          </label>
+          <div className="flex justify-end gap-2">
+            <Button size="sm" variant="ghost" onClick={() => setOpen(false)}>
+              Avbryt
+            </Button>
+            <Button
+              size="sm"
+              loading={pending}
+              onClick={() => {
+                setOpen(false);
+                run(() => grantPlanAction(ownerType, ownerId, Number(days) || null, note), `${name} har fått ${label}`);
+              }}
+            >
+              Gi {label}
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+    </>
+  );
+}
+
+export function VerifyCompanyButton({ companyId, verified }: { companyId: string; verified: boolean }) {
+  const { pending, run } = useRun();
+  return (
+    <Button size="xs" variant={verified ? "ghost" : "secondary"} loading={pending} onClick={() => run(() => setCompanyVerifiedAction(companyId, !verified), verified ? "Ikke lenger bekreftet" : "Bekreftet")}>
+      {verified ? "Fjern bekreftelse" : "Bekreft"}
+    </Button>
   );
 }

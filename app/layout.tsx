@@ -1,6 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
+import Analytics from "@/components/Analytics";
+import { LocaleProvider } from "@/components/LocaleProvider";
+import { makeT } from "@/lib/i18n";
+import { getLocale } from "@/lib/i18n/server";
 import MobileNav from "@/components/MobileNav";
 import CommandPalette from "@/components/nav/CommandPalette";
 import HomeLogo from "@/components/nav/HomeLogo";
@@ -17,21 +21,21 @@ import { SITE_DESCRIPTION, SITE_NAME, siteUrl } from "@/lib/site";
 // hvordan man bytter til Aeonik med lisens.
 const sans = Geist({ variable: "--font-geist", subsets: ["latin", "latin-ext"], display: "swap" });
 
-export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl()),
-  title: { default: "Vis – prosjektene dine, vist frem", template: "%s · Vis" },
-  description: SITE_DESCRIPTION,
-  applicationName: SITE_NAME,
-  openGraph: {
-    type: "website",
-    siteName: SITE_NAME,
-    locale: "nb_NO",
-    title: "Vis – prosjektene dine, vist frem",
-    description: SITE_DESCRIPTION,
-  },
-  twitter: { card: "summary_large_image" },
-  formatDetection: { telephone: false },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale();
+  const t = makeT(locale);
+  const title = t("Vis – prosjektene dine, vist frem");
+  const description = t(SITE_DESCRIPTION);
+  return {
+    metadataBase: new URL(siteUrl()),
+    title: { default: title, template: "%s · Vis" },
+    description,
+    applicationName: SITE_NAME,
+    openGraph: { type: "website", siteName: SITE_NAME, locale: locale === "en" ? "en_GB" : "nb_NO", title, description },
+    twitter: { card: "summary_large_image" },
+    formatDetection: { telephone: false },
+  };
+}
 
 export const viewport: Viewport = {
   themeColor: [
@@ -44,7 +48,7 @@ export const viewport: Viewport = {
 const themeScript = `try{var t=localStorage.getItem("vis-theme");document.documentElement.dataset.theme=t==="dark"||t==="light"||t==="midnight"?t:"midnight"}catch(e){document.documentElement.dataset.theme="midnight"}`;
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
-  const user = await getCurrentUser();
+  const [user, locale] = await Promise.all([getCurrentUser(), getLocale()]);
   const navUser = user
     ? {
         username: user.username,
@@ -57,7 +61,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
 
   return (
     <html
-      lang="nb"
+      lang={locale === "en" ? "en" : "nb"}
       data-theme="midnight"
       className={`${sans.variable} min-h-screen antialiased`}
       suppressHydrationWarning
@@ -66,21 +70,24 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="min-h-screen overflow-x-hidden">
+        <LocaleProvider locale={locale}>
         <ThemeProvider>
           <a
             href="#innhold"
             className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-full focus:bg-primary focus:px-4 focus:py-2 focus:text-on-primary"
           >
-            Hopp til innholdet
+            {locale === "en" ? "Skip to content" : "Hopp til innholdet"}
           </a>
           <HomeLogo />
           <Sidebar user={navUser} />
           <MobileNav user={navUser} />
           <div id="innhold">{children}</div>
           <SiteFooter />
+          <Analytics />
           <CommandPalette loggedIn={Boolean(user)} username={user?.username ?? null} />
           <Toaster />
         </ThemeProvider>
+        </LocaleProvider>
       </body>
     </html>
   );

@@ -5,6 +5,7 @@ import path from "node:path";
 import { del, put } from "@vercel/blob";
 import { eq, inArray } from "drizzle-orm";
 import { db, schema } from "@/db";
+import { isPdf, sniffImageType } from "@/lib/file-signatures";
 import { UserFacingError } from "@/lib/result";
 
 // Hvor filene havner:
@@ -33,6 +34,8 @@ const IMAGE_TYPES = {
 
 type ImageType = keyof typeof IMAGE_TYPES;
 
+export { isPdf, sniffImageType };
+
 const LOCAL_PREFIX = "local:";
 const DB_PREFIX = "db:";
 export const FILE_URL_PREFIX = "/filer/";
@@ -42,31 +45,10 @@ const { storedFile } = schema;
 
 const blobConfigured = () => Boolean(process.env.BLOB_READ_WRITE_TOKEN);
 
-// Sjekker de første bytene i filen i stedet for å stole på filnavn/MIME fra nettleseren.
-export function sniffImageType(bytes: Uint8Array): ImageType | null {
-  const startsWith = (sig: number[], offset = 0) =>
-    sig.every((b, i) => bytes[offset + i] === b);
-
-  if (startsWith([0xff, 0xd8, 0xff])) return "image/jpeg";
-  if (startsWith([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) return "image/png";
-  if (startsWith([0x47, 0x49, 0x46, 0x38])) return "image/gif";
-  if (startsWith([0x52, 0x49, 0x46, 0x46]) && startsWith([0x57, 0x45, 0x42, 0x50], 8))
-    return "image/webp";
-  if (startsWith([0x66, 0x74, 0x79, 0x70], 4)) {
-    const brand = String.fromCharCode(...bytes.slice(8, 12));
-    if (brand === "avif" || brand === "avis") return "image/avif";
-  }
-  return null;
-}
-
 // iPhone-bilder (HEIC) kan ikke vises i de fleste nettlesere, så de må konverteres først.
 function isHeic(bytes: Uint8Array) {
   const brand = String.fromCharCode(...bytes.slice(4, 12));
   return /^ftyp(heic|heix|hevc|hevx|mif1|msf1)$/.test(brand);
-}
-
-export function isPdf(bytes: Uint8Array) {
-  return bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46; // %PDF
 }
 
 export type StoredFile = { url: string; key: string; contentType?: string };

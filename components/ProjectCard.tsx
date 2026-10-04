@@ -1,8 +1,12 @@
+"use client";
+
 import Link from "next/link";
 import { Eye, Heart, MessageCircle, Pin } from "lucide-react";
 import Avatar from "@/components/Avatar";
 import ProjectCover from "@/components/ProjectCover";
 import { compactNumber } from "@/components/ui/misc";
+import { useLocale } from "@/components/LocaleProvider";
+import { makeT } from "@/lib/i18n";
 import { timeAgo } from "@/lib/format";
 import type { ProjectCard as Card } from "@/lib/projects";
 
@@ -22,6 +26,8 @@ export default function ProjectCard({
   size?: "md" | "lg";
   fill?: boolean;
 }) {
+  const locale = useLocale();
+  const t = makeT(locale);
   const href = `/prosjekt/${project.id}`;
   const when = project.publishedAt ?? project.createdAt;
 
@@ -29,7 +35,7 @@ export default function ProjectCard({
     <article className={`group relative ${fill ? "flex h-full flex-col" : ""}`}>
       <Link
         href={href}
-        aria-label={`Åpne prosjektet ${project.title}`}
+        aria-label={t("Åpne prosjektet {title}", { title: project.title })}
         className={`glass-card relative block overflow-hidden rounded-[22px] transition duration-500 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sea ${
           fill ? "min-h-0 flex-1" : ""
         }`}
@@ -53,17 +59,17 @@ export default function ProjectCard({
           <div className="absolute left-3 top-3 flex gap-1.5">
             {project.status === "draft" && (
               <span className="glass-dark inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold">
-                <span className="size-1.5 rounded-full bg-[#ffd60a]" aria-hidden="true" /> Utkast
+                <span className="size-1.5 rounded-full bg-[#ffd60a]" aria-hidden="true" /> {t("Utkast")}
               </span>
             )}
             {project.removed && (
               <span className="glass-dark inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold">
-                <span className="size-1.5 rounded-full bg-[#ff453a]" aria-hidden="true" /> Fjernet
+                <span className="size-1.5 rounded-full bg-[#ff453a]" aria-hidden="true" /> {t("Fjernet")}
               </span>
             )}
             {project.pinned && !showOwner && (
               <span className="glass-dark inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold">
-                <Pin className="size-3" aria-hidden="true" /> Festet
+                <Pin className="size-3" aria-hidden="true" /> {t("Festet")}
               </span>
             )}
           </div>
@@ -102,26 +108,26 @@ export default function ProjectCard({
             {showOwner && (
               <time dateTime={new Date(when).toISOString()} suppressHydrationWarning>
                 {" "}
-                · {timeAgo(when)}
+                · {timeAgo(when, locale)}
               </time>
             )}
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-2.5 pt-0.5 text-xs text-mist" aria-label="Aktivitet">
+        <div className="flex shrink-0 items-center gap-2.5 pt-0.5 text-xs text-mist" aria-label={t("Aktivitet")}>
           {project.reactionCount > 0 && (
-            <span className="inline-flex items-center gap-1" title={`${project.reactionCount} reaksjoner`}>
+            <span className="inline-flex items-center gap-1" title={t("{n} reaksjoner", { n: project.reactionCount })}>
               <Heart className="size-3.5" aria-hidden="true" />
               {compactNumber(project.reactionCount)}
             </span>
           )}
           {project.commentCount > 0 && (
-            <span className="inline-flex items-center gap-1" title={`${project.commentCount} kommentarer`}>
+            <span className="inline-flex items-center gap-1" title={t("{n} kommentarer", { n: project.commentCount })}>
               <MessageCircle className="size-3.5" aria-hidden="true" />
               {compactNumber(project.commentCount)}
             </span>
           )}
           {project.reactionCount === 0 && project.commentCount === 0 && project.viewCount > 0 && (
-            <span className="inline-flex items-center gap-1" title={`${project.viewCount} visninger`}>
+            <span className="inline-flex items-center gap-1" title={t("{n} visninger", { n: project.viewCount })}>
               <Eye className="size-3.5" aria-hidden="true" />
               {compactNumber(project.viewCount)}
             </span>

@@ -4,6 +4,8 @@ import { CloneField, SyncReadmeButton } from "@/components/project/RepoActions";
 import { compactNumber, Skeleton } from "@/components/ui/misc";
 import { timeAgo } from "@/lib/format";
 import { getRepoInsights } from "@/lib/github";
+import { makeT } from "@/lib/i18n";
+import { getLocale } from "@/lib/i18n/server";
 
 // Repoet bak prosjektet, hentet direkte fra GitHub: stjerner, språk, de siste
 // endringene og hvem som har bidratt. Lastes for seg (Suspense), så siden ikke venter.
@@ -16,19 +18,21 @@ export default async function GithubRepoPanel({
   projectId: string;
   isOwner: boolean;
 }) {
-  const repo = await getRepoInsights(fullName);
+  const [repo, locale] = await Promise.all([getRepoInsights(fullName), getLocale()]);
+  const t = makeT(locale);
+  const percent = (value: number) => (locale === "en" ? value.toFixed(value < 10 ? 1 : 0) : value.toFixed(value < 10 ? 1 : 0).replace(".", ","));
   const url = repo?.url ?? `https://github.com/${fullName}`;
 
   return (
-    <section aria-label="Repoet på GitHub" className="overflow-hidden rounded-[22px] glass-card">
+    <section aria-label={t("Repoet på GitHub")} className="overflow-hidden rounded-[22px] glass-card">
       <a href={url} target="_blank" rel="noreferrer" className="group flex items-center gap-3 border-b border-line bg-surface/50 px-5 py-4 transition hover:bg-surface">
         <GithubMark className="size-5 shrink-0 text-fg" />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-semibold text-fg group-hover:text-ice">{repo?.fullName ?? fullName}</span>
           <span className="block text-xs text-mist">
-            {repo?.archived ? "Arkivert repo" : repo?.fork ? "Fork" : "Repo på GitHub"}
+            {t(repo?.archived ? "Arkivert repo" : repo?.fork ? "Fork" : "Repo på GitHub")}
             {repo?.pushedAt && (
-              <span suppressHydrationWarning> · oppdatert {timeAgo(repo.pushedAt)}</span>
+              <span suppressHydrationWarning> · {t("oppdatert {when}", { when: timeAgo(repo.pushedAt, locale) })}</span>
             )}
           </span>
         </span>
@@ -39,10 +43,10 @@ export default async function GithubRepoPanel({
         <div className="space-y-5 p-5 text-sm">
           <ul className="grid grid-cols-4 gap-2 text-center">
             {[
-              { label: "Stjerner", value: repo.stars, Icon: Star, href: `${url}/stargazers` },
+              { label: t("Stjerner"), value: repo.stars, Icon: Star, href: `${url}/stargazers` },
               { label: "Forks", value: repo.forks, Icon: GitFork, href: `${url}/forks` },
-              { label: "Saker", value: repo.openIssues, Icon: CircleDot, href: `${url}/issues` },
-              { label: "Følger", value: repo.watchers, Icon: Eye, href: `${url}/watchers` },
+              { label: t("Saker"), value: repo.openIssues, Icon: CircleDot, href: `${url}/issues` },
+              { label: t("Følgere"), value: repo.watchers, Icon: Eye, href: `${url}/watchers` },
             ].map(({ label, value, Icon, href }) => (
               <li key={label}>
                 <a href={href} target="_blank" rel="noreferrer" title={`${value} ${label.toLowerCase()}`} className="block rounded-2xl bg-fill px-1 py-2.5 transition hover:bg-fill-2">
@@ -58,7 +62,7 @@ export default async function GithubRepoPanel({
 
           {repo.languages.length > 0 && (
             <div>
-              <p className="caption">Språk</p>
+              <p className="caption">{t("Språk")}</p>
               <div className="mt-2.5 flex h-2 gap-px overflow-hidden rounded-full" role="img" aria-label={repo.languages.map((l) => `${l.name} ${Math.round(l.percent)} %`).join(", ")}>
                 {repo.languages.map((l) => (
                   <span key={l.name} style={{ width: `${l.percent}%`, background: l.color }} className="h-full min-w-[3px]" />
@@ -69,7 +73,7 @@ export default async function GithubRepoPanel({
                   <li key={l.name} className="inline-flex items-center gap-1.5">
                     <span className="size-2 rounded-full" style={{ background: l.color }} aria-hidden="true" />
                     <span className="text-fg/90">{l.name}</span>
-                    {l.percent >= 0.1 ? `${l.percent.toFixed(l.percent < 10 ? 1 : 0).replace(".", ",")} %` : "<0,1 %"}
+                    {l.percent >= 0.1 ? `${percent(l.percent)} %` : `<${percent(0.1)} %`}
                   </li>
                 ))}
               </ul>
@@ -83,7 +87,7 @@ export default async function GithubRepoPanel({
                   <TagIcon className="size-3.5" aria-hidden="true" /> {repo.release.tag}
                   {repo.release.publishedAt && (
                     <span className="text-mist" suppressHydrationWarning>
-                      · {timeAgo(repo.release.publishedAt)}
+                      · {timeAgo(repo.release.publishedAt, locale)}
                     </span>
                   )}
                 </a>
@@ -99,9 +103,9 @@ export default async function GithubRepoPanel({
           {repo.commits.length > 0 && (
             <div>
               <div className="flex items-baseline justify-between">
-                <p className="caption">Siste endringer</p>
+                <p className="caption">{t("Siste endringer")}</p>
                 <a href={`${url}/commits/${encodeURIComponent(repo.defaultBranch)}`} target="_blank" rel="noreferrer" className="text-xs text-mist hover:text-ice">
-                  Alle
+                  {t("Alle")}
                 </a>
               </div>
               <ol className="mt-2 space-y-0.5">
@@ -118,7 +122,7 @@ export default async function GithubRepoPanel({
                         <span className="line-clamp-2 text-[13px] leading-5 text-fg/90 group-hover:text-fg">{c.message}</span>
                         <span className="block text-[11px] text-mist">
                           {c.author}
-                          {c.date && <span suppressHydrationWarning> · {timeAgo(c.date)}</span>}
+                          {c.date && <span suppressHydrationWarning> · {timeAgo(c.date, locale)}</span>}
                           <span className="ml-1.5 font-mono text-mist/70">{c.sha}</span>
                         </span>
                       </span>
@@ -131,7 +135,7 @@ export default async function GithubRepoPanel({
 
           {repo.contributors.length > 1 && (
             <div>
-              <p className="caption">Bidragsytere</p>
+              <p className="caption">{t("Bidragsytere")}</p>
               <ul className="mt-2.5 flex flex-wrap -space-x-1.5">
                 {repo.contributors.map((c) => (
                   <li key={c.login}>
@@ -147,10 +151,10 @@ export default async function GithubRepoPanel({
 
           {repo.topics.length > 0 && (
             <ul className="flex flex-wrap gap-1.5">
-              {repo.topics.map((t) => (
-                <li key={t}>
-                  <a href={`https://github.com/topics/${encodeURIComponent(t)}`} target="_blank" rel="noreferrer" className="block rounded-full bg-fill px-2.5 py-0.5 text-[11px] font-medium text-fg/80 transition hover:bg-fill-2">
-                    {t}
+              {repo.topics.map((topic) => (
+                <li key={topic}>
+                  <a href={`https://github.com/topics/${encodeURIComponent(topic)}`} target="_blank" rel="noreferrer" className="block rounded-full bg-fill px-2.5 py-0.5 text-[11px] font-medium text-fg/80 transition hover:bg-fill-2">
+                    {topic}
                   </a>
                 </li>
               ))}
@@ -160,7 +164,7 @@ export default async function GithubRepoPanel({
           <CloneField cloneUrl={repo.cloneUrl} zipUrl={repo.zipUrl} />
         </div>
       ) : (
-        <p className="p-5 text-sm leading-6 text-mist">GitHub svarer ikke akkurat nå, så tallene mangler. Lenken over virker fortsatt.</p>
+        <p className="p-5 text-sm leading-6 text-mist">{t("GitHub svarer ikke akkurat nå, så tallene mangler. Lenken over virker fortsatt.")}</p>
       )}
 
       {isOwner && (

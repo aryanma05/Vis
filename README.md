@@ -13,9 +13,9 @@ prosjektene dine på én lenke (`/@brukernavn`), pluss en feed der man oppdager 
 
 - **Profil** på `/@brukernavn` med visittkort, README-seksjon, egne seksjoner, aksentfarge,
   «åpen for»-status, prosjekter (festede først), aktivitetskart og følgere.
-- **CV** på `/@brukernavn/cv` i tre maler (klassisk, moderne, kompakt), redigerbar
-  med dra-og-slipp, import fra PDF/Word/bilde (fyller ut automatisk med `ANTHROPIC_API_KEY`)
-  og eksport som PDF via utskrift.
+- **CV** på `/@brukernavn/cv` i fem maler (klassisk, moderne og kompakt, pluss elegant og
+  tydelig med Pro), på norsk eller engelsk, redigerbar med dra-og-slipp, import fra
+  PDF/Word (feltene fylles ut automatisk, se under) og eksport som PDF via utskrift.
 - **Prosjekter** med markdown-beskrivelse (README-visning), tagger, rolle, dato, lenker,
   video og bilder. Lim inn lenken til prosjektet, så tas det skjermbilder av siden
   automatisk (opptil tre, nedover siden), som kan fjernes, sorteres og beskjæres før
@@ -32,6 +32,8 @@ prosjektene dine på én lenke (`/@brukernavn`), pluss en feed der man oppdager 
   slette kommentarer og utestenge brukere. Retningslinjer på `/retningslinjer`.
 - **Konto**: e-postbekreftelse og nytt passord med 6-sifret kode, innlogging med
   GitHub/Google, dataeksport og sletting av konto.
+- **Norsk og engelsk**: språkvalg i bunnteksten (se «Språk» under).
+- **Åpent API og webhooks** for utviklere og bedrifter (`/utviklere`).
 - **SEO**: titler og beskrivelser per side, delingsbilder (Open Graph) for forsiden,
   profiler og prosjekter, `sitemap.xml` og `robots.txt`.
 
@@ -75,7 +77,9 @@ med `DATABASE_URL=postgres://localhost:5432/vis`, eller en egen Neon-database/-b
 | `BLOB_READ_WRITE_TOKEN` | Vercel Blob. Uten den lagres bilder og CV-er i databasen (`/filer/...`) | Nei |
 | `BREVO_API_KEY` eller `RESEND_API_KEY`, og `EMAIL_FROM` | E-post for bekreftelse og nytt passord. Uten dem skrives e-postene til terminalen under utvikling, og i produksjon er e-postbekreftelse av | Nei |
 | `CONTACT_EMAIL` | Kontaktadresse som vises på /personvern | Nei |
-| `ANTHROPIC_API_KEY` | Språkmodellen som leser CV-er | Nei, bare for CV-import |
+| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` og `STRIPE_PRICE_*` | Betaling for Pro og Bedrift. Se «Betaling» under og `.env.example` | Nei, uten dem er betaling av |
+| `CRON_SECRET` | Beskytter planlagte jobber (ukesoppsummeringen). Se «Planlagte jobber» under | Nei, men trengs for ukesoppsummeringen |
+| `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` eller `NEXT_PUBLIC_UMAMI_WEBSITE_ID` | Besøksstatistikk uten informasjonskapsler (Plausible eller Umami). Nevnes automatisk på /personvern | Nei |
 | `MICROLINK_API_KEY` | Skjermbilder av prosjektlenker via Microlink. Uten nøkkel: gratis, 50 sider i døgnet | Nei |
 | `SCREENSHOT_BROWSER_PATH` | Sti til Chrome/Chromium. Da tas skjermbildene lokalt i stedet for hos Microlink | Nei |
 
@@ -116,7 +120,10 @@ lib/projects.ts           prosjekter: lese, opprette, endre, slette, bilder, fee
 lib/github.ts             GitHub-import (repoliste, README → prosjekt)
 lib/folder-import.ts      import fra lokal mappe (kjører i nettleseren, koden lastes ikke opp)
 lib/screenshots.ts        skjermbilder av prosjektlenker (Microlink eller lokal Chromium)
-lib/cv.ts, cv-parser.ts   strukturert CV: lagring, redigering og tolking av PDF/Word/bilde
+lib/cv.ts                 strukturert CV: lagring, redigering og import
+lib/cv-parser.ts          leser en opplastet CV (PDF/Word) og gir et utkast til feltene
+lib/cv-extract.ts         henter tekstlinjene ut av PDF (pdf.js) og Word (mammoth)
+lib/cv-text-parser.ts     tolker linjene: seksjoner, datoer, roller, skoler, lenker
 lib/cv-document.ts        CV-dokumentet som vises på profilen (PDF-sider som bilder)
 lib/pdf-pages.ts          gjør PDF-sider om til bilder i nettleseren (pdf.js)
 lib/comments.ts           kommentarer med svar og @omtaler (lib/mentions.ts)
@@ -137,11 +144,144 @@ lib/storage.ts            filopplasting (Vercel Blob / databasen), krymper bilde
 lib/prepare-image.ts      krymper bilder i nettleseren før opplasting
 lib/mailer.ts             e-post (Brevo/Resend) og innholdet i e-postene
 lib/account.ts            kontosiden: dataeksport og sletting av filer
+lib/billing.ts, stripe.ts abonnementer (Pro og Bedrift) og Stripe-klienten
+lib/companies.ts, jobs.ts bedriftssider og stillinger; lib/talent.ts er kandidatsøket
+lib/api.ts, api-v1.ts     det åpne API-et; lib/api-keys.ts er nøklene
+lib/webhooks.ts           webhooks for bedrifter (signerte leveringer)
+lib/i18n/                 språk: t(), getLocale() og den engelske ordboka (en.ts)
+lib/rate-limit.ts         grenser per bruker/IP, lagret i databasen
+lib/safe-path.ts          sjekker at ?neste=… bare sender til interne sider
 app/filer/[...key]        serverer filer lagret i databasen (skjult CV bare for eieren)
 app/actions/*.ts          Server Actions som skjemaene kaller
 components/ui/            knapper, felt, dialoger, menyer, faner, toasts, brytere
 components/               ProjectCard, ProjectCover, ImageEditor (beskjæring), kommentarer osv.
 ```
+
+## Drift og lansering
+
+- **Sjekkliste:** `/admin?fane=system` viser hvilke miljøvariabler som mangler før lansering
+  (verdiene vises aldri), og serveren skriver det samme i loggen når den starter (`lib/env.ts`).
+- **Feillogg:** feil fra serveren, Server Actions og nettleseren lagres i `error_event` og
+  vises gruppert under System. Eldre enn 30 dager slettes automatisk.
+- **Nøkkeltall:** `/admin?fane=nokkeltall` viser nye brukere per uke, aktivering (andel nye
+  som publiserer et prosjekt), aktive brukere og om folk kommer tilbake (`lib/metrics.ts`).
+- **Begrensninger:** `lib/rate-limit.ts` teller i databasen (`rate_bucket`), så grensene
+  gjelder på tvers av serverprosesser og omstarter. Grensene står samlet i `RULES`.
+- **Tester og CI:** `npm test` kjører testene i `tests/` (de som trenger database bruker
+  `DATABASE_URL` fra `.env.local`). `.github/workflows/ci.yml` kjører lint, typesjekk, tester
+  mot en ekte Postgres og bygg på hver push og pull request.
+
+## Vekst og deling
+
+- **Del-menyen** (`components/social/ShareMenu.tsx`): kopier lenke, LinkedIn, X, e-post,
+  QR-kode, merke til GitHub-README (`/api/merke/<brukernavn>`, SVG) og kode for å bygge inn
+  profilen eller et prosjekt på en annen nettside (`/bygg-inn/profil/<brukernavn>` og
+  `/bygg-inn/prosjekt/<id>`, egne sikkerhetshodere i `lib/embed.ts`; `?tema=lys` for lyst).
+- **Utvalgt:** admin velger ut prosjekter fra «…»-menyen på prosjektet. De vises først på
+  forsiden og i Utforsk (filteret «Utvalgt»), og eieren får varsel og e-post.
+- **Kontakt meg:** slås på under Rediger profil. Innloggede kan sende en melding (maks fem
+  i døgnet, én per uke til samme person). Mottakeren får varsel og e-post med avsenderens
+  adresse som svaradresse; mottakerens e-post deles aldri.
+- **Samlinger:** bokmerket på et prosjekt lagrer det i private eller offentlige samlinger
+  (`/samlinger`, `/samling/<id>`, og fanen Samlinger på profilen).
+- **Oppdateringer:** eieren kan skrive korte oppdateringer på prosjektsiden («Versjon 2 er ute»).
+- **To-trinns innlogging** med app for engangskoder og reservekoder (Better Auth
+  `twoFactor`), under Konto og varsler.
+- **Søk:** filtre for fagfelt, periode og utvalgte prosjekter.
+- **Lim inn en lenke:** tittel og beskrivelse hentes fra siden sammen med skjermbildene
+  (Dribbble, Behance, Figma og vanlige nettsider), og fylles inn hvis feltene er tomme.
+
+### Planlagte jobber
+
+`/api/cron/ukesoppsummering` sender ukesoppsummeringen (hvem som har sett profilen, nye
+følgere, nytt fra folk man følger og utvalgte prosjekter). Kall den med
+`Authorization: Bearer <CRON_SECRET>`, f.eks. med en Cron Job hos Render
+(`curl -fsS -H "Authorization: Bearer $CRON_SECRET" https://<domenet>/api/cron/ukesoppsummering`)
+eller gratis hos cron-job.org, hver time mandag kl. 07–10. Hver kjøring tar en porsjon på
+200; ingen får to på under seks dager. E-posten har ett-klikks avmelding (List-Unsubscribe).
+
+## Betaling, Pro og Bedrift
+
+Vis er gratis. **Pro** (for personer) og **Bedrift** (for bedrifter) betales med Stripe.
+
+| | Gratis | Pro | Bedrift |
+| --- | --- | --- | --- |
+| Profil, prosjekter, CV, deling | ✓ | ✓ | |
+| Hvem har sett profilen | antall | navn og tittel | |
+| Innsikt | 30 dager | 90 dager og 12 måneder | |
+| CV-maler | 3 | + Elegant og Tydelig | |
+| Eget domene, uten «Laget med Vis» | | ✓ | |
+| Bedriftsside og stillinger | én aktiv stilling | | ubegrenset |
+| Kandidatsøk, lister, CSV, kontakt | | | ✓ |
+
+- `lib/stripe.ts` er en liten klient over Stripe sitt REST-API (ingen ekstra pakke), med
+  sjekk av webhook-signaturer. `lib/billing.ts` lager Checkout-sider og kundeportal,
+  synkroniserer abonnementer og svarer på «hvilken plan har denne personen/bedriften?».
+- **Webhook:** `/api/stripe/webhook`. Hver hendelse behandles én gang (`stripe_event`), og
+  abonnementet hentes ferskt fra Stripe, så hendelser i feil rekkefølge ikke gjør noe galt.
+  Etter betaling henter `/betaling/takk` abonnementet med en gang, så brukeren slipper å vente.
+- **Oppsett:** se Stripe-delen i `.env.example`. Prisene på `/priser` hentes fra Stripe (en
+  time i mellomlager); før det er satt opp vises 59 kr/mnd, 590 kr/år og 1 490 kr/mnd.
+- **Admin** kan gi Pro eller Bedrift uten betaling (ambassadører, skoler) under Brukere og
+  Bedrifter, bekrefte bedrifter, og se inntekt (MRR) under Nøkkeltall.
+- **Hvem har sett profilen:** lagres bare for innloggede besøkende som ikke har skjult seg
+  (Konto → Personvern). Den som skjuler seg, ser heller ikke selv hvem som har besøkt dem.
+- **Synlig for bedrifter:** av som standard. Bare de som slår det på (Rediger profil) finnes
+  i kandidatsøket, og bedrifter ser aldri e-postadressen.
+
+### Eget domene (Pro)
+
+Brukeren legger inn domenet under Konto → Pro-innstillinger og får en TXT-post
+(`_vis.<domene>`) og en CNAME til appens adresse. Når TXT-posten er funnet, er domenet
+bekreftet. `proxy.ts` viser da profilen på `<domene>/` og CV-en på `<domene>/cv`; alt annet
+sendes til hovedsiden. **Manuelt steg:** legg domenet til under Settings → Custom Domains hos
+Render, så lages HTTPS-sertifikatet (Render har også et API for dette hvis det blir mange).
+
+## API og webhooks
+
+Dokumentasjonen for brukerne ligger på `/utviklere`.
+
+- **API** (`/api/v1/…`, `lib/api-v1.ts`): profiler, prosjekter, stillinger og bedrifter som
+  JSON, bare det som allerede er offentlig (aldri e-post, utkast eller skjulte prosjekter).
+  Åpent for CORS. `lib/api.ts` (`withApi`) står for grenser, feilsvar og mellomlagring.
+- **Nøkler** (`lib/api-keys.ts`): lages under Konto → Utviklere. Bare en SHA-256-hash lagres;
+  selve nøkkelen vises én gang. Uten nøkkel 120 kall/min per IP, med nøkkel 1 200/min
+  (`RULES.api` og `RULES.apiKey` i `lib/rate-limit.ts`).
+- **Webhooks** (`lib/webhooks.ts`, krever Bedrift): `job.published`, `job.closed` og
+  `job.application_click` sendes som signert POST (`Vis-Signature`, HMAC-SHA256 som hos
+  Stripe) etter at svaret til brukeren er sendt (`after()` i `lib/jobs.ts`). Tre forsøk,
+  ingen omdirigeringer, bare https og offentlige adresser (localhost er lov i utvikling).
+  De siste leveringene vises under Administrer → Utviklere hos bedriften.
+
+## Språk
+
+Norsk er grunnspråket, og engelsk kan velges i bunnteksten (`/sprak?til=en`, lagres i
+informasjonskapselen `vis-sprak`). Uten valg brukes engelsk bare når nettleseren foretrekker
+engelsk foran skandinaviske språk.
+
+- Teksten i koden er norsk og sendes gjennom `t("…")`: `getT()` fra `lib/i18n/server.ts` i
+  serverkomponenter, `useT()` fra `components/LocaleProvider.tsx` i klientkomponenter.
+  Variabler skrives `t("{n} prosjekter", { n })`.
+- Den engelske ordboka er `lib/i18n/en.ts`, med den norske teksten som nøkkel. Mangler en
+  oversettelse, vises norsk. `tests/i18n.test.ts` feiler hvis en tekst i `t()` mangler
+  engelsk, eller hvis variablene ikke stemmer.
+- Oversatt: navigasjon, forside og strøm, profil, prosjektside, CV (også `?sprak=en` på
+  CV-en uavhengig av resten av siden), utforsk, stillinger, bedrifter, priser, innlogging og
+  registrering, `/utviklere` og feilsidene. Redigeringssider, admin, e-poster og de juridiske
+  sidene (vilkår, personvern) er foreløpig bare på norsk.
+
+## CV-import
+
+«Fyll ut feltene fra CV-en» leser PDF- og Word-filer helt lokalt på serveren, uten
+språkmodell eller andre betalte tjenester. `lib/cv-extract.ts` henter ut tekstlinjene med
+skriftstørrelse og innrykk (og leser to spalter hver for seg), og `lib/cv-text-parser.ts`
+finner overskrifter (Erfaring, Utdanning, Skills …), datoer («aug. 2021 – nå», «01/2019»),
+rolle/arbeidsgiver, grad/skole, ferdigheter, lenker og bosted. Resultatet er et utkast som
+brukeren ser over før det lagres. Bilder av CV-er kan vises på profilen, men ikke leses.
+
+Testene (`npm test`) kjører tolkeren på eksempel-CV-er i `tests/fixtures/` (én og to
+spalter, LinkedIn-eksport, datoer til høyre/venstre og en Word-fil). Finner dere en CV som
+leses feil, legg den (anonymisert) i `tests/fixtures/` og lag en test for den.
 
 Alle Server Actions returnerer `{ ok: true, data }` eller `{ ok: false, error, fieldErrors? }`,
 så skjemaer kan vise feilmeldinger uten try/catch. Alt som endrer data sjekker at brukeren
@@ -189,7 +329,7 @@ til de to første, så gamle lenker fortsatt virker. `/@brukernavn` skrives om t
 1. Importer repoet i Vercel.
 2. Storage → Create Database → Neon (Postgres). `DATABASE_URL` settes automatisk.
 3. Storage → Create → Blob. `BLOB_READ_WRITE_TOKEN` settes automatisk.
-4. Legg inn `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` (f.eks. `https://vis.no`), GitHub-nøklene og `ANTHROPIC_API_KEY` under Settings → Environment Variables.
+4. Legg inn `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` (f.eks. `https://vis.no`), og GitHub-nøklene under Settings → Environment Variables.
 5. Kjør migreringene mot produksjonsdatabasen: `DATABASE_URL=<prod-url> npm run db:migrate`.
 
 ## Deploy på Render + Neon
@@ -208,7 +348,7 @@ Under *Connect* finnes to strenger: den med *Connection pooling* på (verten inn
 
 Miljøvariabler: `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, `BETTER_AUTH_SECRET`,
 `BETTER_AUTH_URL` (Render-adressen, f.eks. `https://vis.onrender.com`), `NODE_VERSION=22`,
-og valgfritt `BREVO_API_KEY` + `EMAIL_FROM`, GitHub-/Google-nøklene, `ADMIN_EMAILS` og `ANTHROPIC_API_KEY`.
+og valgfritt `BREVO_API_KEY` + `EMAIL_FROM`, GitHub-/Google-nøklene og `ADMIN_EMAILS`.
 Ikke sett `NODE_ENV`: da hopper `npm ci` over devDependencies som bygget trenger.
 
 Migreringene kjøres automatisk i hvert bygg. Uten `BLOB_READ_WRITE_TOKEN` lagres bilder og

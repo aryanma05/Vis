@@ -386,6 +386,18 @@ async function main() {
     process.loadEnvFile(".env.local");
   } catch {}
   if (process.env.NODE_ENV === "production") throw new Error("Seed skal bare kjøres lokalt.");
+  // Eksempeldata skal aldri havne i den ekte databasen, selv om .env.local peker dit.
+  const host = (() => {
+    try {
+      return new URL(process.env.DATABASE_URL ?? "").hostname;
+    } catch {
+      return "";
+    }
+  })();
+  if (!["localhost", "127.0.0.1", "::1", "db", "postgres"].includes(host) && process.env.SEED_REMOTE !== "ja") {
+    throw new Error(`DATABASE_URL peker til ${host || "en ukjent server"}. Seed kjøres bare mot en lokal database (sett SEED_REMOTE=ja for å overstyre).`);
+  }
+  process.env.VIS_SEEDING = "1";
 
   const { db, schema } = await import("@/db");
   const { auth } = await import("@/lib/auth");

@@ -36,7 +36,11 @@ const nextConfig: NextConfig = {
     ],
   },
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    return [
+      // Alt unntatt innbyggingskortene, som andre nettsider skal kunne vise i en iframe
+      // (de setter sine egne sikkerhetshodere, se lib/embed.ts).
+      { source: "/((?!bygg-inn/).*)", headers: securityHeaders },
+    ];
   },
   async rewrites() {
     return [

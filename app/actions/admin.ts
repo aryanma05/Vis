@@ -8,8 +8,11 @@ import {
   removeProject,
   requireAdminForAction,
   restoreProject,
+  setProjectFeatured,
   unbanUser,
 } from "@/lib/admin";
+import { grantPlan, revokeGrant } from "@/lib/billing";
+import { setCompanyVerified } from "@/lib/companies";
 import { resolveReport, resolveReportsFor } from "@/lib/reports";
 
 export async function removeProjectAction(projectId: string, reason: string) {
@@ -19,6 +22,15 @@ export async function removeProjectAction(projectId: string, reason: string) {
     await resolveReportsFor(admin.id, "project", String(projectId), "Prosjektet ble fjernet.");
     revalidatePath("/", "layout");
   }, "admin.remove-project");
+}
+
+export async function setFeaturedAction(projectId: string, featured: boolean) {
+  return runAction(async () => {
+    const admin = await requireAdminForAction();
+    await setProjectFeatured(admin.id, String(projectId), Boolean(featured));
+    revalidatePath("/");
+    revalidatePath(`/prosjekt/${projectId}`);
+  }, "admin.feature-project");
 }
 
 export async function restoreProjectAction(projectId: string) {
@@ -62,4 +74,30 @@ export async function resolveReportAction(reportId: string, status: "resolved" |
     await resolveReport(admin.id, String(reportId), status === "dismissed" ? "dismissed" : "resolved", resolution);
     revalidatePath("/admin");
   }, "admin.resolve");
+}
+
+export async function grantPlanAction(ownerType: "user" | "company", ownerId: string, days: number | null, note: string) {
+  return runAction(async () => {
+    const admin = await requireAdminForAction();
+    if (ownerType !== "user" && ownerType !== "company") throw new Error("Ukjent eier");
+    await grantPlan(admin.id, ownerType, String(ownerId), days && days > 0 ? Math.min(days, 3650) : null, String(note ?? ""));
+    revalidatePath("/admin");
+  }, "admin.grant");
+}
+
+export async function revokeGrantAction(ownerType: "user" | "company", ownerId: string) {
+  return runAction(async () => {
+    const admin = await requireAdminForAction();
+    await revokeGrant(admin.id, ownerType === "company" ? "company" : "user", String(ownerId));
+    revalidatePath("/admin");
+  }, "admin.revoke");
+}
+
+export async function setCompanyVerifiedAction(companyId: string, verified: boolean) {
+  return runAction(async () => {
+    const admin = await requireAdminForAction();
+    await setCompanyVerified(admin.id, String(companyId), Boolean(verified));
+    revalidatePath("/admin");
+    revalidatePath("/bedrifter");
+  }, "admin.company-verify");
 }

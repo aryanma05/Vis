@@ -3,17 +3,26 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Flag, FolderX, MessageSquareWarning, Search, ShieldCheck, UserX } from "lucide-react";
 import Avatar from "@/components/Avatar";
-import { BanButton, DeleteCommentButton, RemoveProjectButton, ResolveButtons } from "@/components/moderation/AdminActions";
+import { BanButton, DeleteCommentButton, GrantPlanButton, RemoveProjectButton, ResolveButtons, VerifyCompanyButton } from "@/components/moderation/AdminActions";
 import { inputClass } from "@/components/ui/field";
 import { EmptyState } from "@/components/ui/misc";
 import { Tabs } from "@/components/ui/tabs";
-import { getAdmin, getModerationCounts, listUsers } from "@/lib/admin";
+import { getAdmin, getModerationCounts, listCompaniesForAdmin, listUsers } from "@/lib/admin";
+import { getBillingSummary } from "@/lib/billing";
 import { REPORT_REASON_LABELS } from "@/lib/constants";
+import { checkEnv } from "@/lib/env";
+import { getErrorSummary } from "@/lib/errors";
+import { getKeyMetrics } from "@/lib/metrics";
 import { timeAgo } from "@/lib/format";
 import { getProjectById } from "@/lib/projects";
 import { listReports } from "@/lib/reports";
+import MetricsTab from "./MetricsTab";
+import SystemTab from "./SystemTab";
 
-export const metadata: Metadata = { title: "Moderering", robots: { index: false } };
+export const metadata: Metadata = { title: "Admin", robots: { index: false } };
+
+const TABS = ["rapporter", "brukere", "bedrifter", "nokkeltall", "system"] as const;
+type Tab = (typeof TABS)[number];
 
 type Props = { searchParams: Promise<{ fane?: string; status?: string; q?: string; prosjekt?: string }> };
 
@@ -25,14 +34,18 @@ export default async function AdminPage({ searchParams }: Props) {
   if (!admin) notFound();
 
   const { fane, status, q, prosjekt } = await searchParams;
-  const tab = fane === "brukere" ? "brukere" : "rapporter";
+  const tab: Tab = (TABS as readonly string[]).includes(fane ?? "") ? (fane as Tab) : "rapporter";
   const reportStatus = status === "resolved" || status === "dismissed" || status === "all" ? status : "open";
 
-  const [counts, reports, users, focus] = await Promise.all([
+  const [counts, reports, users, focus, metrics, errors, companies, billing] = await Promise.all([
     getModerationCounts(),
     tab === "rapporter" ? listReports(reportStatus) : Promise.resolve([]),
     tab === "brukere" ? listUsers(q ?? "") : Promise.resolve([]),
     prosjekt ? getProjectById(prosjekt, admin.id, { asAdmin: true }) : Promise.resolve(null),
+    tab === "nokkeltall" ? getKeyMetrics() : Promise.resolve(null),
+    tab === "system" ? getErrorSummary() : Promise.resolve(null),
+    tab === "bedrifter" ? listCompaniesForAdmin(q ?? "") : Promise.resolve([]),
+    tab === "nokkeltall" ? getBillingSummary() : Promise.resolve(null),
   ]);
 
   return (
@@ -41,21 +54,23 @@ export default async function AdminPage({ searchParams }: Props) {
         <p className="caption inline-flex items-center gap-2">
           <ShieldCheck className="size-3.5" /> Admin
         </p>
-        <h1 className="mt-3 text-4xl font-bold tracking-tight md:text-5xl">Moderering</h1>
+        <h1 className="mt-3 text-4xl font-bold tracking-tight md:text-5xl">{tab === "nokkeltall" ? "Nøkkeltall" : tab === "system" ? "System" : "Moderering"}</h1>
 
-        <dl className="mt-8 grid gap-3 sm:grid-cols-4">
-          {[
-            ["Åpne rapporter", counts.openReports],
-            ["Rapporter totalt", counts.totalReports],
-            ["Fjernede prosjekter", counts.removedProjects],
-            ["Stengte kontoer", counts.bannedUsers],
-          ].map(([label, value]) => (
-            <div key={label} className="rounded-[18px] glass-card p-4">
-              <dt className="text-sm text-mist">{label}</dt>
-              <dd className="mt-1 text-3xl font-bold tracking-tight">{value}</dd>
-            </div>
-          ))}
-        </dl>
+        {(tab === "rapporter" || tab === "brukere") && (
+          <dl className="mt-8 grid gap-3 sm:grid-cols-4">
+            {[
+              ["Åpne rapporter", counts.openReports],
+              ["Rapporter totalt", counts.totalReports],
+              ["Fjernede prosjekter", counts.removedProjects],
+              ["Stengte kontoer", counts.bannedUsers],
+            ].map(([label, value]) => (
+              <div key={label} className="rounded-[18px] glass-card p-4">
+                <dt className="text-sm text-mist">{label}</dt>
+                <dd className="mt-1 text-3xl font-bold tracking-tight">{value}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
 
         {focus && (
           <section className="mt-8 rounded-[22px] bg-sea/10 p-5">
@@ -83,9 +98,15 @@ export default async function AdminPage({ searchParams }: Props) {
             items={[
               { key: "rapporter", label: "Rapporter", href: "/admin", count: counts.openReports },
               { key: "brukere", label: "Brukere", href: "/admin?fane=brukere" },
+              { key: "bedrifter", label: "Bedrifter", href: "/admin?fane=bedrifter" },
+              { key: "nokkeltall", label: "Nøkkeltall", href: "/admin?fane=nokkeltall" },
+              { key: "system", label: "System", href: "/admin?fane=system" },
             ]}
           />
         </div>
+
+        {metrics && <MetricsTab metrics={metrics} billing={billing} />}
+        {errors && <SystemTab checks={checkEnv()} errors={errors} />}
 
         {tab === "rapporter" ? (
           <>
@@ -172,7 +193,7 @@ export default async function AdminPage({ searchParams }: Props) {
               </ul>
             )}
           </>
-        ) : (
+        ) : tab === "brukere" ? (
           <>
             <form className="relative mt-6 max-w-md" action="/admin">
               <input type="hidden" name="fane" value="brukere" />
@@ -202,12 +223,39 @@ export default async function AdminPage({ searchParams }: Props) {
                       </p>
                     )}
                   </div>
+                  <GrantPlanButton ownerType="user" ownerId={u.id} name={u.name} current={u.pro} />
                   {u.id !== admin.id && u.role !== "admin" && <BanButton userId={u.id} banned={Boolean(u.banned)} name={u.name} />}
                 </li>
               ))}
             </ul>
           </>
-        )}
+        ) : tab === "bedrifter" ? (
+          <>
+            <form className="relative mt-6 max-w-md" action="/admin">
+              <input type="hidden" name="fane" value="bedrifter" />
+              <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-mist" />
+              <input name="q" defaultValue={q ?? ""} placeholder="Søk etter bedrift eller nettside" className={`${inputClass} pl-11`} />
+            </form>
+            <ul className="mt-6 divide-y divide-line overflow-hidden rounded-[22px] glass-card">
+              {companies.map((c) => (
+                <li key={c.id} className="flex flex-wrap items-center gap-4 px-5 py-4">
+                  <div className="min-w-0 flex-1">
+                    <Link href={`/bedrift/${c.slug}`} className="font-medium hover:text-ice">
+                      {c.name}
+                    </Link>
+                    <p className="truncate text-sm text-mist">
+                      {[c.website, `${c.jobs} stillinger`, c.verifiedAt ? "bekreftet" : "ikke bekreftet"].filter(Boolean).join(" · ")} · laget{" "}
+                      <span suppressHydrationWarning>{timeAgo(c.createdAt)}</span>
+                    </p>
+                  </div>
+                  <VerifyCompanyButton companyId={c.id} verified={Boolean(c.verifiedAt)} />
+                  <GrantPlanButton ownerType="company" ownerId={c.id} name={c.name} current={c.business} />
+                </li>
+              ))}
+              {companies.length === 0 && <li className="px-5 py-6 text-sm text-mist">Ingen bedrifter ennå.</li>}
+            </ul>
+          </>
+        ) : null}
       </div>
     </main>
   );

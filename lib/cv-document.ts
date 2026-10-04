@@ -133,7 +133,7 @@ export async function deleteCvDocument(userId: string) {
   await deleteStoredFiles(allKeys(row));
 }
 
-// Leser den opplastede CV-en med språkmodellen, så feltene kan fylles ut automatisk.
+// Leser teksten i den opplastede CV-en, så feltene kan fylles ut automatisk.
 export async function parseStoredCv(userId: string) {
   const [row] = await db.select().from(cvDocument).where(eq(cvDocument.userId, userId)).limit(1);
   if (!row) throw new UserFacingError("Last opp CV-en først.");

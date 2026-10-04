@@ -10,7 +10,8 @@ import { ButtonLink } from "@/components/ui/button";
 import { EmptyState, SectionHeading, Tag } from "@/components/ui/misc";
 import { Tabs } from "@/components/ui/tabs";
 import { getFeaturedProfiles, getOnboarding, getPlatformStats } from "@/lib/profiles";
-import { getFollowingProjects, getLatestProjects, getPopularTags, getTrendingProjects, type ProjectCard } from "@/lib/projects";
+import { getFeaturedProjects, getFollowingProjects, getLatestProjects, getPopularTags, getTrendingProjects, type ProjectCard } from "@/lib/projects";
+import { getT } from "@/lib/i18n/server";
 import { getCurrentUser, type CurrentUser } from "@/lib/session";
 import { getFollowCounts, suggestPeople } from "@/lib/social";
 
@@ -27,44 +28,47 @@ export default async function Home({ searchParams }: Props) {
 /* -------------------------------------------------------------------------- */
 
 async function Landing() {
-  const [stats, featured, trending, latest] = await Promise.all([
+  const t = await getT();
+  const [stats, featured, picked, trending, latest] = await Promise.all([
     getPlatformStats(),
     getFeaturedProfiles(6),
+    getFeaturedProjects(6),
     getTrendingProjects({ limit: 6 }),
     getLatestProjects({ limit: 12 }),
   ]);
 
-  // Raden øverst viser det populære; rutenettet under det nyeste som ikke allerede står der.
-  const showcase = trending;
+  // Raden øverst viser det redaksjonen har valgt ut, fylt opp med det populære; rutenettet
+  // under viser det nyeste som ikke allerede står der.
+  const showcase = [...picked, ...trending.filter((t) => !picked.some((p) => p.id === t.id))].slice(0, 6);
   const fresh = latest.projects.filter((p) => !showcase.some((s) => s.id === p.id)).slice(0, 6);
 
   return (
     <main className="pb-24">
       <section className="px-5 pt-14 md:pl-28 md:pr-10 md:pt-24">
         <div className="fade-up mx-auto max-w-7xl">
-          <h1 className="display max-w-3xl text-[clamp(2.6rem,6.4vw,5rem)]">Vis frem det du lager.</h1>
+          <h1 className="display max-w-3xl text-[clamp(2.6rem,6.4vw,5rem)]">{t("Vis frem det du lager.")}</h1>
           <p className="mt-5 max-w-xl text-lg leading-8 text-mist md:text-xl md:leading-9">
-            Prosjektene, CV-en og lenkene dine på én side. Hent prosjekter fra GitHub, eller lim inn en lenke, så tar vi
-            skjermbildene for deg.
+            {t("Prosjektene, CV-en og lenkene dine på én side. Hent prosjekter fra GitHub, eller lim inn en lenke, så tar vi skjermbildene for deg.")}
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <ButtonLink href="/register" size="lg">
-              Lag profilen din <ArrowRight className="size-4" />
+              {t("Lag profilen din")} <ArrowRight className="size-4" />
             </ButtonLink>
             <ButtonLink href="/sok" size="lg" variant="secondary">
-              Utforsk
+              {t("Utforsk")}
             </ButtonLink>
           </div>
-          {stats.projects > 0 && (
+          {/* Små tall virker mot sin hensikt, så de vises først når det er litt liv her. */}
+          {stats.projects >= 50 && stats.people >= 30 && (
             <p className="mt-8 text-sm text-mist">
-              {stats.people} {stats.people === 1 ? "profil" : "profiler"} · {stats.projects} prosjekter · {stats.tags} teknologier
+              {t("{people} profiler · {projects} prosjekter · {tags} teknologier", { people: stats.people, projects: stats.projects, tags: stats.tags })}
             </p>
           )}
         </div>
       </section>
 
       {showcase.length > 0 && (
-        <section aria-label="Utvalgte prosjekter" className="mt-14 md:mt-16">
+        <section aria-label={t("Utvalgte prosjekter")} className="mt-14 md:mt-16">
           <div className="edge-pad no-scrollbar flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2">
             {showcase.map((p, i) => (
               <ShowcaseCard key={p.id} project={p} priority={i < 2} />
@@ -77,10 +81,10 @@ async function Landing() {
         <section className="mt-24 px-5 md:mt-32 md:pl-28 md:pr-10">
           <div className="mx-auto max-w-7xl">
             <SectionHeading
-              title="Nytt på Vis"
+              title={t("Nytt på Vis")}
               action={
                 <ButtonLink href="/sok" variant="ghost" size="sm">
-                  Se alle <ArrowRight className="size-4" />
+                  {t("Se alle")} <ArrowRight className="size-4" />
                 </ButtonLink>
               }
             />
@@ -95,10 +99,10 @@ async function Landing() {
         <section className="mt-24 px-5 md:mt-32 md:pl-28 md:pr-10">
           <div className="mx-auto max-w-7xl">
             <SectionHeading
-              title="Folk på Vis"
+              title={t("Folk på Vis")}
               action={
                 <ButtonLink href="/sok?type=personer" variant="ghost" size="sm">
-                  Finn flere <ArrowRight className="size-4" />
+                  {t("Finn flere")} <ArrowRight className="size-4" />
                 </ButtonLink>
               }
             />
@@ -119,7 +123,7 @@ async function Landing() {
                             <MapPin className="size-3 shrink-0" aria-hidden="true" /> {p.location}
                           </span>
                         )}
-                        <span className="shrink-0">{p.projectCount} prosjekter</span>
+                        <span className="shrink-0">{t("{n} prosjekter", { n: p.projectCount })}</span>
                       </span>
                     </span>
                   </Link>
@@ -133,11 +137,11 @@ async function Landing() {
       <section className="mt-24 px-5 md:mt-32 md:pl-28 md:pr-10">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-6 rounded-[28px] glass-card p-8 md:p-12">
           <div>
-            <h2 className="text-2xl font-bold tracking-[-0.025em] md:text-3xl">Klar til å vise noe?</h2>
-            <p className="mt-2 text-mist">Gratis, på norsk, og ferdig på et par minutter.</p>
+            <h2 className="text-2xl font-bold tracking-[-0.025em] md:text-3xl">{t("Klar til å vise noe?")}</h2>
+            <p className="mt-2 text-mist">{t("Gratis, på norsk, og ferdig på et par minutter.")}</p>
           </div>
           <ButtonLink href="/register" size="lg">
-            Lag profilen din
+            {t("Lag profilen din")}
           </ButtonLink>
         </div>
       </section>
@@ -190,6 +194,7 @@ function greeting() {
 
 async function Feed({ user, searchParams }: { user: CurrentUser; searchParams: Props["searchParams"] }) {
   const { fane } = await searchParams;
+  const t = await getT();
   const counts = await getFollowCounts(user.id);
   const followsAnyone = counts.following > 0;
   const tab = fane === "trender" || fane === "nyeste" || fane === "folger" ? fane : followsAnyone ? "folger" : "trender";
@@ -212,14 +217,14 @@ async function Feed({ user, searchParams }: { user: CurrentUser; searchParams: P
       <div className="mx-auto max-w-7xl">
         <header className="flex flex-wrap items-end justify-between gap-5">
           <h1 className="display text-[34px] md:text-5xl">
-            {greeting()}, {firstName}
+            {t(greeting())}, {firstName}
           </h1>
           <div className="flex gap-2">
             <ButtonLink href="/sok" variant="secondary" size="sm">
-              <Compass className="size-4" /> Utforsk
+              <Compass className="size-4" /> {t("Utforsk")}
             </ButtonLink>
             <ButtonLink href="/ny" size="sm">
-              Del prosjekt
+              {t("Del prosjekt")}
             </ButtonLink>
           </div>
         </header>
@@ -228,12 +233,12 @@ async function Feed({ user, searchParams }: { user: CurrentUser; searchParams: P
           <div className="min-w-0">
             <div>
               <Tabs
-                label="Strømmen"
+                label={t("Strømmen")}
                 active={tab}
                 items={[
-                  { key: "folger", label: "Følger", href: "/?fane=folger" },
-                  { key: "trender", label: "Populært", href: "/?fane=trender" },
-                  { key: "nyeste", label: "Nyeste", href: "/?fane=nyeste" },
+                  { key: "folger", label: t("Følger"), href: "/?fane=folger" },
+                  { key: "trender", label: t("Populært"), href: "/?fane=trender" },
+                  { key: "nyeste", label: t("Nyeste"), href: "/?fane=nyeste" },
                 ]}
               />
             </div>
@@ -250,24 +255,24 @@ async function Feed({ user, searchParams }: { user: CurrentUser; searchParams: P
               ) : tab === "folger" ? (
                 <EmptyState
                   icon={<Compass className="size-5" />}
-                  title={followsAnyone ? "Ingen nye prosjekter ennå" : "Du følger ingen ennå"}
+                  title={t(followsAnyone ? "Ingen nye prosjekter ennå" : "Du følger ingen ennå")}
                   action={
                     <>
-                      <ButtonLink href="/sok?type=personer">Finn folk å følge</ButtonLink>
+                      <ButtonLink href="/sok?type=personer">{t("Finn folk å følge")}</ButtonLink>
                       <ButtonLink href="/?fane=trender" variant="secondary">
-                        Se hva som er populært
+                        {t("Se hva som er populært")}
                       </ButtonLink>
                     </>
                   }
                 >
-                  Følg folk du synes lager spennende ting, så dukker prosjektene deres opp her.
+                  {t("Følg folk du synes lager spennende ting, så dukker prosjektene deres opp her.")}
                 </EmptyState>
               ) : (
                 <EmptyState
-                  title="Ingen prosjekter ennå"
-                  action={<ButtonLink href="/ny">Del det første prosjektet</ButtonLink>}
+                  title={t("Ingen prosjekter ennå")}
+                  action={<ButtonLink href="/ny">{t("Del det første prosjektet")}</ButtonLink>}
                 >
-                  Bli den første som viser frem noe.
+                  {t("Bli den første som viser frem noe.")}
                 </EmptyState>
               )}
             </div>
@@ -279,9 +284,9 @@ async function Feed({ user, searchParams }: { user: CurrentUser; searchParams: P
             {people.length > 0 && (
               <section className="rounded-[22px] glass-card p-5">
                 <div className="flex items-baseline justify-between">
-                  <h2 className="font-semibold">Folk å følge</h2>
+                  <h2 className="font-semibold">{t("Folk å følge")}</h2>
                   <Link href="/sok?type=personer" className="text-sm text-mist hover:text-fg">
-                    Se flere
+                    {t("Se flere")}
                   </Link>
                 </div>
                 <div className="mt-5 space-y-5">
@@ -294,11 +299,11 @@ async function Feed({ user, searchParams }: { user: CurrentUser; searchParams: P
 
             {tags.length > 0 && (
               <section>
-                <h2 className="px-1 caption">Populære teknologier</h2>
+                <h2 className="px-1 caption">{t("Populære teknologier")}</h2>
                 <div className="mt-4 flex flex-wrap gap-1.5">
-                  {tags.map((t) => (
-                    <Tag key={t.slug} href={`/tag/${t.slug}`} count={t.count}>
-                      {t.name}
+                  {tags.map((tag) => (
+                    <Tag key={tag.slug} href={`/tag/${tag.slug}`} count={tag.count}>
+                      {tag.name}
                     </Tag>
                   ))}
                 </div>

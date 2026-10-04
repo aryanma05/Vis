@@ -1,18 +1,44 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Flag, MoreHorizontal, Shield } from "lucide-react";
+import { Flag, MoreHorizontal, Shield, Sparkles } from "lucide-react";
+import { setFeaturedAction } from "@/app/actions/admin";
+import { useT } from "@/components/LocaleProvider";
 import ReportDialog from "@/components/moderation/ReportDialog";
 import { buttonClass } from "@/components/ui/button";
 import { Menu, MenuItem } from "@/components/ui/menu";
+import { toast } from "@/components/ui/toast";
 
 // «Mer»-menyen på et prosjekt: rapporter (og moderering for admin).
-export default function ProjectMenu({ projectId, loggedIn, isAdmin }: { projectId: string; loggedIn: boolean; isAdmin: boolean }) {
+export default function ProjectMenu({
+  projectId,
+  loggedIn,
+  isAdmin,
+  featured = false,
+}: {
+  projectId: string;
+  loggedIn: boolean;
+  isAdmin: boolean;
+  featured?: boolean;
+}) {
+  const router = useRouter();
+  const t = useT();
   const [reporting, setReporting] = useState(false);
+
+  async function toggleFeatured() {
+    const result = await setFeaturedAction(projectId, !featured);
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
+    toast.success(t(featured ? "Tatt ut av utvalgte" : "Prosjektet er valgt ut"), featured ? undefined : { description: t("Eieren får beskjed.") });
+    router.refresh();
+  }
   return (
     <>
       <Menu
-        label="Mer"
+        label={t("Mer")}
         align="end"
         trigger={({ open, toggle, id }) => (
           <button
@@ -21,7 +47,7 @@ export default function ProjectMenu({ projectId, loggedIn, isAdmin }: { projectI
             aria-haspopup="menu"
             aria-expanded={open}
             aria-controls={open ? id : undefined}
-            aria-label="Flere valg"
+            aria-label={t("Flere valg")}
             className={buttonClass({ variant: "secondary", size: "icon" })}
           >
             <MoreHorizontal className="size-4" />
@@ -29,12 +55,17 @@ export default function ProjectMenu({ projectId, loggedIn, isAdmin }: { projectI
         )}
       >
         <MenuItem icon={<Flag className="size-4" />} onSelect={() => setReporting(true)} danger>
-          Rapporter prosjektet
+          {t("Rapporter prosjektet")}
         </MenuItem>
         {isAdmin && (
-          <MenuItem href={`/admin?prosjekt=${projectId}`} icon={<Shield className="size-4" />}>
-            Moderer
-          </MenuItem>
+          <>
+            <MenuItem icon={<Sparkles className="size-4" />} onSelect={toggleFeatured}>
+              {t(featured ? "Ta ut av utvalgte" : "Velg ut til forsiden")}
+            </MenuItem>
+            <MenuItem href={`/admin?prosjekt=${projectId}`} icon={<Shield className="size-4" />}>
+              {t("Moderer")}
+            </MenuItem>
+          </>
         )}
       </Menu>
       <ReportDialog open={reporting} onClose={() => setReporting(false)} targetType="project" targetId={projectId} loggedIn={loggedIn} />

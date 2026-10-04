@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Plus } from "lucide-react";
 import { followAction } from "@/app/actions/social";
+import { useT } from "@/components/LocaleProvider";
 import { buttonClass, type ButtonSize } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
 
@@ -24,6 +25,7 @@ export default function FollowButton({
   className?: string;
 }) {
   const router = useRouter();
+  const t = useT();
   const [following, setFollowing] = useState(initialFollowing);
   const [hover, setHover] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -42,7 +44,7 @@ export default function FollowButton({
         toast.error(result.error);
         return;
       }
-      if (next && name) toast.success(`Du følger nå ${name}`);
+      if (next && name) toast.success(t("Du følger nå {name}", { name }));
       router.refresh();
     });
   };
@@ -63,15 +65,15 @@ export default function FollowButton({
     >
       {following ? (
         hover ? (
-          "Slutt å følge"
+          t("Slutt å følge")
         ) : (
           <>
-            <Check className="size-4" aria-hidden="true" /> Følger
+            <Check className="size-4" aria-hidden="true" /> {t("Følger")}
           </>
         )
       ) : (
         <>
-          <Plus className="size-4" aria-hidden="true" strokeWidth={2.4} /> Følg
+          <Plus className="size-4" aria-hidden="true" strokeWidth={2.4} /> {t("Følg")}
         </>
       )}
     </button>

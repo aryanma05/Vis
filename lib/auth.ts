@@ -4,10 +4,10 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError } from "better-auth/api";
 import { nextCookies } from "better-auth/next-js";
-import { admin, emailOTP, username } from "better-auth/plugins";
+import { admin, emailOTP, twoFactor, username } from "better-auth/plugins";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/db";
-import { deleteAllFilesOfUser } from "@/lib/account";
+import { deleteAllFilesOfUser, prepareAccountDeletion } from "@/lib/account";
 import { log } from "@/lib/log";
 import { canSendEmail, resetPasswordEmail, sendEmail, verificationCodeEmail } from "@/lib/mailer";
 import {
@@ -89,6 +89,7 @@ export const auth = betterAuth({
       account: schema.account,
       verification: schema.verification,
       rateLimit: schema.rateLimit,
+      twoFactor: schema.twoFactor,
     },
   }),
   emailAndPassword: {
@@ -122,6 +123,12 @@ export const auth = betterAuth({
       // Alt annet (profil, prosjekter, CV, kommentarer, filer i databasen) slettes
       // automatisk sammen med brukeren (ON DELETE CASCADE).
       beforeDelete: async (user) => {
+        try {
+          await prepareAccountDeletion(user.id);
+        } catch (error) {
+          log.error("account.delete.prepare", { error, userId: user.id });
+          throw new APIError("BAD_GATEWAY", { code: "SUBSCRIPTION_CANCEL_FAILED", message: "Kunne ikke avslutte abonnementet." });
+        }
         await deleteAllFilesOfUser(user.id);
       },
     },
@@ -177,6 +184,8 @@ export const auth = betterAuth({
       "/email-otp/verify-email": { window: 60, max: 10 },
       "/email-otp/reset-password": { window: 60, max: 10 },
       "/delete-user": { window: 60, max: 5 },
+      // To-trinns: få forsøk, så ingen kan prøve seg gjennom alle sekssifrede koder.
+      "/two-factor/*": { window: 60, max: 10 },
     },
   },
   databaseHooks: {
@@ -227,6 +236,8 @@ export const auth = betterAuth({
       adminRoles: ["admin"],
       bannedUserMessage: "Kontoen din er stengt av en moderator.",
     }),
+    // To-trinns innlogging med en app (Google Authenticator, 1Password …) og reservekoder.
+    twoFactor({ issuer: "Vis" }),
     // Må være sist, slik at cookies settes riktig fra Server Actions.
     nextCookies(),
   ],

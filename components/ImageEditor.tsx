@@ -197,6 +197,37 @@ export default function ImageEditor({
     setRect({ x: left ? ax - w : ax, y: top ? ay - h : ay, w, h });
   }
 
+  // Tastatur: piltaster flytter rammen, Shift + piltaster endrer størrelsen (Alt gir større steg).
+  function onCropKey(event: React.KeyboardEvent) {
+    const step = event.altKey ? 0.1 : 0.02;
+    const delta = ({ ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] } as Record<string, [number, number]>)[
+      event.key
+    ];
+    if (!delta) return;
+    event.preventDefault();
+    const [dx, dy] = delta;
+    setRect((r) => {
+      if (!event.shiftKey) return { ...r, x: clamp(r.x + dx, 0, 1 - r.w), y: clamp(r.y + dy, 0, 1 - r.h) };
+      let w = clamp(r.w + dx, MIN, 1 - r.x);
+      let h = clamp(r.h + dy, MIN, 1 - r.y);
+      const ratio = ASPECTS[aspect];
+      if (ratio && dx !== 0) {
+        h = (w * natural.w) / (natural.h * ratio);
+        if (h > 1 - r.y) {
+          h = 1 - r.y;
+          w = (h * natural.h * ratio) / natural.w;
+        }
+      } else if (ratio) {
+        w = (h * natural.h * ratio) / natural.w;
+        if (w > 1 - r.x) {
+          w = 1 - r.x;
+          h = (w * natural.w) / (natural.h * ratio);
+        }
+      }
+      return { ...r, w, h };
+    });
+  }
+
   async function save() {
     if (!base) return;
     setSaving(true);
@@ -261,9 +292,14 @@ export default function ImageEditor({
             <canvas ref={previewRef} className="block max-h-[50vh] max-w-full" style={{ filter: cssFilter(adjust) }} />
             {mode === "crop" ? (
               <div
-                role="presentation"
+                role="group"
+                tabIndex={0}
+                aria-roledescription="beskjæringsramme"
+                aria-label="Beskjæring. Piltastene flytter rammen, Shift og piltastene endrer størrelsen."
+                aria-describedby="beskjaering-tips"
+                onKeyDown={onCropKey}
                 onPointerDown={(e) => startDrag(e, "move")}
-                className="absolute cursor-move ring-2 ring-white"
+                className="absolute cursor-move ring-2 ring-white outline-none focus-visible:ring-4 focus-visible:ring-sea"
                 style={{
                   left: `${rect.x * 100}%`,
                   top: `${rect.y * 100}%`,
@@ -305,6 +341,11 @@ export default function ImageEditor({
           </div>
         )}
       </div>
+      {mode === "crop" && base && !error && (
+        <p id="beskjaering-tips" className="mt-2 hidden text-xs text-mist md:block">
+          Dra i rammen eller hjørnene. Med tastatur: velg rammen, bruk piltastene for å flytte og Shift + piltastene for å endre størrelsen.
+        </p>
+      )}
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
         <Segmented

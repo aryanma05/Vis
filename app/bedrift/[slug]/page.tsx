@@ -1,0 +1,105 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { ArrowUpRight, BadgeCheck, Building2, MapPin, Settings, Users } from "lucide-react";
+import Avatar from "@/components/Avatar";
+import JobList from "@/components/company/JobList";
+import Markdown from "@/components/Markdown";
+import { ButtonLink } from "@/components/ui/button";
+import { getCompanyBySlug, getMembership, listCompanyMembers } from "@/lib/companies";
+import { listCompanyJobs } from "@/lib/jobs";
+import { getCurrentUser } from "@/lib/session";
+import { getT } from "@/lib/i18n/server";
+
+type Props = { params: Promise<{ slug: string }> };
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const [company, t] = await Promise.all([getCompanyBySlug((await params).slug), getT()]);
+  if (!company) return { title: t("Fant ikke bedriften") };
+  return { title: company.name, description: company.about?.slice(0, 160) ?? t("{name} på Vis: ledige stillinger og folk.", { name: company.name }) };
+}
+
+const host = (url: string) => url.replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/$/, "");
+
+export default async function CompanyPage({ params }: Props) {
+  const { slug } = await params;
+  const company = await getCompanyBySlug(slug);
+  if (!company) notFound();
+  const [viewer, t] = await Promise.all([getCurrentUser(), getT()]);
+  const [role, jobs, members] = await Promise.all([getMembership(viewer?.id, company.id), listCompanyJobs(company.id), listCompanyMembers(company.id)]);
+
+  return (
+    <main className="px-5 pb-28 pt-10 md:pb-20 md:pl-28 md:pr-10 md:pt-14">
+      <div className="mx-auto max-w-5xl">
+        <header className="flex flex-wrap items-start gap-5">
+          <span className="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-[22px] bg-fill">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            {company.logoUrl ? <img src={company.logoUrl} alt="" className="size-full object-cover" /> : <Building2 className="size-7 text-mist" />}
+          </span>
+          <div className="min-w-0 flex-1">
+            <h1 className="flex items-center gap-2 text-4xl font-bold tracking-tight">
+              {company.name}
+              {company.verifiedAt && <BadgeCheck className="size-6 text-sea" aria-label={t("Bekreftet av Vis")} />}
+            </h1>
+            <p className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-mist">
+              {company.location && (
+                <span className="inline-flex items-center gap-1.5">
+                  <MapPin className="size-4" /> {company.location}
+                </span>
+              )}
+              {company.size && (
+                <span className="inline-flex items-center gap-1.5">
+                  <Users className="size-4" /> {t("{n} ansatte", { n: company.size })}
+                </span>
+              )}
+              {company.website && (
+                <a href={company.website} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-ice hover:underline">
+                  {host(company.website)} <ArrowUpRight className="size-3.5" />
+                </a>
+              )}
+            </p>
+          </div>
+          {role && (
+            <ButtonLink href={`/bedrift/${company.slug}/admin`} variant="secondary" size="sm">
+              <Settings className="size-4" /> {t("Administrer")}
+            </ButtonLink>
+          )}
+        </header>
+
+        <div className="mt-12 grid gap-12 lg:grid-cols-[minmax(0,1fr)_300px]">
+          <div className="min-w-0 space-y-12">
+            <section>
+              <h2 className="caption">{t("Ledige stillinger")}</h2>
+              <div className="mt-4">
+                {jobs.length > 0 ? <JobList jobs={jobs} showCompany={false} /> : <p className="text-mist">{t("Ingen ledige stillinger akkurat nå.")}</p>}
+              </div>
+            </section>
+            {company.about && (
+              <section>
+                <h2 className="caption">{t("Om {name}", { name: company.name })}</h2>
+                <div className="mt-4">
+                  <Markdown>{company.about}</Markdown>
+                </div>
+              </section>
+            )}
+          </div>
+          <aside>
+            <section className="rounded-[22px] glass-card p-5">
+              <h2 className="caption">{t("Folk på Vis")}</h2>
+              <ul className="mt-3 space-y-3">
+                {members.map((m) => (
+                  <li key={m.userId}>
+                    <Link href={`/@${m.username}`} className="flex items-center gap-3 hover:text-ice">
+                      <Avatar name={m.name} image={m.image} size={32} />
+                      <span className="text-sm font-medium">{m.name}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          </aside>
+        </div>
+      </div>
+    </main>
+  );
+}

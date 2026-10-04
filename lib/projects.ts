@@ -1,11 +1,13 @@
 import "server-only";
 
-import { and, asc, desc, eq, inArray, isNull, lt, ne, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, isNotNull, isNull, lt, ne, or, sql, type SQL } from "drizzle-orm";
 import { db, schema } from "@/db";
+import { FIELDS, PERIODS, type FieldKey, type PeriodKey } from "@/lib/constants";
 import { captureScreenshots, MAX_SCREENSHOTS, normalizeProjectUrl } from "@/lib/screenshots";
 import { deleteStoredFiles, storeImage } from "@/lib/storage";
 import { tagSlug } from "@/lib/tag-names";
 import { setProjectTags } from "@/lib/tags";
+import { enforce } from "@/lib/rate-limit";
 import { UserFacingError } from "@/lib/result";
 import type { ProjectInput } from "@/lib/validation";
 import { outer } from "@/lib/sql";
@@ -56,6 +58,7 @@ export type ProjectDetail = ProjectCard & {
   updatedAt: Date;
   removedReason: string | null;
   isOwner: boolean;
+  featured: boolean;
 };
 
 const cardColumns = {
@@ -197,6 +200,7 @@ export async function getProjectById(
       githubFullName: project.githubFullName,
       removedReason: project.removedReason,
       updatedAt: project.updatedAt,
+      featuredAt: project.featuredAt,
     })
     .from(project)
     .innerJoin(user, eq(user.id, project.ownerId))
@@ -232,6 +236,7 @@ export async function getProjectById(
     updatedAt: row.updatedAt,
     images,
     isOwner,
+    featured: row.featuredAt !== null,
   };
 }
 
@@ -272,6 +277,33 @@ async function pageByPublished(conditions: SQL[], { limit = 24, cursor }: { limi
     projects: await toCards(page),
     nextCursor: rows.length > take && last?.publishedAt ? encodeCursor(last.publishedAt, last.id) : null,
   };
+}
+
+// Offentlige prosjekter i den rekkefølgen id-ene kommer i (samlinger). Prosjekter som
+// er slettet, skjult eller fjernet hoppes over.
+export async function getProjectCardsByIds(ids: string[]) {
+  const valid = ids.filter(isUuid).slice(0, 500);
+  if (valid.length === 0) return [];
+  const rows = await db
+    .select(cardColumns)
+    .from(project)
+    .innerJoin(user, eq(user.id, project.ownerId))
+    .where(and(publicProject(), inArray(project.id, valid)));
+  const order = new Map(valid.map((id, i) => [id, i]));
+  rows.sort((a, b) => order.get(a.id)! - order.get(b.id)!);
+  return toCards(rows);
+}
+
+// Valgt ut av redaksjonen, sist valgt først.
+export async function getFeaturedProjects(limit = 6) {
+  const rows = await db
+    .select(cardColumns)
+    .from(project)
+    .innerJoin(user, eq(user.id, project.ownerId))
+    .where(and(publicProject(), isNotNull(project.featuredAt)))
+    .orderBy(desc(project.featuredAt))
+    .limit(Math.min(limit, 60));
+  return toCards(rows);
 }
 
 // Nyeste publiserte prosjekter. Send inn `nextCursor` fra forrige side for å bla videre.
@@ -338,7 +370,14 @@ export type ProjectSort = "relevant" | "newest" | "trending" | "popular" | "disc
 
 export async function searchProjects(
   query: string,
-  { tag: tagFilter, sort = "relevant", limit = 48 }: { tag?: string | null; sort?: ProjectSort; limit?: number } = {},
+  {
+    tag: tagFilter,
+    sort = "relevant",
+    limit = 48,
+    field,
+    period,
+    featuredOnly = false,
+  }: { tag?: string | null; sort?: ProjectSort; limit?: number; field?: FieldKey | null; period?: PeriodKey | null; featuredOnly?: boolean } = {},
 ) {
   const terms = query
     .toLowerCase()
@@ -346,9 +385,23 @@ export async function searchProjects(
     .filter(Boolean)
     .slice(0, 8);
 
-  if (sort === "trending" && terms.length === 0 && !tagFilter) return getTrendingProjects({ limit });
+  if (sort === "trending" && terms.length === 0 && !tagFilter && !field && !period && !featuredOnly) return getTrendingProjects({ limit });
 
   const conditions: SQL[] = [publicProject()];
+  if (featuredOnly) conditions.push(isNotNull(project.featuredAt));
+  if (period && PERIODS[period]) conditions.push(sql`${project.publishedAt} > now() - make_interval(days => ${PERIODS[period].days})`);
+  if (field && FIELDS[field]) {
+    const words = FIELDS[field].words;
+    conditions.push(
+      or(
+        ...words.map((w) => ilike(project.role, `%${w}%`)),
+        sql`exists (select 1 from ${projectTag} pt join ${tag} t on t.id = pt.tag_id where pt.project_id = ${outer(project.id)} and (${sql.join(
+          words.map((w) => sql`t.slug like ${`${tagSlug(w)}%`}`),
+          sql` or `,
+        )}))`,
+      )!,
+    );
+  }
   const tsQuery = terms.map((t) => `${t.replace(/'/g, "")}:*`).join(" & ");
   const textMatch = terms.length > 0 ? sql`${project.searchVector} @@ to_tsquery('simple', ${tsQuery})` : null;
 
@@ -523,6 +576,7 @@ export async function createProject(
   input: ProjectInput,
   github?: { repoId: number; fullName: string },
 ) {
+  await enforce("projectCreate", ownerId);
   return db.transaction(async (tx) => {
     const [created] = await tx
       .insert(project)

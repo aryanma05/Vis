@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, Compass, Home, LogIn, Palette, Plus, Search } from "lucide-react";
+import { Bell, Briefcase, Compass, Home, LogIn, Palette, Plus, Search } from "lucide-react";
 import Avatar from "@/components/Avatar";
 import NavUserMenu, { type NavUser } from "@/components/nav/NavUserMenu";
 import ThemeSwitch from "@/components/nav/ThemeSwitch";
 import { openSearch } from "@/components/nav/search-events";
+import { useT } from "@/components/LocaleProvider";
 import { Menu } from "@/components/ui/menu";
 
 export type { NavUser };
@@ -26,31 +27,33 @@ const itemBase =
 // Logoen står for seg selv øverst til venstre (components/nav/HomeLogo.tsx), ikke her.
 export default function Sidebar({ user = null }: { user?: NavUser }) {
   const pathname = usePathname();
+  const t = useT();
   const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`));
 
   const items = [
-    { href: "/", label: user ? "Strømmen" : "Hjem", Icon: Home },
-    { href: "/sok", label: "Utforsk", Icon: Compass },
-    ...(user ? [{ href: "/varsler", label: "Varsler", Icon: Bell, badge: user.unread ?? 0 }] : []),
+    { href: "/", label: t(user ? "Strømmen" : "Hjem"), Icon: Home },
+    { href: "/sok", label: t("Utforsk"), Icon: Compass },
+    { href: "/stillinger", label: t("Stillinger"), Icon: Briefcase },
+    ...(user ? [{ href: "/varsler", label: t("Varsler"), Icon: Bell, badge: user.unread ?? 0 }] : []),
   ];
 
   return (
     <aside className="pointer-events-none fixed inset-y-0 left-5 z-40 hidden items-center md:flex print:!hidden">
       <nav
-        aria-label="Hovedmeny"
+        aria-label={t("Hovedmeny")}
         className="glass pointer-events-auto flex w-[60px] flex-col items-center gap-1 rounded-full py-2"
       >
         <div className="group relative">
           <button
             type="button"
             onClick={() => openSearch()}
-            aria-label="Søk (⌘K)"
+            aria-label={`${t("Søk")} (⌘K)`}
             className={`${itemBase} text-mist hover:bg-fill hover:text-fg`}
           >
             <Search className="size-[19px]" />
           </button>
           <Tip>
-            Søk <span className="ml-1 text-mist">⌘K</span>
+            {t("Søk")} <span className="ml-1 text-mist">⌘K</span>
           </Tip>
         </div>
 
@@ -84,12 +87,12 @@ export default function Sidebar({ user = null }: { user?: NavUser }) {
             <div className="group relative">
               <Link
                 href="/ny"
-                aria-label="Del prosjekt"
+                aria-label={t("Del prosjekt")}
                 className={`${itemBase} bg-primary text-on-primary hover:opacity-90`}
               >
                 <Plus className="size-5" strokeWidth={2.2} />
               </Link>
-              <Tip>Del prosjekt</Tip>
+              <Tip>{t("Del prosjekt")}</Tip>
             </div>
             <NavUserMenu
               user={user}
@@ -103,7 +106,7 @@ export default function Sidebar({ user = null }: { user?: NavUser }) {
                     aria-haspopup="menu"
                     aria-expanded={open}
                     aria-controls={open ? id : undefined}
-                    aria-label="Profilmeny"
+                    aria-label={t("Profilmeny")}
                     className={`rounded-full p-0.5 ring-2 transition active:scale-90 ${
                       open || pathname.startsWith(`/@${user.username}`) || pathname.startsWith("/profil") ? "ring-fg/30" : "ring-transparent hover:ring-fill-2"
                     }`}
@@ -118,20 +121,20 @@ export default function Sidebar({ user = null }: { user?: NavUser }) {
         ) : (
           <>
             <div className="group relative">
-              <Link href="/logg-inn" aria-label="Logg inn" className={`${itemBase} text-mist hover:bg-fill hover:text-fg`}>
+              <Link href="/logg-inn" aria-label={t("Logg inn")} className={`${itemBase} text-mist hover:bg-fill hover:text-fg`}>
                 <LogIn className="size-[19px]" />
               </Link>
-              <Tip>Logg inn</Tip>
+              <Tip>{t("Logg inn")}</Tip>
             </div>
             <div className="group relative">
               <Link
                 href="/register"
-                aria-label="Lag profil"
+                aria-label={t("Lag profil")}
                 className={`${itemBase} bg-primary text-on-primary hover:opacity-90`}
               >
                 <Plus className="size-5" strokeWidth={2.2} />
               </Link>
-              <Tip>Lag profil</Tip>
+              <Tip>{t("Lag profil")}</Tip>
             </div>
             <Menu
               label="Tema"
@@ -145,16 +148,16 @@ export default function Sidebar({ user = null }: { user?: NavUser }) {
                     onClick={toggle}
                     aria-haspopup="menu"
                     aria-expanded={open}
-                    aria-label="Fargetema"
+                    aria-label={t("Fargetema")}
                     className={`${itemBase} text-mist hover:bg-fill hover:text-fg`}
                   >
                     <Palette className="size-[19px]" />
                   </button>
-                  {!open && <Tip>Tema</Tip>}
+                  {!open && <Tip>{t("Tema")}</Tip>}
                 </div>
               )}
             >
-              <p className="px-2 pb-2 pt-1 caption">Utseende</p>
+              <p className="px-2 pb-2 pt-1 caption">{t("Utseende")}</p>
               <ThemeSwitch />
             </Menu>
           </>

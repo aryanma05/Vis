@@ -7,6 +7,7 @@ import { REACTION_TYPES, type ReactionType } from "@/lib/constants";
 import { toggleReaction } from "@/lib/reactions";
 import { getCurrentUser, requireUserForAction } from "@/lib/session";
 import { followUser, unfollowUser } from "@/lib/social";
+import { recordProfileVisit } from "@/lib/pro";
 import { isBot, recordProfileView, recordProjectView } from "@/lib/views";
 import { UserFacingError } from "@/lib/result";
 
@@ -35,7 +36,10 @@ export async function recordViewAction(kind: "project" | "profile", id: string) 
     if (isBot(ua)) return;
     const viewer = await getCurrentUser();
     if (kind === "project") await recordProjectView(String(id), viewer?.id);
-    else if (kind === "profile" && typeof id === "string" && id.length <= 64) await recordProfileView(id, viewer?.id);
+    else if (kind === "profile" && typeof id === "string" && id.length <= 64) {
+      await recordProfileView(id, viewer?.id);
+      await recordProfileVisit(id, viewer?.id);
+    }
   } catch {
     // Telling av visninger skal aldri gi feil hos besøkende.
   }

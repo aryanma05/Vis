@@ -15,7 +15,9 @@ import {
   updateProject,
 } from "@/lib/projects";
 import { fail, UserFacingError, type ActionResult } from "@/lib/result";
-import { assertScreenshotQuota, captureScreenshots, MAX_SCREENSHOTS } from "@/lib/screenshots";
+import { addProjectUpdate, deleteProjectUpdate } from "@/lib/project-updates";
+import { enforce } from "@/lib/rate-limit";
+import { capturePage, MAX_SCREENSHOTS } from "@/lib/screenshots";
 import { requireUserForAction } from "@/lib/session";
 import { fieldErrors, projectInput } from "@/lib/validation";
 
@@ -142,9 +144,12 @@ export async function captureScreenshotsAction(url: string, max: number = MAX_SC
   return runAction(async () => {
     const user = await requireUserForAction();
     if (typeof url !== "string" || url.length > 500) throw new UserFacingError("Lenken er for lang.");
-    assertScreenshotQuota(user.id);
-    const shots = await captureScreenshots(url, { max: Math.max(1, Math.min(Number(max) || MAX_SCREENSHOTS, MAX_SCREENSHOTS)) });
-    return shots.map((shot) => ({ base64: shot.bytes.toString("base64"), type: "image/webp", width: shot.width, height: shot.height }));
+    await enforce("screenshots", user.id);
+    const { shots, meta } = await capturePage(url, { max: Math.max(1, Math.min(Number(max) || MAX_SCREENSHOTS, MAX_SCREENSHOTS)) });
+    return {
+      shots: shots.map((shot) => ({ base64: shot.bytes.toString("base64"), type: "image/webp", width: shot.width, height: shot.height })),
+      meta,
+    };
   }, "project.screenshots");
 }
 
@@ -154,9 +159,25 @@ export async function addProjectScreenshotsAction(projectId: string, url: string
   return runAction(async () => {
     const user = await requireUserForAction();
     if (typeof url !== "string" || url.length > 500) throw new UserFacingError("Lenken er for lang.");
-    assertScreenshotQuota(user.id);
+    await enforce("screenshots", user.id);
     const images = await addProjectScreenshots(user.id, String(projectId), url);
     revalidateProject(String(projectId), user.username);
     return images;
   }, "project.screenshots");
+}
+
+export async function addProjectUpdateAction(projectId: string, body: string) {
+  return runAction(async () => {
+    const user = await requireUserForAction();
+    await addProjectUpdate(user.id, String(projectId), String(body ?? ""));
+    revalidatePath(`/prosjekt/${projectId}`);
+  }, "project.update.add");
+}
+
+export async function deleteProjectUpdateAction(updateId: string) {
+  return runAction(async () => {
+    const user = await requireUserForAction();
+    const projectId = await deleteProjectUpdate(user.id, String(updateId));
+    if (projectId) revalidatePath(`/prosjekt/${projectId}`);
+  }, "project.update.delete");
 }

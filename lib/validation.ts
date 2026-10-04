@@ -100,6 +100,7 @@ export const profileInput = z.object({
   openTo: z.array(z.enum(OPEN_TO)).max(OPEN_TO.length).default([]),
   customSections: z.array(customSection).max(8).default([]),
   accentColor: z.enum(ACCENT_KEYS).nullish().transform((v) => v ?? null),
+  contactEnabled: z.boolean().default(false),
 });
 
 export type ProfileInput = z.output<typeof profileInput>;

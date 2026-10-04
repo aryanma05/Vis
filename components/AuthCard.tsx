@@ -1,8 +1,9 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { getT } from "@/lib/i18n/server";
 
 // Ramme for innlogging, registrering og sidene rundt kontoen: ett kort midt på siden.
-export default function AuthCard({
+export default async function AuthCard({
   title,
   subtitle,
   children,
@@ -11,6 +12,7 @@ export default function AuthCard({
   subtitle?: ReactNode;
   children: ReactNode;
 }) {
+  const t = await getT();
   return (
     <main className="flex min-h-[calc(100vh-3.5rem)] flex-col items-center justify-center px-4 pb-28 pt-8 md:min-h-screen md:py-16 md:pl-28 md:pr-8">
       <div className="group w-full max-w-[420px]">
@@ -22,15 +24,15 @@ export default function AuthCard({
         <div className="rounded-[28px] glass-card p-6 sm:p-8">{children}</div>
         <p className="mt-6 text-center text-xs text-mist">
           <Link href="/personvern" className="hover:text-fg">
-            Personvern
+            {t("Personvern")}
           </Link>
           <span className="mx-2">·</span>
           <Link href="/vilkar" className="hover:text-fg">
-            Vilkår
+            {t("Vilkår")}
           </Link>
           <span className="mx-2">·</span>
           <Link href="/retningslinjer" className="hover:text-fg">
-            Retningslinjer
+            {t("Retningslinjer")}
           </Link>
         </p>
       </div>

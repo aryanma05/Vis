@@ -29,6 +29,34 @@
       "when": 1790277138782,
       "tag": "0003_social_moderation",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791067560207,
+      "tag": "0004_drift",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791068190436,
+      "tag": "0005_vekst",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791069394215,
+      "tag": "0006_betaling",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791070634252,
+      "tag": "0007_utviklere",
+      "breakpoints": true
     }
   ]
 }

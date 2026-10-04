@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
+import { useT } from "@/components/LocaleProvider";
 import { inputClass } from "@/components/ui/field";
 
 // Passordfelt med knapp for å vise passordet, så man ser skrivefeil på mobil.
@@ -10,6 +11,7 @@ export default function PasswordInput({
   inputRef,
   ...props
 }: React.InputHTMLAttributes<HTMLInputElement> & { invalid?: boolean; inputRef?: React.Ref<HTMLInputElement> }) {
+  const t = useT();
   const [visible, setVisible] = useState(false);
   return (
     <div className="relative">
@@ -17,7 +19,7 @@ export default function PasswordInput({
       <button
         type="button"
         onClick={() => setVisible((v) => !v)}
-        aria-label={visible ? "Skjul passord" : "Vis passord"}
+        aria-label={t(visible ? "Skjul passord" : "Vis passord")}
         className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-mist transition hover:text-fg"
       >
         {visible ? <EyeOff className="size-4" /> : <Eye className="size-4" />}

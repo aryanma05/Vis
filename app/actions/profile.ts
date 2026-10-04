@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { runAction } from "@/lib/action";
-import { CV_TEMPLATES, type CvTemplate } from "@/lib/constants";
+import { isPro } from "@/lib/billing";
+import { CV_TEMPLATE_LABELS, CV_TEMPLATES, isProTemplate, type CvTemplate } from "@/lib/constants";
 import { setAvatar, setCvTemplate, updateProfile } from "@/lib/profiles";
 import { fail, UserFacingError } from "@/lib/result";
 import { requireUserForAction } from "@/lib/session";
@@ -49,6 +50,7 @@ export async function setCvTemplateAction(template: CvTemplate) {
   return runAction(async () => {
     const user = await requireUserForAction();
     if (!CV_TEMPLATES.includes(template)) throw new UserFacingError("Ukjent mal.");
+    if (isProTemplate(template) && !(await isPro(user.id))) throw new UserFacingError(`${CV_TEMPLATE_LABELS[template].name} er en Pro-mal.`);
     await setCvTemplate(user.id, template);
     revalidatePath(`/profil/${user.username}`);
     revalidatePath(`/profil/${user.username}/cv`);

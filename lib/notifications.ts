@@ -10,18 +10,20 @@ import { log } from "@/lib/log";
 import { emailProviderConfigured, notificationEmail, sendEmailInBackground } from "@/lib/mailer";
 import { profilePath, projectPath } from "@/lib/site";
 
-const { comment, notification, profile, project, user } = schema;
+const { comment, contactRequest, notification, profile, project, user } = schema;
 
 export type NotificationKind = (typeof schema.notificationType.enumValues)[number];
 
-export const DEFAULT_NOTIFICATION_PREFS: NotificationPrefs = {
+export const DEFAULT_NOTIFICATION_PREFS: Required<NotificationPrefs> = {
   comment: true,
   reply: true,
   mention: true,
   follow: false,
+  digest: true,
+  contact: true,
 };
 
-export function resolvePrefs(prefs: NotificationPrefs | null | undefined): NotificationPrefs {
+export function resolvePrefs(prefs: NotificationPrefs | null | undefined): Required<NotificationPrefs> {
   return { ...DEFAULT_NOTIFICATION_PREFS, ...(prefs ?? {}) };
 }
 
@@ -31,7 +33,7 @@ type NotifyInput = {
   type: NotificationKind;
   projectId?: string | null;
   commentId?: string | null;
-  data?: { reaction?: ReactionType } | null;
+  data?: { reaction?: ReactionType; contactId?: string } | null;
 };
 
 // Lager et varsel (aldri til seg selv). Reaksjoner og nye følgere varsles bare én gang
@@ -69,7 +71,8 @@ export async function notify(input: NotifyInput, tx: Tx | typeof db = db) {
 // E-post om et nytt varsel, hvis mottakeren har slått det på. Kalles etter at
 // transaksjonen er ferdig, så en treg e-posttjeneste ikke holder på databasen.
 export async function emailNotification(input: NotifyInput & { excerpt?: string | null }) {
-  if (input.userId === input.actorId || input.type === "reaction") return;
+  // Reaksjoner sendes ikke på e-post, og kontaktforespørsler har sin egen e-post (lib/contact.ts).
+  if (input.userId === input.actorId || input.type === "reaction" || input.type === "contact") return;
   if (!emailProviderConfigured && process.env.NODE_ENV === "production") return;
 
   try {
@@ -91,7 +94,8 @@ export async function emailNotification(input: NotifyInput & { excerpt?: string 
       .limit(1);
     if (!row || !row.emailVerified) return;
     const prefs = resolvePrefs(row.prefs);
-    if (!prefs[input.type as keyof NotificationPrefs]) return;
+    // «Utvalgt» skjer sjelden og er alltid gode nyheter, så den har ikke egen innstilling.
+    if (input.type !== "featured" && !prefs[input.type as keyof NotificationPrefs]) return;
 
     const title = row.projectTitle ? `«${row.projectTitle}»` : "prosjektet ditt";
     const commentPath = input.projectId ? `${projectPath(input.projectId)}#kommentarer` : "/varsler";
@@ -100,7 +104,13 @@ export async function emailNotification(input: NotifyInput & { excerpt?: string 
       reply: { subject: `${row.actorName} svarte deg`, intro: `${row.actorName} svarte på kommentaren din på ${title}.`, button: "Se svaret", path: commentPath },
       mention: { subject: `${row.actorName} nevnte deg`, intro: `${row.actorName} nevnte deg i en kommentar på ${title}.`, button: "Se kommentaren", path: commentPath },
       follow: { subject: `${row.actorName} følger deg nå`, intro: `${row.actorName} (@${row.actorUsername}) begynte å følge deg på Vis.`, button: "Se profilen", path: profilePath(row.actorUsername) },
-    }[input.type as Exclude<NotificationKind, "reaction">];
+      featured: {
+        subject: `${title} er valgt ut på Vis`,
+        intro: `${title} er valgt ut av redaksjonen og vises nå øverst på forsiden og i Utforsk. Gratulerer! Del det gjerne videre.`,
+        button: "Se prosjektet",
+        path: input.projectId ? projectPath(input.projectId) : "/",
+      },
+    }[input.type as Exclude<NotificationKind, "reaction" | "contact">];
     if (!content) return;
 
     sendEmailInBackground(
@@ -145,11 +155,14 @@ export async function listNotifications(userId: string, { limit = 60, unreadOnly
       projectTitle: project.title,
       commentId: comment.id,
       commentBody: comment.body,
+      contactMessage: contactRequest.message,
+      contactReason: contactRequest.reason,
     })
     .from(notification)
     .innerJoin(actor, eq(actor.id, notification.actorId))
     .leftJoin(project, eq(project.id, notification.projectId))
     .leftJoin(comment, eq(comment.id, notification.commentId))
+    .leftJoin(contactRequest, sql`${contactRequest.id}::text = ${notification.data}->>'contactId'`)
     .where(and(eq(notification.userId, userId), unreadOnly ? isNull(notification.readAt) : undefined))
     .orderBy(desc(notification.createdAt))
     .limit(limit);
@@ -162,7 +175,9 @@ export async function listNotifications(userId: string, { limit = 60, unreadOnly
     actor: { username: r.actorUsername, name: r.actorName, image: r.actorImage },
     project: r.projectId ? { id: r.projectId, title: r.projectTitle! } : null,
     commentId: r.commentId,
-    excerpt: r.commentBody ? r.commentBody.slice(0, 180) : null,
+    contactId: r.data?.contactId ?? null,
+    contactReason: r.contactReason,
+    excerpt: (r.commentBody ?? r.contactMessage)?.slice(0, 180) ?? null,
     reaction: r.data?.reaction ? REACTION_LABELS[r.data.reaction] : null,
   }));
 }

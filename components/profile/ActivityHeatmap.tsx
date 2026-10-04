@@ -1,7 +1,13 @@
+import { makeT } from "@/lib/i18n";
+import { getLocale } from "@/lib/i18n/server";
+
 // Aktivitetskart som på GitHub: én rute per dag det siste året, mørkere jo mer som skjedde.
 
 const WEEKS = 53;
-const MONTHS = ["jan", "feb", "mar", "apr", "mai", "jun", "jul", "aug", "sep", "okt", "nov", "des"];
+const MONTHS = {
+  nb: ["jan", "feb", "mar", "apr", "mai", "jun", "jul", "aug", "sep", "okt", "nov", "des"],
+  en: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+};
 
 function level(n: number) {
   if (n <= 0) return 0;
@@ -19,7 +25,7 @@ const FILL = [
   "bg-accent",
 ];
 
-export default function ActivityHeatmap({
+export default async function ActivityHeatmap({
   byDay,
   projects,
   comments,
@@ -28,6 +34,8 @@ export default function ActivityHeatmap({
   projects: number;
   comments: number;
 }) {
+  const locale = await getLocale();
+  const t = makeT(locale);
   // Siste kolonne slutter i dag. Ukene starter på mandag.
   const today = new Date();
   const end = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
@@ -48,7 +56,10 @@ export default function ActivityHeatmap({
   }
 
   const total = Object.values(byDay).reduce((a, b) => a + b, 0);
-  const summary = `${projects} ${projects === 1 ? "prosjekt" : "prosjekter"} og ${comments} ${comments === 1 ? "kommentar" : "kommentarer"} det siste året`;
+  const summary = t("{projects} og {comments} det siste året", {
+    projects: t(projects === 1 ? "1 prosjekt" : "{n} prosjekter", { n: projects }),
+    comments: t(comments === 1 ? "1 kommentar" : "{n} kommentarer", { n: comments }),
+  });
 
   return (
     <figure>
@@ -60,7 +71,7 @@ export default function ActivityHeatmap({
               const firstOfMonth = col.find((c) => c.date === 1 && !c.future);
               return (
                 <span key={i} className="whitespace-nowrap">
-                  {firstOfMonth ? MONTHS[firstOfMonth.month] : ""}
+                  {firstOfMonth ? MONTHS[locale][firstOfMonth.month] : ""}
                 </span>
               );
             })}
@@ -70,7 +81,7 @@ export default function ActivityHeatmap({
               col.map((cell) => (
                 <span
                   key={cell.key}
-                  title={cell.future ? undefined : `${cell.key}: ${cell.n === 0 ? "ingen aktivitet" : `aktivitet ${cell.n}`}`}
+                  title={cell.future ? undefined : `${cell.key}: ${cell.n === 0 ? t("ingen aktivitet") : t("aktivitet {n}", { n: cell.n })}`}
                   className={`size-[11px] rounded-[3px] ${cell.future ? "opacity-0" : FILL[level(cell.n)]}`}
                 />
               )),
@@ -79,13 +90,13 @@ export default function ActivityHeatmap({
         </div>
       </div>
       <figcaption className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-mist">
-        <span>{total === 0 ? "Ingen aktivitet det siste året ennå." : summary}</span>
+        <span>{total === 0 ? t("Ingen aktivitet det siste året ennå.") : summary}</span>
         <span className="flex items-center gap-1.5" aria-hidden="true">
-          Mindre
+          {t("Mindre")}
           {FILL.map((f) => (
             <span key={f} className={`size-[11px] rounded-[3px] ${f}`} />
           ))}
-          Mer
+          {t("Mer")}
         </span>
       </figcaption>
     </figure>

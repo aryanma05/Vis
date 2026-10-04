@@ -11,8 +11,9 @@ import { parsedCv, yearMonth, type ParsedCv } from "@/lib/validation";
 
 const { cvEducation, cvExperience, cvImport, cvSkill, profile, user } = schema;
 
-// Hver import koster penger hos språkmodell-leverandøren.
-export const MAX_CV_IMPORTS_PER_DAY = 10;
+// CV-ene leses lokalt og koster ingenting, men grensen hindrer at noen bruker
+// serveren til å lese tusenvis av PDF-er.
+export const MAX_CV_IMPORTS_PER_DAY = 20;
 
 /* -------------------------------------------------------------------------- */
 /*  Lesing                                                                    */

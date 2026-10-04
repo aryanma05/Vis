@@ -1,12 +1,43 @@
 import "server-only";
 
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db, schema } from "@/db";
+import { cancelAllSubscriptions } from "@/lib/billing";
+import { releaseCompaniesOf } from "@/lib/companies";
 import { getCv } from "@/lib/cv";
 import { deleteStoredFiles, storageKeyFromUrl } from "@/lib/storage";
 
-const { account, comment, cvDocument, follow, profile, project, projectImage, projectTag, reaction, tag, user } = schema;
+const {
+  account,
+  apiKey,
+  collection,
+  collectionItem,
+  comment,
+  company,
+  companyMember,
+  contactRequest,
+  cvDocument,
+  follow,
+  planGrant,
+  profile,
+  profileVisit,
+  project,
+  projectImage,
+  projectTag,
+  projectUpdate,
+  reaction,
+  subscription,
+  tag,
+  user,
+} = schema;
+
+// Kjøres før kontoen slettes: avslutt Pro hos Stripe og gi bedriftene en ny eier. Feiler
+// Stripe, stoppes slettingen, så ingen betaler for en konto som ikke finnes.
+export async function prepareAccountDeletion(userId: string) {
+  await cancelAllSubscriptions("user", userId);
+  await releaseCompaniesOf(userId);
+}
 
 // Har brukeren et passord (og ikke bare GitHub-innlogging)?
 export async function hasPassword(userId: string) {
@@ -47,7 +78,7 @@ export async function deleteAllFilesOfUser(userId: string) {
 // e-post vises som bekreftet med en gang.
 export async function getAccountInfo(userId: string) {
   const [row] = await db
-    .select({ email: user.email, emailVerified: user.emailVerified, createdAt: user.createdAt })
+    .select({ email: user.email, emailVerified: user.emailVerified, createdAt: user.createdAt, twoFactorEnabled: user.twoFactorEnabled })
     .from(user)
     .where(eq(user.id, userId))
     .limit(1);
@@ -157,6 +188,61 @@ export async function exportUserData(userId: string) {
       .where(eq(reaction.userId, userId)),
   ]);
 
+  const sender = alias(user, "sender");
+  const recipient = alias(user, "recipient");
+  const visited = alias(user, "visited");
+  const [contactsSent, contactsReceived, collections, collectionItems, updates, subscriptions, grants, companies, apiKeys, visits] = await Promise.all([
+    db
+      .select({ to: recipient.username, reason: contactRequest.reason, message: contactRequest.message, createdAt: contactRequest.createdAt })
+      .from(contactRequest)
+      .innerJoin(recipient, eq(recipient.id, contactRequest.recipientId))
+      .where(eq(contactRequest.senderId, userId))
+      .orderBy(asc(contactRequest.createdAt)),
+    db
+      .select({ from: sender.username, reason: contactRequest.reason, message: contactRequest.message, createdAt: contactRequest.createdAt })
+      .from(contactRequest)
+      .innerJoin(sender, eq(sender.id, contactRequest.senderId))
+      .where(eq(contactRequest.recipientId, userId))
+      .orderBy(asc(contactRequest.createdAt)),
+    db
+      .select({ id: collection.id, title: collection.title, description: collection.description, isPublic: collection.isPublic })
+      .from(collection)
+      .where(eq(collection.ownerId, userId)),
+    db
+      .select({ collectionId: collectionItem.collectionId, projectId: collectionItem.projectId, addedAt: collectionItem.addedAt })
+      .from(collectionItem)
+      .innerJoin(collection, eq(collection.id, collectionItem.collectionId))
+      .where(eq(collection.ownerId, userId)),
+    db
+      .select({ projectId: projectUpdate.projectId, body: projectUpdate.body, createdAt: projectUpdate.createdAt })
+      .from(projectUpdate)
+      .innerJoin(project, eq(project.id, projectUpdate.projectId))
+      .where(eq(project.ownerId, userId)),
+    db
+      .select({ plan: subscription.plan, status: subscription.status, interval: subscription.interval, currentPeriodEnd: subscription.currentPeriodEnd })
+      .from(subscription)
+      .where(and(eq(subscription.ownerType, "user"), eq(subscription.ownerId, userId))),
+    db
+      .select({ plan: planGrant.plan, until: planGrant.until })
+      .from(planGrant)
+      .where(and(eq(planGrant.ownerType, "user"), eq(planGrant.ownerId, userId))),
+    db
+      .select({ company: company.name, slug: company.slug, role: companyMember.role, since: companyMember.createdAt })
+      .from(companyMember)
+      .innerJoin(company, eq(company.id, companyMember.companyId))
+      .where(eq(companyMember.userId, userId)),
+    db
+      .select({ name: apiKey.name, prefix: apiKey.prefix, lastUsedAt: apiKey.lastUsedAt, revokedAt: apiKey.revokedAt, createdAt: apiKey.createdAt })
+      .from(apiKey)
+      .where(eq(apiKey.userId, userId)),
+    db
+      .select({ profile: visited.username, visits: profileVisit.visits, lastSeenAt: profileVisit.lastSeenAt })
+      .from(profileVisit)
+      .innerJoin(visited, eq(visited.id, profileVisit.profileUserId))
+      .where(eq(profileVisit.viewerId, userId))
+      .orderBy(desc(profileVisit.lastSeenAt)),
+  ]);
+
   return {
     exportedAt: new Date().toISOString(),
     account: { ...owner, loginMethods: accounts.map((a) => (a.provider === "credential" ? "e-post og passord" : a.provider)) },
@@ -172,5 +258,14 @@ export async function exportUserData(userId: string) {
     following: followingRows,
     followers: followerRows,
     reactions,
+    projectUpdates: updates,
+    collections: collections.map((c) => ({ ...c, projects: collectionItems.filter((i) => i.collectionId === c.id).map(({ projectId, addedAt }) => ({ projectId, addedAt })) })),
+    contactRequests: { sent: contactsSent, received: contactsReceived },
+    // Profiler du har besøkt mens du var innlogget (vises for Pro-eiere hvis du ikke har skjult deg).
+    profilesVisited: visits,
+    plan: { subscriptions, grants },
+    companies,
+    // Selve nøklene lagres ikke, bare starten av dem.
+    apiKeys,
   };
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useT } from "@/components/LocaleProvider";
 import { buttonClass, Spinner } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
 import { authClient } from "@/lib/auth-client";
@@ -39,6 +40,7 @@ export function OAuthButton({
   callbackURL?: string;
   label?: string;
 }) {
+  const t = useT();
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const name = provider === "google" ? "Google" : "GitHub";
@@ -60,9 +62,9 @@ export function OAuthButton({
     <div>
       <button type="button" onClick={onClick} disabled={pending} className={buttonClass({ variant: "secondary", className: "w-full" })}>
         {pending ? <Spinner /> : <ProviderIcon provider={provider} />}
-        {pending ? `Sender deg til ${name} …` : (label ?? `Fortsett med ${name}`)}
+        {pending ? t("Sender deg til {name} …", { name }) : (label ?? t("Fortsett med {name}", { name }))}
       </button>
-      {error && <FieldError>{error}</FieldError>}
+      {error && <FieldError>{t(error)}</FieldError>}
     </div>
   );
 }
@@ -76,13 +78,14 @@ export function SocialLogins({
   github,
   google,
   callbackURL,
-  divider = "eller med e-post",
+  divider,
 }: {
   github: boolean;
   google: boolean;
   callbackURL: string;
   divider?: string;
 }) {
+  const t = useT();
   if (!github && !google) return null;
   return (
     <div className="group-has-[[data-verify-step]]:hidden">
@@ -92,7 +95,7 @@ export function SocialLogins({
       </div>
       <div className="my-7 flex items-center gap-4 text-xs uppercase tracking-[0.18em] text-mist/60">
         <span className="h-px flex-1 bg-line" />
-        {divider}
+        {divider ?? t("eller med e-post")}
         <span className="h-px flex-1 bg-line" />
       </div>
     </div>

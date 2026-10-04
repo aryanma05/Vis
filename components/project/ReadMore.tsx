@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useT } from "@/components/LocaleProvider";
 import { ChevronDown, ChevronUp } from "lucide-react";
 
 const COLLAPSED = 520;
@@ -14,6 +15,7 @@ type State = "collapsed" | "expanding" | "expanded" | "short";
 // delen, eller når en lenke peker til en overskrift lenger ned.
 export default function ReadMore({ children, minutes }: { children: React.ReactNode; minutes: number }) {
   const id = useId();
+  const t = useT();
   const outer = useRef<HTMLDivElement>(null);
   const inner = useRef<HTMLDivElement>(null);
   const [state, setState] = useState<State>("collapsed");
@@ -114,13 +116,13 @@ export default function ReadMore({ children, minutes }: { children: React.ReactN
           >
             {state === "collapsed" ? (
               <>
-                Les mer
+                {t("Les mer")}
                 <span className="font-normal text-mist group-hover:text-ice/80">· {minutes} min</span>
                 <ChevronDown className="size-4 transition-transform duration-300 group-hover:translate-y-0.5" aria-hidden="true" />
               </>
             ) : (
               <>
-                Vis mindre
+                {t("Vis mindre")}
                 <ChevronUp className="size-4 transition-transform duration-300 group-hover:-translate-y-0.5" aria-hidden="true" />
               </>
             )}
