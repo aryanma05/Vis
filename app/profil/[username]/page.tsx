@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { CSSProperties } from "react";
-import { ArrowRight, ArrowUpRight, CalendarDays, Download, FileText, FolderPlus, MapPin, Printer } from "lucide-react";
+import { ArrowRight, ArrowUpRight, CalendarDays, Download, FileText, FolderPlus, MapPin, Paintbrush, Printer } from "lucide-react";
+import AchievementCelebration from "@/components/achievements/AchievementCelebration";
+import ProfileAchievements from "@/components/achievements/ProfileAchievements";
 import Avatar from "@/components/Avatar";
 import CvView from "@/components/cv/CvView";
 import CvPages from "@/components/CvPages";
@@ -11,11 +13,14 @@ import OnboardingChecklist from "@/components/OnboardingChecklist";
 import ActivityHeatmap from "@/components/profile/ActivityHeatmap";
 import { hostLabel, linkIcon } from "@/components/profile/LinkIcon";
 import ProfileActions from "@/components/profile/ProfileActions";
+import ProfileBanner from "@/components/profile/ProfileBanner";
+import Pet from "@/components/pet/Pet";
 import ProjectCard, { ProjectGrid } from "@/components/ProjectCard";
 import { ButtonLink } from "@/components/ui/button";
 import { compactNumber, EmptyState, Tag } from "@/components/ui/misc";
 import { Tabs } from "@/components/ui/tabs";
 import ViewTracker from "@/components/ViewTracker";
+import { syncAchievements } from "@/lib/achievements";
 import { getActivityByDay } from "@/lib/activity";
 import { ACCENTS, CV_TEMPLATE_LABELS, OPEN_TO_LABELS } from "@/lib/constants";
 import { countPublicCollections, listPublicCollections } from "@/lib/collections";
@@ -62,13 +67,14 @@ export default async function ProfilePage({ params, searchParams }: Props) {
   const tab = fane === "prosjekter" || fane === "cv" || fane === "samlinger" ? fane : "oversikt";
   const base = `/@${profile.username}`;
   const accent = ACCENTS[profile.accentColor ?? "is"];
-  const [activity, steps, collectionCount, collections, ownerPro, showBrand] = await Promise.all([
+  const [activity, steps, collectionCount, collections, ownerPro, showBrand, achievements] = await Promise.all([
     tab === "oversikt" ? getActivityByDay(profile.id) : null,
     profile.isOwner ? getOnboarding(profile.id, profile.username) : [],
     countPublicCollections(profile.id),
     tab === "samlinger" ? listPublicCollections(profile.id) : [],
     isPro(profile.id),
     tab === "cv" ? showsBranding(profile.id) : true,
+    syncAchievements(profile.id, { withProgress: profile.isOwner }),
   ]);
 
   const visibleProjects = profile.projects;
@@ -109,27 +115,29 @@ export default async function ProfilePage({ params, searchParams }: Props) {
       <ViewTracker kind="profile" id={profile.id} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
 
-      {/* Banner i profilens aksentfarge: lys, et svakt rutenett og sirkler. */}
+      {/* Banneret (valgt i redigeringen, ellers aksentfargen) og kjæledyret som sitter på kanten. */}
       <div className="mx-auto max-w-7xl px-5 pt-2 md:px-10 md:pt-8">
-        <div aria-hidden="true" className="glass-card relative h-40 overflow-hidden rounded-[28px] md:h-60">
-          <div
-            className="absolute inset-0"
-            style={{
-              background: `radial-gradient(70% 130% at 88% -10%, color-mix(in srgb, ${accent.color} 55%, transparent), transparent 70%), radial-gradient(55% 110% at 0% 110%, color-mix(in srgb, ${accent.color} 22%, transparent), transparent 70%)`,
-            }}
-          />
-          <div
-            className="absolute inset-0 [mask-image:radial-gradient(90%_120%_at_70%_0%,black,transparent_75%)]"
-            style={{
-              backgroundImage: `linear-gradient(color-mix(in srgb, var(--fg) 8%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--fg) 8%, transparent) 1px, transparent 1px)`,
-              backgroundSize: "44px 44px",
-            }}
-          />
-          <div className="absolute -bottom-28 right-[10%] size-72 rounded-full border md:size-96" style={{ borderColor: `color-mix(in srgb, ${accent.color} 45%, transparent)` }} />
-          <div className="absolute -bottom-44 right-[4%] size-[26rem] rounded-full border md:size-[34rem]" style={{ borderColor: `color-mix(in srgb, ${accent.color} 25%, transparent)` }} />
-          <span className="glass-rim" />
+        <div className="relative">
+          <div aria-hidden="true" className="glass-card relative h-40 overflow-hidden rounded-[28px] md:h-60">
+            <ProfileBanner banner={profile.banner} accent={accent.color} />
+            <span className="glass-rim" />
+          </div>
+          {profile.isOwner && (
+            <Link
+              href="/profil/rediger#utseende"
+              className="glass-dark absolute right-3 top-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition hover:bg-black/60"
+            >
+              <Paintbrush className="size-3.5" /> {t("Tilpass")}
+            </Link>
+          )}
+          {profile.pet && (
+            <div className="absolute -bottom-10 right-4 z-10 md:-bottom-12 md:right-10">
+              <Pet pet={profile.pet} owner={profile.name.split(" ")[0]} className="size-[92px] md:size-[118px]" />
+            </div>
+          )}
         </div>
       </div>
+      {profile.isOwner && <AchievementCelebration achievements={achievements} />}
 
       <div className="mx-auto grid max-w-7xl grid-cols-1 gap-10 px-5 md:px-10 lg:grid-cols-[340px_minmax(0,1fr)] xl:gap-14">
         {/* ------------------------------------------------------------------ */}
@@ -230,6 +238,8 @@ export default async function ProfilePage({ params, searchParams }: Props) {
               );
             })}
           </ul>
+
+          <ProfileAchievements achievements={achievements} isOwner={profile.isOwner} />
 
           {topTags.length > 0 && (
             <section className="mt-6">

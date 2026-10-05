@@ -5,10 +5,14 @@ import { and, asc, desc, eq, ilike, inArray, or, sql, type SQL } from "drizzle-o
 import { db, schema } from "@/db";
 import type { OpenTo, ProfileSection, SocialLink } from "@/db/schema";
 import { FIELDS, OPEN_TO, type AccentKey, type CvTemplate, type FieldKey } from "@/lib/constants";
+import { achievementTiers } from "@/lib/achievements";
 import { getCv } from "@/lib/cv";
 import { getCvDocument } from "@/lib/cv-document";
 import { getProjectsByOwner, publicProject } from "@/lib/projects";
+import { PET_ACCESSORIES, type BannerConfig, type PetConfig } from "@/lib/profile-style";
+import { UserFacingError } from "@/lib/result";
 import { getFollowCounts, isFollowing, personColumns, withFollowState, type PersonCard } from "@/lib/social";
+import { deleteStoredFiles, storageKeyFromUrl } from "@/lib/storage";
 import type { ProfileInput } from "@/lib/validation";
 import { siteHost } from "@/lib/site";
 import { outer } from "@/lib/sql";
@@ -34,6 +38,8 @@ const profileColumns = {
   openTo: profile.openTo,
   customSections: profile.customSections,
   accentColor: profile.accentColor,
+  banner: profile.banner,
+  pet: profile.pet,
   cvTemplate: profile.cvTemplate,
   contactEnabled: profile.contactEnabled,
 };
@@ -53,6 +59,8 @@ export const getProfileBase = cache(async (username: string) => {
     openTo: (row.openTo ?? []) as OpenTo[],
     customSections: (row.customSections ?? []) as ProfileSection[],
     accentColor: (row.accentColor ?? null) as AccentKey | null,
+    banner: (row.banner ?? null) as BannerConfig | null,
+    pet: (row.pet ?? null) as PetConfig | null,
     cvTemplate: (row.cvTemplate ?? "klassisk") as CvTemplate,
   };
 });
@@ -99,10 +107,29 @@ export async function getOwnProfile(userId: string) {
     openTo: (row.openTo ?? []) as OpenTo[],
     customSections: (row.customSections ?? []) as ProfileSection[],
     accentColor: (row.accentColor ?? null) as AccentKey | null,
+    banner: (row.banner ?? null) as BannerConfig | null,
+    pet: (row.pet ?? null) as PetConfig | null,
   };
 }
 
+// Et opplastet bannerbilde må ligge i brukerens egen mappe i fillagringen.
+export const isOwnBannerUrl = (userId: string, url: string) => Boolean(storageKeyFromUrl(url)?.includes(`banners/${userId}/`));
+
+const bannerImageKey = (banner: BannerConfig | null | undefined) => (banner?.type === "image" ? storageKeyFromUrl(banner.url) : null);
+
+async function checkPet(userId: string, pet: PetConfig | null | undefined) {
+  if (!pet) return;
+  const requires = (PET_ACCESSORIES[pet.accessory] as { requires?: { key: string; tier: number } }).requires;
+  if (requires && ((await achievementTiers(userId)).get(requires.key) ?? 0) < requires.tier) {
+    throw new UserFacingError(`${PET_ACCESSORIES[pet.accessory].label} er ikke låst opp ennå.`);
+  }
+}
+
 export async function updateProfile(userId: string, input: ProfileInput) {
+  if (input.banner?.type === "image" && !isOwnBannerUrl(userId, input.banner.url)) throw new UserFacingError("Last opp bannerbildet på nytt.");
+  await checkPet(userId, input.pet);
+  const [previous] = input.banner !== undefined ? await db.select({ banner: profile.banner }).from(profile).where(eq(profile.userId, userId)) : [];
+
   const fields = {
     headline: input.headline,
     bio: input.bio,
@@ -115,6 +142,9 @@ export async function updateProfile(userId: string, input: ProfileInput) {
     customSections: input.customSections,
     accentColor: input.accentColor,
     contactEnabled: input.contactEnabled,
+    // undefined = ikke med i skjemaet, da røres de ikke.
+    ...(input.banner !== undefined ? { banner: input.banner } : {}),
+    ...(input.pet !== undefined ? { pet: input.pet } : {}),
   };
 
   await db.transaction(async (tx) => {
@@ -124,6 +154,20 @@ export async function updateProfile(userId: string, input: ProfileInput) {
       .values({ userId, ...fields })
       .onConflictDoUpdate({ target: profile.userId, set: fields });
   });
+
+  // Et bannerbilde som er byttet ut, slettes.
+  const oldKey = bannerImageKey(previous?.banner);
+  if (oldKey && oldKey !== bannerImageKey(input.banner)) await deleteStoredFiles([oldKey]);
+}
+
+// Nytt bannerbilde: lagres med en gang (som profilbildet), og det forrige slettes.
+export async function setBannerImage(userId: string, url: string) {
+  const [previous] = await db.select({ banner: profile.banner }).from(profile).where(eq(profile.userId, userId));
+  const banner: BannerConfig = { type: "image", url, y: 50 };
+  await db.insert(profile).values({ userId, banner }).onConflictDoUpdate({ target: profile.userId, set: { banner } });
+  const oldKey = bannerImageKey(previous?.banner);
+  if (oldKey) await deleteStoredFiles([oldKey]);
+  return banner;
 }
 
 export async function setAvatar(userId: string, url: string | null) {

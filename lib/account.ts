@@ -30,6 +30,7 @@ const {
   subscription,
   tag,
   user,
+  userAchievement,
 } = schema;
 
 // Kjøres før kontoen slettes: avslutt Pro hos Stripe og gi bedriftene en ny eier. Feiler
@@ -54,6 +55,7 @@ export async function hasPassword(userId: string) {
 // fjernes her.
 export async function deleteAllFilesOfUser(userId: string) {
   const [owner] = await db.select({ image: user.image }).from(user).where(eq(user.id, userId)).limit(1);
+  const [own] = await db.select({ banner: profile.banner }).from(profile).where(eq(profile.userId, userId)).limit(1);
   const images = await db
     .select({ key: projectImage.storageKey })
     .from(projectImage)
@@ -67,6 +69,7 @@ export async function deleteAllFilesOfUser(userId: string) {
 
   const keys = [
     owner?.image ? storageKeyFromUrl(owner.image) : null,
+    own?.banner?.type === "image" ? storageKeyFromUrl(own.banner.url) : null,
     ...images.map((i) => i.key),
     cv?.fileKey,
     ...(cv?.pages.map((p) => p.key) ?? []),
@@ -115,6 +118,8 @@ export async function exportUserData(userId: string) {
       openTo: profile.openTo,
       customSections: profile.customSections,
       accentColor: profile.accentColor,
+      banner: profile.banner,
+      pet: profile.pet,
       cvTemplate: profile.cvTemplate,
       notificationPrefs: profile.notificationPrefs,
     })
@@ -267,5 +272,9 @@ export async function exportUserData(userId: string) {
     companies,
     // Selve nøklene lagres ikke, bare starten av dem.
     apiKeys,
+    achievements: await db
+      .select({ key: userAchievement.key, tier: userAchievement.tier, unlockedAt: userAchievement.unlockedAt })
+      .from(userAchievement)
+      .where(eq(userAchievement.userId, userId)),
   };
 }

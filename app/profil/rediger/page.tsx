@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { syncAchievements } from "@/lib/achievements";
 import { getOwnProfile, getOwnProfileFlags } from "@/lib/profiles";
 import { requireUser } from "@/lib/session";
 import { shownUsername } from "@/lib/username";
@@ -11,7 +12,7 @@ export const metadata: Metadata = { title: "Rediger profil", robots: { index: fa
 
 export default async function EditProfilePage() {
   const user = await requireUser();
-  const [profile, flags] = await Promise.all([getOwnProfile(user.id), getOwnProfileFlags(user.id)]);
+  const [profile, flags, achievements] = await Promise.all([getOwnProfile(user.id), getOwnProfileFlags(user.id), syncAchievements(user.id)]);
   if (!profile) notFound();
 
   return (
@@ -22,6 +23,7 @@ export default async function EditProfilePage() {
           image={profile.image}
           username={shownUsername(user)}
           visibleToCompanies={flags.visibleToCompanies}
+          achievementTiers={Object.fromEntries(achievements.map((a) => [a.key, a.tier]))}
           initial={{
             name: profile.name,
             headline: profile.headline ?? "",
@@ -35,6 +37,8 @@ export default async function EditProfilePage() {
             links: profile.links,
             customSections: profile.customSections,
             contactEnabled: profile.contactEnabled ?? false,
+            banner: profile.banner,
+            pet: profile.pet,
           }}
         />
         <div className="lg:max-w-[calc(100%-340px)]">
