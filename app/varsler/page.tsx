@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AtSign, Bell, Heart, Lightbulb, Mail, MessageCircle, Reply, Settings, Sparkles, Star, UserPlus } from "lucide-react";
+import { AtSign, Bell, Heart, Lightbulb, Mail, MessageCircle, Reply, Settings, Sparkles, Star, UserPlus, Users } from "lucide-react";
 import Avatar from "@/components/Avatar";
 import { EmptyState } from "@/components/ui/misc";
 import { Tabs } from "@/components/ui/tabs";
@@ -29,6 +29,8 @@ function describe(n: NotificationItem) {
         tone: "text-success",
         text: <>vil komme i kontakt{n.contactReason ? ` (${CONTACT_REASON_LABELS[n.contactReason].toLowerCase()})` : ""}</>,
       };
+    case "member":
+      return { Icon: Users, tone: "text-success", text: <>la deg til som medlem i <b className="font-semibold text-fg">{project}</b></> };
     case "featured":
       return { Icon: Sparkles, tone: "text-warn", text: <>valgte ut <b className="font-semibold text-fg">{project}</b>. Det vises nå på forsiden.</> };
     case "reaction": {

@@ -62,6 +62,11 @@ export default function ProjectCard({
                 <span className="size-1.5 rounded-full bg-[#ffd60a]" aria-hidden="true" /> {t("Utkast")}
               </span>
             )}
+            {project.progress === "in_progress" && (
+              <span className="glass-dark inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold">
+                <span className="size-1.5 rounded-full bg-[#ff9f0a]" aria-hidden="true" /> {t("Under arbeid")}
+              </span>
+            )}
             {project.removed && (
               <span className="glass-dark inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold">
                 <span className="size-1.5 rounded-full bg-[#ff453a]" aria-hidden="true" /> {t("Fjernet")}
@@ -99,9 +104,13 @@ export default function ProjectCard({
           </Link>
           <p className="mt-0.5 truncate text-[13px] text-mist">
             {showOwner ? (
-              <Link href={`/@${project.owner.username}`} className="transition hover:text-fg">
-                {project.owner.name}
-              </Link>
+              <>
+                <Link href={`/@${project.owner.username}`} className="transition hover:text-fg">
+                  {project.owner.name}
+                </Link>
+                {project.members.length > 0 &&
+                  ` ${t(project.members.length === 1 ? "og {name}" : "og {n} andre", { name: project.members[0].name, n: project.members.length })}`}
+              </>
             ) : (
               project.summary ?? project.tags.map((t) => t.name).slice(0, 3).join(" · ")
             )}

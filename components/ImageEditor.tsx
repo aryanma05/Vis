@@ -228,8 +228,21 @@ export default function ImageEditor({
     });
   }
 
+  const changed =
+    rotation !== 0 ||
+    flip ||
+    adjust.brightness !== 0 ||
+    adjust.contrast !== 0 ||
+    adjust.saturation !== 0 ||
+    rect.x !== 0 ||
+    rect.y !== 0 ||
+    rect.w !== 1 ||
+    rect.h !== 1;
+
   async function save() {
     if (!base) return;
+    // Ingen endringer: behold originalen som den er (ingen ny koding, ingen kvalitetstap).
+    if (!changed) return onCancel();
     setSaving(true);
     try {
       const sx = Math.round(rect.x * natural.w);
@@ -262,17 +275,6 @@ export default function ImageEditor({
       setSaving(false);
     }
   }
-
-  const changed =
-    rotation !== 0 ||
-    flip ||
-    adjust.brightness !== 0 ||
-    adjust.contrast !== 0 ||
-    adjust.saturation !== 0 ||
-    rect.x !== 0 ||
-    rect.y !== 0 ||
-    rect.w !== 1 ||
-    rect.h !== 1;
 
   return (
     <Dialog open onClose={onCancel} title="Rediger bildet" size="lg">
@@ -413,7 +415,7 @@ export default function ImageEditor({
         <Button variant="ghost" onClick={onCancel}>
           Avbryt
         </Button>
-        <Button onClick={save} loading={saving} disabled={!base || Boolean(error) || !changed}>
+        <Button onClick={save} loading={saving} disabled={!base || Boolean(error)}>
           Bruk
         </Button>
       </div>

@@ -2,7 +2,8 @@ import "server-only";
 
 import { and, asc, desc, eq, ilike, inArray, isNotNull, isNull, lt, ne, or, sql, type SQL } from "drizzle-orm";
 import { db, schema } from "@/db";
-import { FIELDS, PERIODS, type FieldKey, type PeriodKey } from "@/lib/constants";
+import { FIELDS, PERIODS, type FieldKey, type PeriodKey, type ProjectProgress } from "@/lib/constants";
+import { loadMembers, setProjectMembers, type ProjectMember } from "@/lib/project-members";
 import { captureScreenshots, MAX_SCREENSHOTS, normalizeProjectUrl } from "@/lib/screenshots";
 import { deleteStoredFiles, storeImage } from "@/lib/storage";
 import { tagSlug } from "@/lib/tag-names";
@@ -27,6 +28,7 @@ export const isUuid = (value: string) => UUID.test(value);
 export type ProjectOwner = { id: string; username: string; name: string; image: string | null; headline?: string | null };
 export type ProjectTag = { slug: string; name: string };
 export type ProjectImage = { id: string; url: string; alt: string | null };
+export type { ProjectMember };
 
 export type ProjectCard = {
   id: string;
@@ -35,7 +37,10 @@ export type ProjectCard = {
   coverImageUrl: string | null;
   tags: ProjectTag[];
   owner: ProjectOwner;
+  // Andre som har vært med på prosjektet (eieren er ikke med i listen).
+  members: ProjectMember[];
   status: "draft" | "published";
+  progress: ProjectProgress;
   projectDate: string | null;
   publishedAt: Date | null;
   createdAt: Date;
@@ -66,6 +71,7 @@ const cardColumns = {
   title: project.title,
   summary: project.summary,
   status: project.status,
+  progress: project.progress,
   projectDate: project.projectDate,
   publishedAt: project.publishedAt,
   createdAt: project.createdAt,
@@ -83,6 +89,7 @@ type CardRow = {
   title: string;
   summary: string | null;
   status: "draft" | "published";
+  progress: ProjectProgress;
   projectDate: string | null;
   publishedAt: Date | null;
   createdAt: Date;
@@ -149,17 +156,19 @@ async function countBy(table: typeof comment | typeof reaction, projectIds: stri
 
 async function toCards(rows: CardRow[]): Promise<ProjectCard[]> {
   const ids = rows.map((r) => r.id);
-  const [tags, covers, comments, reactions] = await Promise.all([
+  const [tags, covers, comments, reactions, members] = await Promise.all([
     loadTags(ids),
     loadCovers(ids),
     countBy(comment, ids),
     countBy(reaction, ids),
+    loadMembers(ids),
   ]);
   return rows.map((r) => ({
     id: r.id,
     title: r.title,
     summary: r.summary,
     status: r.status,
+    progress: r.progress,
     projectDate: r.projectDate,
     publishedAt: r.publishedAt,
     createdAt: r.createdAt,
@@ -171,6 +180,7 @@ async function toCards(rows: CardRow[]): Promise<ProjectCard[]> {
     commentCount: comments.get(r.id) ?? 0,
     reactionCount: reactions.get(r.id) ?? 0,
     owner: { id: r.ownerId, username: r.ownerUsername, name: r.ownerName, image: r.ownerImage },
+    members: members.get(r.id) ?? [],
   }));
 }
 
@@ -591,6 +601,7 @@ export async function createProject(
         role: input.role,
         projectDate: input.projectDate,
         status: input.status,
+        progress: input.progress ?? "completed",
         publishedAt: input.status === "published" ? new Date() : null,
         source: github ? "github" : "manual",
         githubRepoId: github?.repoId,
@@ -600,6 +611,7 @@ export async function createProject(
       .returning({ id: project.id });
 
     await setProjectTags(tx, created.id, input.tags);
+    if (input.members) await setProjectMembers(tx, created.id, ownerId, input.members);
     return created.id;
   });
 }
@@ -620,6 +632,7 @@ export async function updateProject(ownerId: string, projectId: string, input: P
         role: input.role,
         projectDate: input.projectDate,
         status: input.status,
+        progress: input.progress,
         // Beholder opprinnelig publiseringsdato hvis prosjektet publiseres på nytt.
         publishedAt:
           input.status === "published" ? (existing.publishedAt ?? new Date()) : existing.publishedAt,
@@ -627,6 +640,7 @@ export async function updateProject(ownerId: string, projectId: string, input: P
       .where(eq(project.id, projectId));
 
     await setProjectTags(tx, projectId, input.tags);
+    if (input.members) await setProjectMembers(tx, projectId, ownerId, input.members);
   });
 }
 

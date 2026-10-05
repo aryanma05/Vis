@@ -13,12 +13,14 @@ import {
 } from "@/app/actions/projects";
 import ImageEditor from "@/components/ImageEditor";
 import MarkdownEditor from "@/components/MarkdownEditor";
+import MemberPicker, { type MemberOption } from "@/components/MemberPicker";
 import TagInput from "@/components/TagInput";
 import MonthYear from "@/components/ui/month-year";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, inputClass, Section } from "@/components/ui/field";
 import { Segmented } from "@/components/ui/tabs";
 import { toast } from "@/components/ui/toast";
+import { MAX_PROJECT_MEMBERS, PROGRESS_LABELS, type ProjectProgress } from "@/lib/constants";
 import { prepareImage } from "@/lib/prepare-image";
 
 export type ProjectFormValues = {
@@ -32,6 +34,8 @@ export type ProjectFormValues = {
   role: string;
   projectDate: string;
   status: "draft" | "published";
+  progress: ProjectProgress;
+  members: MemberOption[];
 };
 
 type ExistingImage = { id: string; url: string; alt: string | null };
@@ -50,6 +54,8 @@ const empty: ProjectFormValues = {
   role: "",
   projectDate: "",
   status: "published",
+  progress: "completed",
+  members: [],
 };
 
 const CASE_TEMPLATE = `## Bakgrunn
@@ -87,9 +93,9 @@ function base64ToFile(base64: string, name: string, type: string) {
   return new File([bytes], name, { type });
 }
 
-// Bildene er hovedsaken: de kommer først og vises store. Limer man inn lenken til
+// Bildene kommer først, som et rutenett av små miniatyrer. Limer man inn lenken til
 // prosjektet, tar vi skjermbilder av siden og legger dem inn blant bildene, der de kan
-// fjernes, flyttes og beskjæres som alle andre. Deretter tittel, teknologier og historien.
+// fjernes, flyttes og beskjæres som alle andre. Deretter tittel, teknologier, historien og teamet.
 export default function ProjectForm({
   projectId,
   initial = empty,
@@ -97,6 +103,7 @@ export default function ProjectForm({
   maxImages,
   notice,
   tagSuggestions = [],
+  selfUsername,
 }: {
   projectId?: string;
   initial?: ProjectFormValues;
@@ -104,6 +111,8 @@ export default function ProjectForm({
   maxImages: number;
   notice?: string;
   tagSuggestions?: string[];
+  // Den innloggede, så du ikke foreslås som medlem i ditt eget prosjekt.
+  selfUsername?: string;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -120,6 +129,8 @@ export default function ProjectForm({
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [projectDate, setProjectDate] = useState(initial.projectDate);
   const [status, setStatus] = useState(initial.status);
+  const [projectProgress, setProjectProgress] = useState(initial.progress);
+  const [members, setMembers] = useState(initial.members);
   const [demoUrl, setDemoUrl] = useState(initial.demoUrl);
   const [capturing, setCapturing] = useState<{ host: string; count: number } | null>(null);
   const [editing, setEditing] = useState<{ key: string; url: string } | null>(null);
@@ -319,7 +330,6 @@ export default function ProjectForm({
   }
 
   const err = (name: string) => errors[name]?.[0];
-  const [cover, ...rest] = items;
 
   const dropHandlers = {
     onDragOver: (e: React.DragEvent) => {
@@ -413,95 +423,88 @@ export default function ProjectForm({
           )}
         </div>
 
-        {!cover && preparing === 0 && !capturing ? (
+        {items.length === 0 && preparing === 0 && !capturing ? (
           <button
             type="button"
             onClick={() => inputRef.current?.click()}
             {...dropHandlers}
-            className={`group flex h-64 w-full flex-col items-center justify-center rounded-[28px] px-6 text-center ring-inset transition md:h-80 ${
+            className={`group flex h-44 w-full flex-col items-center justify-center rounded-[24px] px-6 text-center ring-inset transition md:h-48 ${
               dragging ? "bg-sea/10 ring-2 ring-sea" : "bg-surface ring-1 ring-line hover:bg-surface-2"
             }`}
           >
-            <span className="flex size-14 items-center justify-center rounded-full glass-chip text-fg transition group-hover:scale-105">
-              <ImagePlus className="size-6" />
+            <span className="flex size-12 items-center justify-center rounded-full glass-chip text-fg transition group-hover:scale-105">
+              <ImagePlus className="size-5" />
             </span>
-            <span className="mt-4 text-xl font-semibold text-fg md:text-2xl">Legg til bilder</span>
-            <span className="mt-1.5 text-sm text-mist">Dra dem hit, klikk for å velge, eller lim inn med ⌘V · opptil {maxImages}</span>
+            <span className="mt-3 text-lg font-semibold text-fg">Legg til bilder</span>
+            <span className="mt-1 text-sm text-mist">Dra dem hit, klikk for å velge, eller lim inn med ⌘V · opptil {maxImages}</span>
           </button>
         ) : (
           <div className="space-y-3" {...dropHandlers}>
-            {cover ? (
-              <figure {...tileDrag(0)} className={`group relative overflow-hidden rounded-[28px] bg-surface ring-inset ${dragging ? "ring-2 ring-sea" : "ring-1 ring-line"}`}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={cover.url}
-                  alt=""
-                  onClick={() => setEditing({ key: cover.key, url: cover.url })}
-                  className="aspect-[16/9] w-full cursor-pointer object-cover"
-                />
-                <span className="glass-dark absolute left-4 top-4 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium">
-                  <Star className="size-3.5" /> Forsidebilde
-                </span>
-                <div className="absolute right-4 top-4 flex gap-2">
-                  <OverlayButton onClick={() => setEditing({ key: cover.key, url: cover.url })} label="Rediger" icon={<SlidersHorizontal className="size-3.5" />} />
-                  {rest.length > 0 && <OverlayButton onClick={() => move(0, 1)} label="Flytt bakover" icon={<ArrowRight className="size-3.5" />} />}
-                  <OverlayButton onClick={() => remove(0)} label="Fjern bildet" icon={<X className="size-3.5" />} danger />
-                </div>
-              </figure>
-            ) : (
-              <div className="skeleton flex aspect-[16/9] w-full items-center justify-center rounded-[28px] p-5">
-                {capturing && (
-                  <span className="glass inline-flex items-center gap-2.5 rounded-full px-4 py-2 text-sm font-medium text-fg">
-                    <Camera className="size-4 animate-pulse" /> Tar skjermbilder av {capturing.host} …
-                  </span>
-                )}
-              </div>
-            )}
-
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-              {rest.map((item, i) => {
-                const index = i + 1;
-                return (
-                  <figure
-                    key={item.key}
-                    {...tileDrag(index)}
-                    className={`glass-card group relative overflow-hidden rounded-[20px] ${dragIndex === index ? "opacity-40" : ""}`}
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={item.url}
-                      alt=""
-                      onClick={() => setEditing({ key: item.key, url: item.url })}
-                      className="aspect-[4/3] w-full cursor-pointer object-cover"
-                    />
+            <div
+              className={`grid grid-cols-2 gap-3 rounded-[22px] transition sm:grid-cols-3 lg:grid-cols-4 ${
+                dragging ? "outline-2 outline-offset-4 outline-sea outline-dashed" : ""
+              }`}
+            >
+              {items.map((item, index) => (
+                <figure
+                  key={item.key}
+                  {...tileDrag(index)}
+                  className={`glass-card group relative overflow-hidden rounded-[18px] ${index === 0 ? "ring-2 ring-sea" : ""} ${
+                    dragIndex === index ? "opacity-40" : ""
+                  }`}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={item.url}
+                    alt=""
+                    onClick={() => setEditing({ key: item.key, url: item.url })}
+                    className="aspect-[16/10] w-full cursor-pointer object-cover"
+                  />
+                  {index === 0 ? (
+                    <span className="glass-dark absolute left-2 top-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium">
+                      <Star className="size-3" /> Forside
+                    </span>
+                  ) : (
                     <span className="glass-dark absolute left-2 top-2 cursor-grab rounded-full p-1.5 opacity-0 transition group-hover:opacity-100" aria-hidden="true">
                       <GripVertical className="size-3.5" />
                     </span>
-                    <div className="absolute inset-x-2 bottom-2 flex items-center justify-between gap-1">
+                  )}
+                  <div className="absolute inset-x-2 bottom-2 flex items-center justify-between gap-1">
+                    {index > 0 ? (
                       <OverlayButton onClick={() => move(index, 0)} label="Gjør til forsidebilde" icon={<Star className="size-3.5" />} />
-                      <div className="flex gap-1">
-                        <OverlayButton onClick={() => setEditing({ key: item.key, url: item.url })} label="Rediger" icon={<SlidersHorizontal className="size-3.5" />} />
-                        <OverlayButton onClick={() => move(index, index - 1)} label="Flytt fremover" icon={<ArrowLeft className="size-3.5" />} />
-                        {index < items.length - 1 && <OverlayButton onClick={() => move(index, index + 1)} label="Flytt bakover" icon={<ArrowRight className="size-3.5" />} />}
-                        <OverlayButton onClick={() => remove(index)} label="Fjern bildet" icon={<X className="size-3.5" />} danger />
-                      </div>
+                    ) : (
+                      <span />
+                    )}
+                    <div className="flex gap-1">
+                      {/* På mobil redigerer man ved å trykke på bildet, så knappene får plass. */}
+                      <OverlayButton
+                        onClick={() => setEditing({ key: item.key, url: item.url })}
+                        label="Rediger"
+                        icon={<SlidersHorizontal className="size-3.5" />}
+                        className="max-sm:hidden"
+                      />
+                      {index > 0 && <OverlayButton onClick={() => move(index, index - 1)} label="Flytt fremover" icon={<ArrowLeft className="size-3.5" />} />}
+                      {index < items.length - 1 && <OverlayButton onClick={() => move(index, index + 1)} label="Flytt bakover" icon={<ArrowRight className="size-3.5" />} />}
+                      <OverlayButton onClick={() => remove(index)} label="Fjern bildet" icon={<X className="size-3.5" />} danger />
                     </div>
-                  </figure>
-                );
-              })}
+                  </div>
+                </figure>
+              ))}
 
-              {Array.from({ length: Math.max(0, preparing + (capturing?.count ?? 0) - (cover ? 0 : 1)) }, (_, i) => (
-                <div key={`klargjor-${i}`} className="skeleton aspect-[4/3] rounded-[20px]" />
+              {Array.from({ length: preparing + (capturing?.count ?? 0) }, (_, i) => (
+                <div key={`klargjor-${i}`} className="skeleton flex aspect-[16/10] items-center justify-center rounded-[18px]">
+                  {capturing && <Camera className="size-5 animate-pulse text-mist" aria-hidden="true" />}
+                </div>
               ))}
 
               {room > 0 && (
                 <button
                   type="button"
                   onClick={() => inputRef.current?.click()}
-                  className="flex aspect-[4/3] flex-col items-center justify-center rounded-[20px] bg-fill text-mist transition hover:bg-fill-2 hover:text-fg"
+                  className="flex aspect-[16/10] flex-col items-center justify-center rounded-[18px] bg-fill text-mist transition hover:bg-fill-2 hover:text-fg"
                 >
-                  <Plus className="size-6" />
-                  <span className="mt-1.5 text-sm">Legg til bilder</span>
+                  <Plus className="size-5" />
+                  <span className="mt-1 text-sm">Legg til bilder</span>
                 </button>
               )}
             </div>
@@ -572,17 +575,35 @@ export default function ProjectForm({
 
       <Section title="Detaljer" description="Alt er valgfritt, men kode og rolle gjør prosjektet mer troverdig.">
         <div className="grid gap-5 md:grid-cols-2">
-          <Field label="Din rolle" optional hint="F.eks. «Design og frontend» eller «Alt, alene»." error={err("role")}>
-            <input name="role" defaultValue={initial.role} maxLength={80} placeholder="Fullstack" className={inputClass} />
-          </Field>
+          <div>
+            <span className="mb-2 block text-sm font-medium text-fg">Er prosjektet ferdig?</span>
+            <input type="hidden" name="progress" value={projectProgress} />
+            <Segmented
+              label="Status"
+              value={projectProgress}
+              onChange={setProjectProgress}
+              options={(Object.keys(PROGRESS_LABELS) as ProjectProgress[]).map((key) => ({
+                value: key,
+                label: (
+                  <span className="inline-flex items-center gap-2">
+                    <span className={`size-1.5 rounded-full ${key === "completed" ? "bg-success" : "bg-warn"}`} aria-hidden="true" />
+                    {PROGRESS_LABELS[key]}
+                  </span>
+                ),
+              }))}
+            />
+          </div>
           <div>
             <span className="mb-2 block text-sm font-medium text-fg">
-              Når ble det laget? <span className="font-normal text-mist/60">valgfritt</span>
+              {projectProgress === "completed" ? "Når ble det laget?" : "Når startet du?"} <span className="font-normal text-mist/60">valgfritt</span>
             </span>
             <MonthYear label="Dato" value={projectDate} onChange={setProjectDate} />
             <input type="hidden" name="projectDate" value={projectDate} />
             {err("projectDate") && <FieldError>{err("projectDate")}</FieldError>}
           </div>
+          <Field label="Din rolle" optional hint="F.eks. «Design og frontend» eller «Alt, alene»." error={err("role")}>
+            <input name="role" defaultValue={initial.role} maxLength={80} placeholder="Fullstack" className={inputClass} />
+          </Field>
           <Field label="Kode" optional hint="GitHub, GitLab eller lignende." error={err("repoUrl")}>
             <input name="repoUrl" inputMode="url" defaultValue={initial.repoUrl} placeholder="https://github.com/…" className={inputClass} />
           </Field>
@@ -590,6 +611,17 @@ export default function ProjectForm({
             <input name="videoUrl" inputMode="url" defaultValue={initial.videoUrl} placeholder="https://www.youtube.com/watch?v=…" className={inputClass} />
           </Field>
         </div>
+      </Section>
+
+      <Section title="Teamet" description="Laget du det sammen med andre? Legg dem til, så ser alle hvem som var med.">
+        <MemberPicker name="members" value={members} onChange={setMembers} exclude={selfUsername} max={MAX_PROJECT_MEMBERS} />
+        {err("members") ? (
+          <FieldError>{err("members")}</FieldError>
+        ) : (
+          <p className="mt-1.5 text-[13px] leading-5 text-mist">
+            {members.length === 0 ? "Bare deg foreløpig." : `Du og ${members.length === 1 ? "én til" : `${members.length} andre`}.`} De får et varsel når prosjektet er publisert, og kan fjerne seg selv.
+          </p>
+        )}
       </Section>
 
       {error && (
@@ -623,14 +655,26 @@ export default function ProjectForm({
   );
 }
 
-function OverlayButton({ onClick, label, icon, danger }: { onClick: () => void; label: string; icon: React.ReactNode; danger?: boolean }) {
+function OverlayButton({
+  onClick,
+  label,
+  icon,
+  danger,
+  className = "",
+}: {
+  onClick: () => void;
+  label: string;
+  icon: React.ReactNode;
+  danger?: boolean;
+  className?: string;
+}) {
   return (
     <button
       type="button"
       onClick={onClick}
       aria-label={label}
       title={label}
-      className={`glass-dark flex size-8 items-center justify-center rounded-full transition active:scale-90 ${danger ? "hover:bg-danger" : "hover:bg-black/70"}`}
+      className={`glass-dark flex size-8 items-center justify-center rounded-full transition active:scale-90 ${danger ? "hover:bg-danger" : "hover:bg-black/70"} ${className}`}
     >
       {icon}
     </button>

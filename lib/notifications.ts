@@ -94,8 +94,8 @@ export async function emailNotification(input: NotifyInput & { excerpt?: string 
       .limit(1);
     if (!row || !row.emailVerified) return;
     const prefs = resolvePrefs(row.prefs);
-    // «Utvalgt» skjer sjelden og er alltid gode nyheter, så den har ikke egen innstilling.
-    if (input.type !== "featured" && !prefs[input.type as keyof NotificationPrefs]) return;
+    // «Utvalgt» og «lagt til i et prosjekt» skjer sjelden og har ikke egne innstillinger.
+    if (input.type !== "featured" && input.type !== "member" && !prefs[input.type as keyof NotificationPrefs]) return;
 
     const title = row.projectTitle ? `«${row.projectTitle}»` : "prosjektet ditt";
     const commentPath = input.projectId ? `${projectPath(input.projectId)}#kommentarer` : "/varsler";
@@ -104,6 +104,12 @@ export async function emailNotification(input: NotifyInput & { excerpt?: string 
       reply: { subject: `${row.actorName} svarte deg`, intro: `${row.actorName} svarte på kommentaren din på ${title}.`, button: "Se svaret", path: commentPath },
       mention: { subject: `${row.actorName} nevnte deg`, intro: `${row.actorName} nevnte deg i en kommentar på ${title}.`, button: "Se kommentaren", path: commentPath },
       follow: { subject: `${row.actorName} følger deg nå`, intro: `${row.actorName} (@${row.actorUsername}) begynte å følge deg på Vis.`, button: "Se profilen", path: profilePath(row.actorUsername) },
+      member: {
+        subject: `${row.actorName} la deg til i ${title}`,
+        intro: `${row.actorName} (@${row.actorUsername}) la deg til som medlem i ${title} på Vis. Prosjektet vises nå med deg som en del av teamet. Vil du ikke stå oppført, kan du fjerne deg selv på prosjektsiden.`,
+        button: "Se prosjektet",
+        path: input.projectId ? projectPath(input.projectId) : "/",
+      },
       featured: {
         subject: `${title} er valgt ut på Vis`,
         intro: `${title} er valgt ut av redaksjonen og vises nå øverst på forsiden og i Utforsk. Gratulerer! Del det gjerne videre.`,

@@ -9,6 +9,7 @@ import {
   JOB_TYPE_LABELS,
   OPEN_TO_LABELS,
   PERIODS,
+  PROGRESS_LABELS,
   REACTION_LABELS,
   REMOTE_LABELS,
 } from "@/lib/constants";
@@ -53,6 +54,7 @@ function keysInLists() {
   return [
     ...Object.values(OPEN_TO_LABELS),
     ...Object.values(REACTION_LABELS),
+    ...Object.values(PROGRESS_LABELS),
     ...Object.values(CONTACT_REASON_LABELS),
     ...Object.values(JOB_TYPE_LABELS),
     ...Object.values(REMOTE_LABELS),

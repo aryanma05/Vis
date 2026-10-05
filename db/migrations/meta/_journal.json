@@ -57,6 +57,13 @@
       "when": 1791070634252,
       "tag": "0007_utviklere",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791212236418,
+      "tag": "0008_prosjektmedlemmer",
+      "breakpoints": true
     }
   ]
 }

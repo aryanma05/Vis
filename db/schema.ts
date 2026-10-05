@@ -21,6 +21,7 @@ import {
 import {
   CONTACT_REASONS,
   type CvTemplate,
+  PROJECT_PROGRESS,
   type OpenTo,
   REACTION_TYPES,
   type ReactionType,
@@ -220,6 +221,8 @@ export const profile = pgTable("profile", {
 
 export const projectStatus = pgEnum("project_status", ["draft", "published"]);
 export const projectSource = pgEnum("project_source", ["manual", "github"]);
+// Om prosjektet er ferdig eller fortsatt under arbeid.
+export const projectProgress = pgEnum("project_progress", PROJECT_PROGRESS);
 
 export const project = pgTable(
   "project",
@@ -242,6 +245,7 @@ export const project = pgTable(
     // "YYYY-MM" eller "YYYY".
     projectDate: varchar("project_date", { length: 7 }),
     status: projectStatus("status").notNull().default("published"),
+    progress: projectProgress("progress").notNull().default("completed"),
     // Festet øverst på profilen (maks seks).
     pinned: boolean("pinned").notNull().default(false),
     viewCount: integer("view_count").notNull().default(0),
@@ -286,6 +290,25 @@ export const projectImage = pgTable(
     createdAt: createdAt(),
   },
   (t) => [index("project_image_project_idx").on(t.projectId, t.position)],
+);
+
+// Andre som har vært med på prosjektet. Eieren legger dem til; de kan fjerne seg selv.
+export const projectMember = pgTable(
+  "project_member",
+  {
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => project.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    position: integer("position").notNull().default(0),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.projectId, t.userId] }),
+    index("project_member_user_idx").on(t.userId),
+  ],
 );
 
 export const tag = pgTable("tag", {
@@ -455,6 +478,7 @@ export const notificationType = pgEnum("notification_type", [
   "reaction",
   "contact",
   "featured",
+  "member",
 ]);
 
 export const notification = pgTable(

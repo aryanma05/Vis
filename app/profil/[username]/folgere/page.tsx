@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import FollowList from "@/components/profile/FollowList";
 import { getProfileBase } from "@/lib/profiles";
 import { getCurrentUser } from "@/lib/session";
-import { getFollowCounts, listFollowers } from "@/lib/social";
+import { getFollowCounts, listFollowers, listFollowing } from "@/lib/social";
 
 type Props = { params: Promise<{ username: string }> };
 
@@ -17,6 +17,20 @@ export default async function FollowersPage({ params }: Props) {
   const profile = await getProfileBase(decodeURIComponent(username));
   if (!profile) notFound();
   const viewer = await getCurrentUser();
-  const [people, counts] = await Promise.all([listFollowers(profile.id, viewer?.id), getFollowCounts(profile.id)]);
-  return <FollowList name={profile.name} username={profile.username} mode="folgere" people={people} viewerId={viewer?.id} counts={counts} />;
+  const [followers, following, counts] = await Promise.all([
+    listFollowers(profile.id, viewer?.id),
+    listFollowing(profile.id, viewer?.id),
+    getFollowCounts(profile.id),
+  ]);
+  return (
+    <FollowList
+      name={profile.name}
+      username={profile.username}
+      mode="folgere"
+      followers={followers}
+      following={following}
+      viewerId={viewer?.id}
+      counts={counts}
+    />
+  );
 }

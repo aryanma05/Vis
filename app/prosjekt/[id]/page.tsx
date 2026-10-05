@@ -16,6 +16,7 @@ import ReactionBar from "@/components/project/ReactionBar";
 import ReadMore from "@/components/project/ReadMore";
 import VideoEmbed from "@/components/project/VideoEmbed";
 import FollowButton from "@/components/social/FollowButton";
+import LeaveProject from "@/components/project/LeaveProject";
 import ProjectUpdates from "@/components/project/ProjectUpdates";
 import SaveToCollection from "@/components/project/SaveToCollection";
 import ShareMenu from "@/components/social/ShareMenu";
@@ -24,6 +25,7 @@ import { compactNumber, Tag } from "@/components/ui/misc";
 import ViewTracker from "@/components/ViewTracker";
 import { isAdmin } from "@/lib/admin";
 import { countComments } from "@/lib/comments";
+import { PROGRESS_LABELS } from "@/lib/constants";
 import { formatYearMonth, timeAgo } from "@/lib/format";
 import { projectRepoName } from "@/lib/github";
 import { listProjectUpdates } from "@/lib/project-updates";
@@ -81,6 +83,8 @@ export default async function ProjectPage({ params }: Props) {
   ]);
 
   const date = formatYearMonth(project.projectDate, locale);
+  const isMember = Boolean(viewer && project.members.some((m) => m.id === viewer.id));
+  const inProgress = project.progress === "in_progress";
   const repoName = projectRepoName(project);
   const published = project.status === "published" && !project.removed;
   const jsonLd = {
@@ -94,6 +98,9 @@ export default async function ProjectPage({ params }: Props) {
     datePublished: project.publishedAt?.toISOString(),
     keywords: project.tags.map((tag) => tag.name).join(", ") || undefined,
     author: { "@type": "Person", name: project.owner.name, url: `${siteUrl()}/@${project.owner.username}` },
+    contributor: project.members.length
+      ? project.members.map((m) => ({ "@type": "Person", name: m.name, url: `${siteUrl()}/@${m.username}` }))
+      : undefined,
   };
 
   return (
@@ -126,19 +133,42 @@ export default async function ProjectPage({ params }: Props) {
 
         {/* Toppen: hvem, tittel, kort om, reaksjoner. */}
         <header>
-          <Link href={`/@${project.owner.username}`} className="group inline-flex items-center gap-2.5 text-sm text-mist transition hover:text-fg">
-            <Avatar name={project.owner.name} image={project.owner.image} size={26} />
-            <span className="font-medium text-fg/90 group-hover:text-fg">{project.owner.name}</span>
+          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm text-mist">
+            <Link href={`/@${project.owner.username}`} className="group inline-flex items-center gap-2.5 transition hover:text-fg">
+              <Avatar name={project.owner.name} image={project.owner.image} size={26} />
+              <span className="font-medium text-fg/90 group-hover:text-fg">{project.owner.name}</span>
+            </Link>
+            {project.members.length > 0 && (
+              <a href="#teamet" className="group inline-flex items-center gap-2 transition hover:text-fg">
+                <span className="flex -space-x-2" aria-hidden="true">
+                  {project.members.slice(0, 3).map((m) => (
+                    <Avatar key={m.id} name={m.name} image={m.image} size={22} className="ring-2 ring-ink" />
+                  ))}
+                </span>
+                <span className="text-fg/90 group-hover:text-fg">
+                  {t(project.members.length === 1 ? "og {name}" : "og {n} andre", { name: project.members[0].name, n: project.members.length })}
+                </span>
+              </a>
+            )}
             {project.publishedAt && (
               <time dateTime={project.publishedAt.toISOString()} suppressHydrationWarning>
                 · {timeAgo(project.publishedAt, locale)}
               </time>
             )}
-          </Link>
-          {project.featured && (
-            <p className="mt-4 inline-flex items-center gap-1.5 rounded-full glass-chip px-3 py-1 text-xs font-medium text-fg">
-              <Sparkles className="size-3.5 text-warn" aria-hidden="true" /> {t("Utvalgt av redaksjonen")}
-            </p>
+          </div>
+          {(project.featured || inProgress) && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {project.featured && (
+                <p className="inline-flex items-center gap-1.5 rounded-full glass-chip px-3 py-1 text-xs font-medium text-fg">
+                  <Sparkles className="size-3.5 text-warn" aria-hidden="true" /> {t("Utvalgt av redaksjonen")}
+                </p>
+              )}
+              {inProgress && (
+                <p className="inline-flex items-center gap-2 rounded-full glass-chip px-3 py-1 text-xs font-medium text-fg">
+                  <span className="size-1.5 animate-pulse rounded-full bg-warn" aria-hidden="true" /> {t("Under arbeid")}
+                </p>
+              )}
+            </div>
           )}
           <h1 className="mt-4 max-w-5xl display text-[clamp(2.25rem,5vw,4rem)]">{project.title}</h1>
           {project.summary && <p className="mt-4 max-w-3xl text-xl leading-8 text-mist md:text-[22px] md:leading-9">{project.summary}</p>}
@@ -244,7 +274,7 @@ export default async function ProjectPage({ params }: Props) {
 
           {/* Repo-panelet gjør kolonnen høy, da blir den ikke stående fast (bunnen ville vært utenfor skjermen). */}
           <aside className={`space-y-6 lg:self-start ${repoName ? "" : "lg:sticky lg:top-8"}`}>
-            <section className="rounded-[22px] glass-card p-5">
+            <section id="teamet" className="scroll-mt-24 rounded-[22px] glass-card p-5">
               <p className="caption">{t("Laget av")}</p>
               <div className="mt-4 flex items-center gap-3">
                 <Link href={`/@${project.owner.username}`} className="shrink-0">
@@ -265,9 +295,39 @@ export default async function ProjectPage({ params }: Props) {
                   <UserRound className="size-4" /> {t("Profil")}
                 </ButtonLink>
               </div>
+
+              {project.members.length > 0 && (
+                <div className="mt-5 border-t border-line pt-4">
+                  <p className="caption">{t("Sammen med")}</p>
+                  <ul className="mt-3 space-y-3">
+                    {project.members.map((m) => (
+                      <li key={m.id}>
+                        <Link href={`/@${m.username}`} className="group flex items-center gap-3">
+                          <Avatar name={m.name} image={m.image} size={36} />
+                          <span className="min-w-0">
+                            <span className="block truncate text-sm font-semibold text-fg underline-offset-4 group-hover:underline">{m.name}</span>
+                            <span className="block truncate text-[13px] text-mist">{m.headline ?? `@${m.username}`}</span>
+                          </span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                  {isMember && (
+                    <div className="mt-3">
+                      <LeaveProject projectId={project.id} owner={project.owner.name} />
+                    </div>
+                  )}
+                </div>
+              )}
             </section>
 
             <dl className="space-y-4 rounded-[22px] glass-card p-5 text-sm">
+              <div>
+                <dt className="caption">{t("Status")}</dt>
+                <dd className="mt-1.5 flex items-center gap-2 text-fg">
+                  <span className={`size-2 rounded-full ${inProgress ? "bg-warn" : "bg-success"}`} aria-hidden="true" /> {t(PROGRESS_LABELS[project.progress])}
+                </dd>
+              </div>
               {project.role && (
                 <div>
                   <dt className="caption">{t("Rolle")}</dt>
@@ -276,7 +336,7 @@ export default async function ProjectPage({ params }: Props) {
               )}
               {date && (
                 <div>
-                  <dt className="caption">{t("Laget")}</dt>
+                  <dt className="caption">{t(inProgress ? "Startet" : "Laget")}</dt>
                   <dd className="mt-1.5 flex items-center gap-2 text-fg">
                     <CalendarDays className="size-4 text-mist" aria-hidden="true" /> {date}
                   </dd>

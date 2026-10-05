@@ -19,6 +19,17 @@ export const REACTION_LABELS: Record<ReactionType, string> = {
   inspiring: "Inspirerende",
 };
 
+// Om et prosjekt er ferdig eller fortsatt under arbeid.
+export const PROJECT_PROGRESS = ["completed", "in_progress"] as const;
+export type ProjectProgress = (typeof PROJECT_PROGRESS)[number];
+export const PROGRESS_LABELS: Record<ProjectProgress, string> = {
+  completed: "Fullført",
+  in_progress: "Under arbeid",
+};
+
+// Andre enn eieren som kan stå oppført på et prosjekt.
+export const MAX_PROJECT_MEMBERS = 20;
+
 export const REPORT_REASONS = ["spam", "offensive", "harassment", "copyright", "impersonation", "other"] as const;
 export type ReportReason = (typeof REPORT_REASONS)[number];
 export const REPORT_REASON_LABELS: Record<ReportReason, string> = {

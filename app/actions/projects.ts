@@ -8,6 +8,7 @@ import {
   createProject,
   deleteProject,
   deleteProjectImage,
+  isUuid,
   reorderProjectImages,
   setProjectPinned,
   setProjectStatus,
@@ -15,6 +16,7 @@ import {
   updateProject,
 } from "@/lib/projects";
 import { fail, UserFacingError, type ActionResult } from "@/lib/result";
+import { leaveProject, notifyProjectMembers } from "@/lib/project-members";
 import { addProjectUpdate, deleteProjectUpdate } from "@/lib/project-updates";
 import { enforce } from "@/lib/rate-limit";
 import { capturePage, MAX_SCREENSHOTS } from "@/lib/screenshots";
@@ -33,6 +35,8 @@ function readProjectForm(formData: FormData) {
     projectDate: formData.get("projectDate"),
     tags: formData.getAll("tags").length > 1 ? formData.getAll("tags") : formData.get("tags"),
     status: formData.get("status") ?? undefined,
+    progress: formData.get("progress"),
+    members: formData.get("members"),
   });
 }
 
@@ -43,7 +47,8 @@ function revalidateProject(projectId: string, username: string) {
 }
 
 // Skjemafelter: title, summary, description, repoUrl, demoUrl, projectDate,
-// tags (kommaseparert eller flere felt), status ("draft" | "published"), images (filer, valgfritt).
+// tags (kommaseparert eller flere felt), status ("draft" | "published"),
+// progress ("completed" | "in_progress"), members (kommaseparerte brukernavn), images (filer, valgfritt).
 export async function createProjectAction(formData: FormData): Promise<ActionResult<{ id: string }>> {
   const parsed = readProjectForm(formData);
   if (!parsed.success) return fail("Sjekk feltene i skjemaet.", fieldErrors(parsed.error));
@@ -62,6 +67,7 @@ export async function createProjectAction(formData: FormData): Promise<ActionRes
       }
     }
 
+    await notifyProjectMembers(user.id, id);
     revalidateProject(id, user.username);
     return { id };
   });
@@ -74,6 +80,7 @@ export async function updateProjectAction(projectId: string, formData: FormData)
   return runAction(async () => {
     const user = await requireUserForAction();
     await updateProject(user.id, projectId, parsed.data);
+    await notifyProjectMembers(user.id, projectId);
     revalidateProject(projectId, user.username);
     return { id: projectId };
   });
@@ -84,8 +91,19 @@ export async function setProjectStatusAction(projectId: string, status: "draft" 
     const user = await requireUserForAction();
     if (status !== "draft" && status !== "published") throw new Error("Ugyldig status");
     await setProjectStatus(user.id, projectId, status);
+    await notifyProjectMembers(user.id, projectId);
     revalidateProject(projectId, user.username);
   });
+}
+
+// Et medlem fjerner seg selv fra prosjektet.
+export async function leaveProjectAction(projectId: string) {
+  return runAction(async () => {
+    const user = await requireUserForAction();
+    if (!isUuid(String(projectId))) throw new UserFacingError("Fant ikke prosjektet.");
+    await leaveProject(user.id, String(projectId));
+    revalidatePath(`/prosjekt/${projectId}`);
+  }, "project.leave");
 }
 
 export async function setProjectPinnedAction(projectId: string, pinned: boolean) {

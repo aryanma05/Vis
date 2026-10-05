@@ -23,7 +23,7 @@ export default async function JobsPage({ searchParams }: Props) {
   const t = await getT();
   const jobs = await listOpenJobs({ q: q.slice(0, 100), type: type ?? null, remote: remote ?? null });
   const chip = (href: string, label: string, active: boolean) => (
-    <Link href={href} className={`rounded-full px-3.5 py-1.5 text-sm font-medium transition ${active ? "bg-primary text-on-primary" : "glass-chip text-fg hover:bg-fill-2"}`}>
+    <Link key={href} href={href} className={`rounded-full px-3.5 py-1.5 text-sm font-medium transition ${active ? "bg-primary text-on-primary" : "glass-chip text-fg hover:bg-fill-2"}`}>
       {label}
     </Link>
   );

@@ -56,7 +56,7 @@ export default async function NewProjectPage({ searchParams }: { searchParams: P
               suggestedLogin={githubLoginFromLinks(ownProfile?.links ?? [])}
             />
           )}
-          {source === "manuell" && <ProjectForm maxImages={MAX_PROJECT_IMAGES} tagSuggestions={tags.map((t) => t.name)} />}
+          {source === "manuell" && <ProjectForm maxImages={MAX_PROJECT_IMAGES} tagSuggestions={tags.map((t) => t.name)} selfUsername={user.username} />}
         </div>
       </div>
     </main>
