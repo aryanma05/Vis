@@ -1,11 +1,14 @@
 import "server-only";
 
-import { and, asc, desc, eq, inArray, isNull, lt, ne, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, isNotNull, isNull, lt, ne, or, sql, type SQL } from "drizzle-orm";
 import { db, schema } from "@/db";
+import { FIELDS, PERIODS, type FieldKey, type PeriodKey, type ProjectProgress } from "@/lib/constants";
+import { loadMembers, setProjectMembers, type ProjectMember } from "@/lib/project-members";
 import { captureScreenshots, MAX_SCREENSHOTS, normalizeProjectUrl } from "@/lib/screenshots";
 import { deleteStoredFiles, storeImage } from "@/lib/storage";
 import { tagSlug } from "@/lib/tag-names";
 import { setProjectTags } from "@/lib/tags";
+import { enforce } from "@/lib/rate-limit";
 import { UserFacingError } from "@/lib/result";
 import type { ProjectInput } from "@/lib/validation";
 import { outer } from "@/lib/sql";
@@ -25,6 +28,7 @@ export const isUuid = (value: string) => UUID.test(value);
 export type ProjectOwner = { id: string; username: string; name: string; image: string | null; headline?: string | null };
 export type ProjectTag = { slug: string; name: string };
 export type ProjectImage = { id: string; url: string; alt: string | null };
+export type { ProjectMember };
 
 export type ProjectCard = {
   id: string;
@@ -33,7 +37,10 @@ export type ProjectCard = {
   coverImageUrl: string | null;
   tags: ProjectTag[];
   owner: ProjectOwner;
+  // Andre som har vært med på prosjektet (eieren er ikke med i listen).
+  members: ProjectMember[];
   status: "draft" | "published";
+  progress: ProjectProgress;
   projectDate: string | null;
   publishedAt: Date | null;
   createdAt: Date;
@@ -56,6 +63,7 @@ export type ProjectDetail = ProjectCard & {
   updatedAt: Date;
   removedReason: string | null;
   isOwner: boolean;
+  featured: boolean;
 };
 
 const cardColumns = {
@@ -63,6 +71,7 @@ const cardColumns = {
   title: project.title,
   summary: project.summary,
   status: project.status,
+  progress: project.progress,
   projectDate: project.projectDate,
   publishedAt: project.publishedAt,
   createdAt: project.createdAt,
@@ -80,6 +89,7 @@ type CardRow = {
   title: string;
   summary: string | null;
   status: "draft" | "published";
+  progress: ProjectProgress;
   projectDate: string | null;
   publishedAt: Date | null;
   createdAt: Date;
@@ -146,17 +156,19 @@ async function countBy(table: typeof comment | typeof reaction, projectIds: stri
 
 async function toCards(rows: CardRow[]): Promise<ProjectCard[]> {
   const ids = rows.map((r) => r.id);
-  const [tags, covers, comments, reactions] = await Promise.all([
+  const [tags, covers, comments, reactions, members] = await Promise.all([
     loadTags(ids),
     loadCovers(ids),
     countBy(comment, ids),
     countBy(reaction, ids),
+    loadMembers(ids),
   ]);
   return rows.map((r) => ({
     id: r.id,
     title: r.title,
     summary: r.summary,
     status: r.status,
+    progress: r.progress,
     projectDate: r.projectDate,
     publishedAt: r.publishedAt,
     createdAt: r.createdAt,
@@ -168,6 +180,7 @@ async function toCards(rows: CardRow[]): Promise<ProjectCard[]> {
     commentCount: comments.get(r.id) ?? 0,
     reactionCount: reactions.get(r.id) ?? 0,
     owner: { id: r.ownerId, username: r.ownerUsername, name: r.ownerName, image: r.ownerImage },
+    members: members.get(r.id) ?? [],
   }));
 }
 
@@ -197,6 +210,7 @@ export async function getProjectById(
       githubFullName: project.githubFullName,
       removedReason: project.removedReason,
       updatedAt: project.updatedAt,
+      featuredAt: project.featuredAt,
     })
     .from(project)
     .innerJoin(user, eq(user.id, project.ownerId))
@@ -232,6 +246,7 @@ export async function getProjectById(
     updatedAt: row.updatedAt,
     images,
     isOwner,
+    featured: row.featuredAt !== null,
   };
 }
 
@@ -272,6 +287,33 @@ async function pageByPublished(conditions: SQL[], { limit = 24, cursor }: { limi
     projects: await toCards(page),
     nextCursor: rows.length > take && last?.publishedAt ? encodeCursor(last.publishedAt, last.id) : null,
   };
+}
+
+// Offentlige prosjekter i den rekkefølgen id-ene kommer i (samlinger). Prosjekter som
+// er slettet, skjult eller fjernet hoppes over.
+export async function getProjectCardsByIds(ids: string[]) {
+  const valid = ids.filter(isUuid).slice(0, 500);
+  if (valid.length === 0) return [];
+  const rows = await db
+    .select(cardColumns)
+    .from(project)
+    .innerJoin(user, eq(user.id, project.ownerId))
+    .where(and(publicProject(), inArray(project.id, valid)));
+  const order = new Map(valid.map((id, i) => [id, i]));
+  rows.sort((a, b) => order.get(a.id)! - order.get(b.id)!);
+  return toCards(rows);
+}
+
+// Valgt ut av redaksjonen, sist valgt først.
+export async function getFeaturedProjects(limit = 6) {
+  const rows = await db
+    .select(cardColumns)
+    .from(project)
+    .innerJoin(user, eq(user.id, project.ownerId))
+    .where(and(publicProject(), isNotNull(project.featuredAt)))
+    .orderBy(desc(project.featuredAt))
+    .limit(Math.min(limit, 60));
+  return toCards(rows);
 }
 
 // Nyeste publiserte prosjekter. Send inn `nextCursor` fra forrige side for å bla videre.
@@ -338,7 +380,14 @@ export type ProjectSort = "relevant" | "newest" | "trending" | "popular" | "disc
 
 export async function searchProjects(
   query: string,
-  { tag: tagFilter, sort = "relevant", limit = 48 }: { tag?: string | null; sort?: ProjectSort; limit?: number } = {},
+  {
+    tag: tagFilter,
+    sort = "relevant",
+    limit = 48,
+    field,
+    period,
+    featuredOnly = false,
+  }: { tag?: string | null; sort?: ProjectSort; limit?: number; field?: FieldKey | null; period?: PeriodKey | null; featuredOnly?: boolean } = {},
 ) {
   const terms = query
     .toLowerCase()
@@ -346,9 +395,23 @@ export async function searchProjects(
     .filter(Boolean)
     .slice(0, 8);
 
-  if (sort === "trending" && terms.length === 0 && !tagFilter) return getTrendingProjects({ limit });
+  if (sort === "trending" && terms.length === 0 && !tagFilter && !field && !period && !featuredOnly) return getTrendingProjects({ limit });
 
   const conditions: SQL[] = [publicProject()];
+  if (featuredOnly) conditions.push(isNotNull(project.featuredAt));
+  if (period && PERIODS[period]) conditions.push(sql`${project.publishedAt} > now() - make_interval(days => ${PERIODS[period].days})`);
+  if (field && FIELDS[field]) {
+    const words = FIELDS[field].words;
+    conditions.push(
+      or(
+        ...words.map((w) => ilike(project.role, `%${w}%`)),
+        sql`exists (select 1 from ${projectTag} pt join ${tag} t on t.id = pt.tag_id where pt.project_id = ${outer(project.id)} and (${sql.join(
+          words.map((w) => sql`t.slug like ${`${tagSlug(w)}%`}`),
+          sql` or `,
+        )}))`,
+      )!,
+    );
+  }
   const tsQuery = terms.map((t) => `${t.replace(/'/g, "")}:*`).join(" & ");
   const textMatch = terms.length > 0 ? sql`${project.searchVector} @@ to_tsquery('simple', ${tsQuery})` : null;
 
@@ -523,6 +586,7 @@ export async function createProject(
   input: ProjectInput,
   github?: { repoId: number; fullName: string },
 ) {
+  await enforce("projectCreate", ownerId);
   return db.transaction(async (tx) => {
     const [created] = await tx
       .insert(project)
@@ -537,6 +601,7 @@ export async function createProject(
         role: input.role,
         projectDate: input.projectDate,
         status: input.status,
+        progress: input.progress ?? "completed",
         publishedAt: input.status === "published" ? new Date() : null,
         source: github ? "github" : "manual",
         githubRepoId: github?.repoId,
@@ -546,6 +611,7 @@ export async function createProject(
       .returning({ id: project.id });
 
     await setProjectTags(tx, created.id, input.tags);
+    if (input.members) await setProjectMembers(tx, created.id, ownerId, input.members);
     return created.id;
   });
 }
@@ -566,6 +632,7 @@ export async function updateProject(ownerId: string, projectId: string, input: P
         role: input.role,
         projectDate: input.projectDate,
         status: input.status,
+        progress: input.progress,
         // Beholder opprinnelig publiseringsdato hvis prosjektet publiseres på nytt.
         publishedAt:
           input.status === "published" ? (existing.publishedAt ?? new Date()) : existing.publishedAt,
@@ -573,6 +640,7 @@ export async function updateProject(ownerId: string, projectId: string, input: P
       .where(eq(project.id, projectId));
 
     await setProjectTags(tx, projectId, input.tags);
+    if (input.members) await setProjectMembers(tx, projectId, ownerId, input.members);
   });
 }
 

@@ -37,6 +37,7 @@ export default async function EditProjectPage({
             maxImages={MAX_PROJECT_IMAGES}
             images={project.images}
             tagSuggestions={tags.map((t) => t.name)}
+            selfUsername={user.username}
             notice={
               failedImages > 0
                 ? `Prosjektet er lagret, men ${failedImages === 1 ? "ett bilde" : `${failedImages} bilder`} kunne ikke lastes opp. Prøv å legge ${failedImages === 1 ? "det" : "dem"} til her.`
@@ -53,6 +54,8 @@ export default async function EditProjectPage({
               role: project.role ?? "",
               projectDate: project.projectDate ?? "",
               status: project.status,
+              progress: project.progress,
+              members: project.members.map(({ username, name, image }) => ({ username, name, image })),
             }}
           />
         </div>

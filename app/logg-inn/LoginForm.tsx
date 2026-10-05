@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useT } from "@/components/LocaleProvider";
 import VerifyEmailCode from "@/components/auth/VerifyEmailCode";
 import PasswordInput from "@/components/PasswordInput";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,7 @@ import { inputClass, labelClass } from "@/components/ui/field";
 import { authClient } from "@/lib/auth-client";
 import { authError } from "@/lib/auth-errors";
 import { RESET_EMAIL_KEY } from "@/lib/email";
+import { safeInternalPath } from "@/lib/safe-path";
 
 // Feil som betyr «feil passord»: da er det naturlig å tilby nytt passord.
 const WRONG_PASSWORD = new Set(["INVALID_EMAIL_OR_PASSWORD", "INVALID_USERNAME_OR_PASSWORD", "INVALID_PASSWORD"]);
@@ -25,6 +27,7 @@ function rememberEmailForReset(form: HTMLFormElement | null) {
 
 export default function LoginForm({ devHint }: { devHint: boolean }) {
   const router = useRouter();
+  const t = useT();
   const next = useSearchParams().get("neste");
   const formRef = useRef<HTMLFormElement>(null);
   const [error, setError] = useState<{ message: string; wrongPassword: boolean } | null>(null);
@@ -33,7 +36,7 @@ export default function LoginForm({ devHint }: { devHint: boolean }) {
   const [verify, setVerify] = useState<{ identifier: string; email: string | null } | null>(null);
 
   // Bare interne stier, så lenken ikke kan sende brukeren til en annen side.
-  const safeNext = next?.startsWith("/") && !next.startsWith("//") ? next : null;
+  const safeNext = safeInternalPath(next);
   const done = (username: string | null) => {
     router.push(safeNext ?? (username ? `/@${username}` : "/"));
     router.refresh();
@@ -71,6 +74,12 @@ export default function LoginForm({ devHint }: { devHint: boolean }) {
       return;
     }
 
+    // To-trinns innlogging er på: koden fra appen skrives inn på neste side.
+    if (data && "twoFactorRedirect" in data && data.twoFactorRedirect) {
+      router.push(`/logg-inn/to-trinn${safeNext ? `?neste=${encodeURIComponent(safeNext)}` : ""}`);
+      return;
+    }
+
     done((data?.user as { username?: string } | undefined)?.username ?? null);
   }
 
@@ -90,7 +99,7 @@ export default function LoginForm({ devHint }: { devHint: boolean }) {
     <form ref={formRef} onSubmit={onSubmit} className="space-y-5" noValidate>
       <div>
         <label htmlFor="identifier" className={labelClass}>
-          E-post eller brukernavn
+          {t("E-post eller brukernavn")}
         </label>
         <input
           id="identifier"
@@ -101,7 +110,7 @@ export default function LoginForm({ devHint }: { devHint: boolean }) {
           autoCapitalize="none"
           autoCorrect="off"
           spellCheck={false}
-          placeholder="navn@eksempel.no"
+          placeholder={t("navn@eksempel.no")}
           className={inputClass}
         />
       </div>
@@ -109,10 +118,10 @@ export default function LoginForm({ devHint }: { devHint: boolean }) {
       <div>
         <div className="mb-2 flex items-baseline justify-between gap-3">
           <label htmlFor="password" className="text-sm font-medium text-fg">
-            Passord
+            {t("Passord")}
           </label>
           <Link href="/glemt-passord" onClick={() => rememberEmailForReset(formRef.current)} className="text-sm text-mist transition hover:text-fg">
-            Glemt passordet?
+            {t("Glemt passordet?")}
           </Link>
         </div>
         <PasswordInput id="password" name="password" required autoComplete="current-password" />
@@ -120,21 +129,21 @@ export default function LoginForm({ devHint }: { devHint: boolean }) {
 
       {error && (
         <div role="alert" className="rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
-          <p>{error.message}</p>
+          <p>{t(error.message)}</p>
           {error.wrongPassword && (
             <Link
               href="/glemt-passord"
               onClick={() => rememberEmailForReset(formRef.current)}
               className="mt-1.5 inline-block font-semibold text-fg underline-offset-4 hover:underline"
             >
-              Glemt passordet? Lag et nytt på et minutt →
+              {t("Glemt passordet? Lag et nytt på et minutt →")}
             </Link>
           )}
         </div>
       )}
 
       <Button type="submit" loading={pending} className="w-full" size="lg">
-        {pending ? "Logger inn …" : "Logg inn"}
+        {t(pending ? "Logger inn …" : "Logg inn")}
       </Button>
     </form>
   );

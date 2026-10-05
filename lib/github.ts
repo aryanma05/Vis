@@ -15,7 +15,7 @@ import {
 } from "@/lib/projects";
 import { log } from "@/lib/log";
 import { UserFacingError } from "@/lib/result";
-import { assertScreenshotQuota } from "@/lib/screenshots";
+import { enforce } from "@/lib/rate-limit";
 import { projectInput } from "@/lib/validation";
 
 const API = "https://api.github.com";
@@ -214,6 +214,7 @@ export type GithubLookup =
 // Søket i «Fra GitHub»: et brukernavn gir de offentlige repoene til brukeren,
 // en repo-lenke gir det ene repoet.
 export async function lookupGithub(userId: string, input: string): Promise<GithubLookup> {
+  await enforce("githubImport", userId);
   const query = parseGithubInput(input);
   if (!query) throw new UserFacingError("Skriv et GitHub-brukernavn eller lim inn en lenke til et repo.");
   const [token, imported] = await Promise.all([optionalGithubToken(userId), getImportedRepoIds(userId)]);
@@ -548,7 +549,7 @@ export async function importGithubRepo(
   let screenshots = 0;
   if (draft.images.length === 0 && draft.input.demoUrl) {
     try {
-      assertScreenshotQuota(userId);
+      await enforce("screenshots", userId);
       screenshots = (await addProjectScreenshots(userId, projectId, draft.input.demoUrl)).length;
     } catch (error) {
       log.warn("github.import.screenshots", { error, repo: draft.fullName });

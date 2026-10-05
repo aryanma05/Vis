@@ -111,7 +111,7 @@ export function ChangePassword() {
   );
 }
 
-type Prefs = { comment: boolean; reply: boolean; mention: boolean; follow: boolean };
+type Prefs = { comment: boolean; reply: boolean; mention: boolean; follow: boolean; digest: boolean; contact: boolean };
 
 export function NotificationSettings({ initial, emailEnabled }: { initial: Prefs; emailEnabled: boolean }) {
   const [prefs, setPrefs] = useState(initial);
@@ -133,6 +133,8 @@ export function NotificationSettings({ initial, emailEnabled }: { initial: Prefs
     { key: "reply", label: "Svar på kommentarene mine", description: "Når noen svarer deg i en tråd." },
     { key: "mention", label: "Når noen nevner meg", description: "Når noen skriver @brukernavnet ditt i en kommentar." },
     { key: "follow", label: "Nye følgere", description: "Når noen begynner å følge deg." },
+    { key: "contact", label: "Meldinger via «Kontakt meg»", description: "Meldingen sendes på e-post, så du kan svare direkte. Gjelder bare hvis knappen er på." },
+    { key: "digest", label: "Ukesoppsummering", description: "Mandag morgen: hvem som har sett profilen din, nye følgere og nytt fra folk du følger." },
   ];
 
   return (

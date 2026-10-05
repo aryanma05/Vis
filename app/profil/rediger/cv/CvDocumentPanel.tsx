@@ -25,12 +25,10 @@ export default function CvDocumentPanel({
   initial,
   onAutofill,
   autofilling,
-  canParse,
 }: {
   initial: DocState;
   onAutofill: () => void;
   autofilling: boolean;
-  canParse: boolean;
 }) {
   const router = useRouter();
   const [doc, setDoc] = useState(initial);
@@ -89,7 +87,7 @@ export default function CvDocumentPanel({
         if (!uploaded.ok) throw new Error(uploaded.error);
         setDoc({ fileUrl: uploaded.data.url, fileName: file.name, mimeType: prepared.type, pages: [{ url: uploaded.data.url, ...size }], isPublic: doc?.isPublic ?? true });
       }
-      toast.success("CV-en er lastet opp", canParse ? { description: "Trykk «Fyll ut feltene» for å hente ut innholdet." } : undefined);
+      toast.success("CV-en er lastet opp", isPdf ? { description: "Trykk «Fyll ut feltene» for å hente ut innholdet." } : undefined);
       router.refresh();
     } catch (e) {
       setError((e as Error).message || "Noe gikk galt med opplastingen.");
@@ -203,7 +201,8 @@ export default function CvDocumentPanel({
       </div>
 
       <div className="mt-6 flex flex-wrap items-center gap-2">
-        {canParse && (
+        {/* Tekst kan bare leses fra PDF-er; et bilde av CV-en vises bare på profilen. */}
+        {doc.mimeType === "application/pdf" && (
           <Button size="sm" onClick={onAutofill} loading={autofilling}>
             <ScanText className="size-4" /> {autofilling ? "Leser CV-en …" : "Fyll ut feltene fra CV-en"}
           </Button>

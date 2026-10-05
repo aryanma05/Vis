@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { animate, motion, useMotionTemplate, useMotionValue, useReducedMotion, useTransform } from "framer-motion";
 import { Moon, MoonStar, Sun } from "lucide-react";
 import { useTheme, type Theme } from "@/components/ThemeProvider";
+import { useT } from "@/components/LocaleProvider";
 
 const THEMES: { name: Theme; label: string; Icon: typeof Moon }[] = [
   { name: "midnight", label: "Midnatt", Icon: MoonStar },
@@ -20,6 +21,7 @@ const TRAIL = { type: "spring", stiffness: 210, damping: 15, mass: 0.9 } as cons
 
 // Tema-velgeren: bare ikoner, med en markør som oppfører seg som gummi.
 export default function ThemeSwitch() {
+  const t = useT();
   const { theme, setTheme } = useTheme();
   const reduce = useReducedMotion();
   const index = Math.max(0, THEMES.findIndex((t) => t.name === theme));
@@ -65,7 +67,7 @@ export default function ThemeSwitch() {
   return (
     <div
       role="radiogroup"
-      aria-label="Fargetema"
+      aria-label={t("Fargetema")}
       onKeyDown={(event) => {
         if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
         event.preventDefault();
@@ -91,8 +93,8 @@ export default function ThemeSwitch() {
               type="button"
               role="radio"
               aria-checked={active}
-              aria-label={label}
-              title={label}
+              aria-label={t(label)}
+              title={t(label)}
               tabIndex={active ? 0 : -1}
               onClick={() => choose(i)}
               whileTap={reduce ? undefined : { scale: 0.86 }}

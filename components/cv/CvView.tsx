@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import type { CvTemplate } from "@/lib/constants";
 import { formatPeriod } from "@/lib/format";
+import { makeT, type Locale } from "@/lib/i18n";
 
 // CV-en som et papirark, i en av tre maler. Brukes på profilen, på den delbare
 // nett-CV-en (/@brukernavn/cv) og når man skriver ut / lagrer som PDF.
@@ -18,7 +19,17 @@ export type CvViewData = {
   skills: string[];
   projects: { title: string; summary: string | null; tags: string[]; url: string }[];
   accent: string;
+  // «Laget med Vis» nederst. Pro kan skru det av.
+  branding?: boolean;
+  brandHost?: string;
+  // Overskriftene og datoene på norsk eller engelsk.
+  locale?: Locale;
 };
+
+function Brand({ data, className = "" }: { data: CvViewData; className?: string }) {
+  if (!data.branding) return null;
+  return <p className={`cv-brand text-[10.5px] text-[#94a3b8] ${className}`}>{makeT(data.locale ?? "nb")("Laget med Vis")} · {data.brandHost}</p>;
+}
 
 const host = (url: string) => {
   try {
@@ -64,11 +75,13 @@ export default function CvView({ data, template }: { data: CvViewData; template:
   const style = { "--cv-accent": data.accent, fontFamily: "var(--font-sans)" } as CSSProperties;
   if (template === "moderne") return <Modern data={data} style={style} />;
   if (template === "kompakt") return <Compact data={data} style={style} />;
+  if (template === "elegant") return <Elegant data={data} style={style} />;
+  if (template === "tydelig") return <Bold data={data} style={style} />;
   return <Classic data={data} style={style} />;
 }
 
-function EmptyNote() {
-  return <p className="text-sm text-[#64748b]">Ingen erfaring eller utdanning er lagt til ennå.</p>;
+function EmptyNote({ data }: { data: CvViewData }) {
+  return <p className="text-sm text-[#64748b]">{makeT(data.locale ?? "nb")("Ingen erfaring eller utdanning er lagt til ennå.")}</p>;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -85,6 +98,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 }
 
 function Classic({ data, style }: { data: CvViewData; style: CSSProperties }) {
+  const t = makeT(data.locale ?? "nb");
   return (
     <article className={`${paper} px-7 py-10 sm:px-14 sm:py-14`} style={style}>
       <header className="pb-7">
@@ -93,12 +107,12 @@ function Classic({ data, style }: { data: CvViewData; style: CSSProperties }) {
         <Contact data={data} className="mt-3 text-[12.5px] text-[#64748b]" />
       </header>
       {data.summary && (
-        <Row label="Profil">
+        <Row label={t("Profil")}>
           <p className="whitespace-pre-line text-[13.5px] leading-6 text-[#1e293b]">{data.summary}</p>
         </Row>
       )}
       {data.experience.length > 0 && (
-        <Row label="Erfaring">
+        <Row label={t("Erfaring")}>
           <ol className="space-y-4">
             {data.experience.map((e) => (
               <li key={e.id} className="cv-entry">
@@ -106,7 +120,7 @@ function Classic({ data, style }: { data: CvViewData; style: CSSProperties }) {
                   <p className="text-[14px] font-semibold">
                     {e.title}, <span className="font-normal text-[#334155]">{e.organization}</span>
                   </p>
-                  <p className="text-[12px] tabular-nums text-[#64748b]">{formatPeriod(e.startDate, e.endDate)}</p>
+                  <p className="text-[12px] tabular-nums text-[#64748b]">{formatPeriod(e.startDate, e.endDate, data.locale)}</p>
                 </div>
                 {e.location && <p className="text-[12px] text-[#64748b]">{e.location}</p>}
                 <Lines text={e.description} className="mt-1.5 text-[13px] leading-[1.55] text-[#334155]" />
@@ -116,13 +130,13 @@ function Classic({ data, style }: { data: CvViewData; style: CSSProperties }) {
         </Row>
       )}
       {data.education.length > 0 && (
-        <Row label="Utdanning">
+        <Row label={t("Utdanning")}>
           <ol className="space-y-3">
             {data.education.map((e) => (
               <li key={e.id} className="cv-entry">
                 <div className="flex flex-wrap items-baseline justify-between gap-x-4">
                   <p className="text-[14px] font-semibold">{e.institution}</p>
-                  <p className="text-[12px] tabular-nums text-[#64748b]">{formatPeriod(e.startDate, e.endDate)}</p>
+                  <p className="text-[12px] tabular-nums text-[#64748b]">{formatPeriod(e.startDate, e.endDate, data.locale)}</p>
                 </div>
                 {(e.degree || e.fieldOfStudy) && <p className="text-[13px] text-[#334155]">{[e.degree, e.fieldOfStudy].filter(Boolean).join(", ")}</p>}
                 <Lines text={e.description} className="mt-1 text-[13px] leading-[1.55] text-[#334155]" />
@@ -132,12 +146,12 @@ function Classic({ data, style }: { data: CvViewData; style: CSSProperties }) {
         </Row>
       )}
       {data.skills.length > 0 && (
-        <Row label="Ferdigheter">
+        <Row label={t("Ferdigheter")}>
           <p className="text-[13.5px] leading-6 text-[#1e293b]">{data.skills.join(" · ")}</p>
         </Row>
       )}
       {data.projects.length > 0 && (
-        <Row label="Prosjekter">
+        <Row label={t("Prosjekter")}>
           <ul className="space-y-2.5">
             {data.projects.map((p) => (
               <li key={p.url} className="cv-entry text-[13px] leading-[1.55]">
@@ -149,8 +163,11 @@ function Classic({ data, style }: { data: CvViewData; style: CSSProperties }) {
           </ul>
         </Row>
       )}
-      {data.experience.length + data.education.length === 0 && !data.summary && <EmptyNote />}
-      <footer className="mt-6 border-t border-[#e2e8f0] pt-4 text-[11px] text-[#94a3b8]">Hele profilen og prosjektene: {data.profileUrl}</footer>
+      {data.experience.length + data.education.length === 0 && !data.summary && <EmptyNote data={data} />}
+      <footer className="mt-6 flex flex-wrap justify-between gap-2 border-t border-[#e2e8f0] pt-4 text-[11px] text-[#94a3b8]">
+        <span>{t("Hele profilen og prosjektene: {url}", { url: data.profileUrl })}</span>
+        <Brand data={data} />
+      </footer>
     </article>
   );
 }
@@ -164,6 +181,7 @@ function ModernHeading({ children }: { children: React.ReactNode }) {
 }
 
 function Modern({ data, style }: { data: CvViewData; style: CSSProperties }) {
+  const t = makeT(data.locale ?? "nb");
   const H = ModernHeading;
   return (
     <article className={`${paper} grid overflow-hidden sm:grid-cols-[34%_1fr]`} style={style}>
@@ -171,12 +189,12 @@ function Modern({ data, style }: { data: CvViewData; style: CSSProperties }) {
         <h1 className="text-[28px] font-extrabold leading-[1.05] tracking-[-0.03em]">{data.name}</h1>
         {data.headline && <p className="mt-2 text-[14px] leading-snug text-[#1e293b]">{data.headline}</p>}
         <div className="mt-7">
-          <H>Kontakt</H>
+          <H>{t("Kontakt")}</H>
           <Contact data={data} vertical className="text-[12px] leading-5 text-[#1e293b]" />
         </div>
         {data.skills.length > 0 && (
           <div className="mt-7">
-            <H>Ferdigheter</H>
+            <H>{t("Ferdigheter")}</H>
             <ul className="flex flex-wrap gap-1.5">
               {data.skills.map((s) => (
                 <li key={s} className="rounded-md bg-white/70 px-2 py-0.5 text-[11.5px] text-[#0f172a]">
@@ -188,13 +206,13 @@ function Modern({ data, style }: { data: CvViewData; style: CSSProperties }) {
         )}
         {data.education.length > 0 && (
           <div className="mt-7">
-            <H>Utdanning</H>
+            <H>{t("Utdanning")}</H>
             <ol className="space-y-3">
               {data.education.map((e) => (
                 <li key={e.id} className="cv-entry text-[12.5px] leading-5">
                   <p className="font-semibold">{e.institution}</p>
                   {(e.degree || e.fieldOfStudy) && <p className="text-[#1e293b]">{[e.degree, e.fieldOfStudy].filter(Boolean).join(", ")}</p>}
-                  <p className="tabular-nums text-[#475569]">{formatPeriod(e.startDate, e.endDate)}</p>
+                  <p className="tabular-nums text-[#475569]">{formatPeriod(e.startDate, e.endDate, data.locale)}</p>
                 </li>
               ))}
             </ol>
@@ -204,18 +222,18 @@ function Modern({ data, style }: { data: CvViewData; style: CSSProperties }) {
       <div className="px-7 py-10 sm:px-10 sm:py-12">
         {data.summary && (
           <section className="cv-section mb-8">
-            <H>Profil</H>
+            <H>{t("Profil")}</H>
             <p className="whitespace-pre-line text-[13.5px] leading-6 text-[#1e293b]">{data.summary}</p>
           </section>
         )}
         {data.experience.length > 0 && (
           <section className="cv-section mb-8">
-            <H>Erfaring</H>
+            <H>{t("Erfaring")}</H>
             <ol className="relative space-y-5 border-l-2 pl-5" style={{ borderColor: "color-mix(in srgb, var(--cv-accent) 55%, white)" }}>
               {data.experience.map((e) => (
                 <li key={e.id} className="cv-entry relative">
                   <span className="absolute -left-[27px] top-1.5 size-3 rounded-full border-2 border-white" style={{ background: "color-mix(in srgb, var(--cv-accent) 80%, #0f172a)" }} />
-                  <p className="text-[12px] tabular-nums text-[#64748b]">{formatPeriod(e.startDate, e.endDate)}</p>
+                  <p className="text-[12px] tabular-nums text-[#64748b]">{formatPeriod(e.startDate, e.endDate, data.locale)}</p>
                   <p className="text-[14.5px] font-semibold">{e.title}</p>
                   <p className="text-[13px] text-[#334155]">
                     {e.organization}
@@ -229,7 +247,7 @@ function Modern({ data, style }: { data: CvViewData; style: CSSProperties }) {
         )}
         {data.projects.length > 0 && (
           <section className="cv-section">
-            <H>Utvalgte prosjekter</H>
+            <H>{t("Utvalgte prosjekter")}</H>
             <ul className="grid gap-3 sm:grid-cols-2">
               {data.projects.map((p) => (
                 <li key={p.url} className="cv-entry rounded-lg border border-[#e2e8f0] p-3 text-[12.5px] leading-5">
@@ -241,7 +259,8 @@ function Modern({ data, style }: { data: CvViewData; style: CSSProperties }) {
             </ul>
           </section>
         )}
-        {data.experience.length + data.education.length === 0 && !data.summary && <EmptyNote />}
+        {data.experience.length + data.education.length === 0 && !data.summary && <EmptyNote data={data} />}
+        <Brand data={data} className="mt-8" />
       </div>
     </article>
   );
@@ -260,6 +279,7 @@ function CompactHeading({ children }: { children: React.ReactNode }) {
 }
 
 function Compact({ data, style }: { data: CvViewData; style: CSSProperties }) {
+  const t = makeT(data.locale ?? "nb");
   const H = CompactHeading;
   return (
     <article className={`${paper} px-7 py-9 sm:px-11 sm:py-11`} style={style}>
@@ -275,13 +295,13 @@ function Compact({ data, style }: { data: CvViewData; style: CSSProperties }) {
         <div>
           {data.experience.length > 0 && (
             <section className="cv-section">
-              <H>Erfaring</H>
+              <H>{t("Erfaring")}</H>
               <ol className="space-y-3">
                 {data.experience.map((e) => (
                   <li key={e.id} className="cv-entry text-[12px] leading-[1.45]">
                     <p className="flex justify-between gap-3">
                       <span className="font-semibold">{e.title}</span>
-                      <span className="shrink-0 tabular-nums text-[#64748b]">{formatPeriod(e.startDate, e.endDate)}</span>
+                      <span className="shrink-0 tabular-nums text-[#64748b]">{formatPeriod(e.startDate, e.endDate, data.locale)}</span>
                     </p>
                     <p className="text-[#334155]">
                       {e.organization}
@@ -297,13 +317,13 @@ function Compact({ data, style }: { data: CvViewData; style: CSSProperties }) {
         <div className="space-y-5">
           {data.education.length > 0 && (
             <section className="cv-section">
-              <H>Utdanning</H>
+              <H>{t("Utdanning")}</H>
               <ol className="space-y-2">
                 {data.education.map((e) => (
                   <li key={e.id} className="cv-entry text-[12px] leading-[1.45]">
                     <p className="font-semibold">{e.institution}</p>
                     <p className="text-[#334155]">{[e.degree, e.fieldOfStudy].filter(Boolean).join(", ")}</p>
-                    <p className="tabular-nums text-[#64748b]">{formatPeriod(e.startDate, e.endDate)}</p>
+                    <p className="tabular-nums text-[#64748b]">{formatPeriod(e.startDate, e.endDate, data.locale)}</p>
                   </li>
                 ))}
               </ol>
@@ -311,13 +331,13 @@ function Compact({ data, style }: { data: CvViewData; style: CSSProperties }) {
           )}
           {data.skills.length > 0 && (
             <section className="cv-section">
-              <H>Ferdigheter</H>
+              <H>{t("Ferdigheter")}</H>
               <p className="text-[12px] leading-5 text-[#1e293b]">{data.skills.join(", ")}</p>
             </section>
           )}
           {data.projects.length > 0 && (
             <section className="cv-section">
-              <H>Prosjekter</H>
+              <H>{t("Prosjekter")}</H>
               <ul className="space-y-1.5">
                 {data.projects.map((p) => (
                   <li key={p.url} className="cv-entry text-[12px] leading-[1.45]">
@@ -330,7 +350,199 @@ function Compact({ data, style }: { data: CvViewData; style: CSSProperties }) {
           )}
         </div>
       </div>
-      {data.experience.length + data.education.length === 0 && !data.summary && <div className="mt-6"><EmptyNote /></div>}
+      {data.experience.length + data.education.length === 0 && !data.summary && <div className="mt-6"><EmptyNote data={data} /></div>}
+      <Brand data={data} className="mt-6 text-right" />
+    </article>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Elegant (Pro): serif, sentrert topp, tynne linjer i aksentfargen          */
+/* -------------------------------------------------------------------------- */
+
+const serif = { fontFamily: '"Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif' };
+
+function ElegantHeading({ children }: { children: React.ReactNode }) {
+  return (
+    <h2 className="mb-3 flex items-center gap-3 text-[12px] uppercase tracking-[0.28em] text-[#334155]" style={serif}>
+      <span className="h-px flex-1" style={{ background: "color-mix(in srgb, var(--cv-accent) 70%, #0f172a)" }} />
+      {children}
+      <span className="h-px flex-1" style={{ background: "color-mix(in srgb, var(--cv-accent) 70%, #0f172a)" }} />
+    </h2>
+  );
+}
+
+function Elegant({ data, style }: { data: CvViewData; style: CSSProperties }) {
+  const t = makeT(data.locale ?? "nb");
+  const H = ElegantHeading;
+  return (
+    <article className={`${paper} px-7 py-11 sm:px-16 sm:py-14`} style={style}>
+      <header className="text-center">
+        <h1 className="text-[38px] leading-none tracking-[-0.01em]" style={serif}>
+          {data.name}
+        </h1>
+        {data.headline && <p className="mt-3 text-[15px] italic text-[#334155]" style={serif}>{data.headline}</p>}
+        <Contact data={data} className="mt-3 justify-center text-[12px] text-[#64748b]" />
+      </header>
+      {data.summary && (
+        <section className="cv-section mt-8">
+          <H>{t("Profil")}</H>
+          <p className="mx-auto max-w-[60ch] whitespace-pre-line text-center text-[13.5px] leading-6 text-[#1e293b]">{data.summary}</p>
+        </section>
+      )}
+      {data.experience.length > 0 && (
+        <section className="cv-section mt-8">
+          <H>{t("Erfaring")}</H>
+          <ol className="space-y-4">
+            {data.experience.map((e) => (
+              <li key={e.id} className="cv-entry">
+                <div className="flex flex-wrap items-baseline justify-between gap-x-4">
+                  <p className="text-[15px]" style={serif}>
+                    <span className="font-semibold">{e.title}</span> · {e.organization}
+                  </p>
+                  <p className="text-[12px] tabular-nums text-[#64748b]">{formatPeriod(e.startDate, e.endDate, data.locale)}</p>
+                </div>
+                {e.location && <p className="text-[12px] text-[#64748b]">{e.location}</p>}
+                <Lines text={e.description} className="mt-1.5 text-[13px] leading-[1.6] text-[#334155]" />
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
+      {data.education.length > 0 && (
+        <section className="cv-section mt-8">
+          <H>{t("Utdanning")}</H>
+          <ol className="space-y-3">
+            {data.education.map((e) => (
+              <li key={e.id} className="cv-entry flex flex-wrap items-baseline justify-between gap-x-4">
+                <p className="text-[14px]" style={serif}>
+                  <span className="font-semibold">{e.institution}</span>
+                  {(e.degree || e.fieldOfStudy) && <span className="text-[#334155]"> · {[e.degree, e.fieldOfStudy].filter(Boolean).join(", ")}</span>}
+                </p>
+                <p className="text-[12px] tabular-nums text-[#64748b]">{formatPeriod(e.startDate, e.endDate, data.locale)}</p>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
+      {data.skills.length > 0 && (
+        <section className="cv-section mt-8">
+          <H>{t("Ferdigheter")}</H>
+          <p className="text-center text-[13px] leading-6 text-[#1e293b]">{data.skills.join("  ·  ")}</p>
+        </section>
+      )}
+      {data.projects.length > 0 && (
+        <section className="cv-section mt-8">
+          <H>{t("Prosjekter")}</H>
+          <ul className="grid gap-3 sm:grid-cols-2">
+            {data.projects.map((p) => (
+              <li key={p.url} className="cv-entry text-[13px] leading-[1.55]">
+                <p className="font-semibold" style={serif}>
+                  {p.title}
+                </p>
+                {p.summary && <p className="text-[#334155]">{p.summary}</p>}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      {data.experience.length + data.education.length === 0 && !data.summary && <EmptyNote data={data} />}
+      <Brand data={data} className="mt-10 text-center" />
+    </article>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Tydelig (Pro): fargebånd øverst og to kolonner                            */
+/* -------------------------------------------------------------------------- */
+
+function BoldHeading({ children }: { children: React.ReactNode }) {
+  return <h2 className="mb-3 text-[13px] font-extrabold uppercase tracking-[0.08em]" style={{ color: "color-mix(in srgb, var(--cv-accent) 45%, #0f172a)" }}>{children}</h2>;
+}
+
+function Bold({ data, style }: { data: CvViewData; style: CSSProperties }) {
+  const t = makeT(data.locale ?? "nb");
+  const H = BoldHeading;
+  return (
+    <article className={`${paper} overflow-hidden`} style={style}>
+      <header className="px-7 py-9 sm:px-12" style={{ background: "var(--cv-accent)", color: "#0b1229" }}>
+        <h1 className="text-[40px] font-black leading-[0.95] tracking-[-0.04em]">{data.name}</h1>
+        {data.headline && <p className="mt-2 text-[16px] font-semibold opacity-80">{data.headline}</p>}
+      </header>
+      <div className="grid gap-8 px-7 py-9 sm:grid-cols-[1fr_32%] sm:px-12">
+        <div className="min-w-0 space-y-8">
+          {data.summary && (
+            <section className="cv-section">
+              <H>{t("Om meg")}</H>
+              <p className="whitespace-pre-line text-[13.5px] leading-6 text-[#1e293b]">{data.summary}</p>
+            </section>
+          )}
+          {data.experience.length > 0 && (
+            <section className="cv-section">
+              <H>{t("Erfaring")}</H>
+              <ol className="space-y-5">
+                {data.experience.map((e) => (
+                  <li key={e.id} className="cv-entry">
+                    <p className="text-[15px] font-bold">{e.title}</p>
+                    <p className="text-[13px] text-[#334155]">
+                      {e.organization}
+                      {e.location && ` · ${e.location}`} · <span className="tabular-nums">{formatPeriod(e.startDate, e.endDate, data.locale)}</span>
+                    </p>
+                    <Lines text={e.description} className="mt-1.5 text-[13px] leading-[1.55] text-[#334155]" />
+                  </li>
+                ))}
+              </ol>
+            </section>
+          )}
+          {data.projects.length > 0 && (
+            <section className="cv-section">
+              <H>{t("Prosjekter")}</H>
+              <ul className="space-y-2.5">
+                {data.projects.map((p) => (
+                  <li key={p.url} className="cv-entry text-[13px] leading-[1.55]">
+                    <span className="font-bold">{p.title}</span>
+                    {p.summary && <span className="text-[#334155]"> – {p.summary}</span>}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+          {data.experience.length + data.education.length === 0 && !data.summary && <EmptyNote data={data} />}
+        </div>
+        <aside className="space-y-7">
+          <section className="cv-section">
+            <H>{t("Kontakt")}</H>
+            <Contact data={data} vertical className="text-[12px] leading-5 text-[#1e293b]" />
+          </section>
+          {data.skills.length > 0 && (
+            <section className="cv-section">
+              <H>{t("Ferdigheter")}</H>
+              <ul className="flex flex-wrap gap-1.5">
+                {data.skills.map((s) => (
+                  <li key={s} className="rounded-full px-2.5 py-0.5 text-[11.5px] font-medium" style={{ background: "color-mix(in srgb, var(--cv-accent) 30%, white)" }}>
+                    {s}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+          {data.education.length > 0 && (
+            <section className="cv-section">
+              <H>{t("Utdanning")}</H>
+              <ol className="space-y-3">
+                {data.education.map((e) => (
+                  <li key={e.id} className="cv-entry text-[12.5px] leading-5">
+                    <p className="font-bold">{e.institution}</p>
+                    {(e.degree || e.fieldOfStudy) && <p className="text-[#1e293b]">{[e.degree, e.fieldOfStudy].filter(Boolean).join(", ")}</p>}
+                    <p className="tabular-nums text-[#475569]">{formatPeriod(e.startDate, e.endDate, data.locale)}</p>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          )}
+          <Brand data={data} />
+        </aside>
+      </div>
     </article>
   );
 }

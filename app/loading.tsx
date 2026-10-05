@@ -1,9 +1,11 @@
 import { Skeleton } from "@/components/ui/misc";
+import { getT } from "@/lib/i18n/server";
 
 // Vises mens neste side hentes. Et rolig skjelett i stedet for en spinner over hele skjermen.
-export default function Loading() {
+export default async function Loading() {
+  const t = await getT();
   return (
-    <main aria-busy="true" aria-label="Laster" className="px-5 pb-28 pt-10 md:pl-28 md:pr-10 md:pt-16">
+    <main aria-busy="true" aria-label={t("Laster")} className="px-5 pb-28 pt-10 md:pl-28 md:pr-10 md:pt-16">
       <div className="fixed inset-x-0 top-0 z-[60] h-0.5 overflow-hidden">
         <div className="loading-bar h-full w-1/3 bg-sea" />
       </div>

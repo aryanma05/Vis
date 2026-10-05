@@ -20,7 +20,14 @@ export async function markNotificationReadAction(id: string) {
   }, "notifications.read");
 }
 
-export async function setNotificationPrefsAction(prefs: { comment?: boolean; reply?: boolean; mention?: boolean; follow?: boolean }) {
+export async function setNotificationPrefsAction(prefs: {
+  comment?: boolean;
+  reply?: boolean;
+  mention?: boolean;
+  follow?: boolean;
+  digest?: boolean;
+  contact?: boolean;
+}) {
   return runAction(async () => {
     const user = await requireUserForAction();
     await setNotificationPrefs(
@@ -30,6 +37,8 @@ export async function setNotificationPrefsAction(prefs: { comment?: boolean; rep
         reply: Boolean(prefs.reply),
         mention: Boolean(prefs.mention),
         follow: Boolean(prefs.follow),
+        digest: Boolean(prefs.digest),
+        contact: Boolean(prefs.contact),
       }),
     );
   }, "notifications.prefs");

@@ -6,6 +6,7 @@ import { useState, useTransition } from "react";
 import { Flag, MoreHorizontal, PenLine, Reply, Trash2 } from "lucide-react";
 import { deleteCommentAction, editCommentAction } from "@/app/actions/comments";
 import Avatar from "@/components/Avatar";
+import { useT } from "@/components/LocaleProvider";
 import CommentForm from "@/components/comments/CommentForm";
 import ReportDialog from "@/components/moderation/ReportDialog";
 import RichText from "@/components/RichText";
@@ -13,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Menu, MenuItem } from "@/components/ui/menu";
 import { toast } from "@/components/ui/toast";
 import { timeAgo } from "@/lib/format";
+import { useLocale } from "@/components/LocaleProvider";
 import type { ProjectComment } from "@/lib/comments";
 
 export default function CommentItem({
@@ -29,6 +31,8 @@ export default function CommentItem({
   isReply?: boolean;
 }) {
   const router = useRouter();
+  const t = useT();
+  const locale = useLocale();
   const [editing, setEditing] = useState(false);
   const [replying, setReplying] = useState(false);
   const [reporting, setReporting] = useState(false);
@@ -49,14 +53,14 @@ export default function CommentItem({
     });
 
   const remove = () => {
-    if (!confirm(comment.replies.length > 0 ? "Slette kommentaren og svarene på den?" : "Slette kommentaren?")) return;
+    if (!confirm(t(comment.replies.length > 0 ? "Slette kommentaren og svarene på den?" : "Slette kommentaren?"))) return;
     startTransition(async () => {
       const result = await deleteCommentAction(comment.id);
       if (!result.ok) {
         toast.error(result.error);
         return;
       }
-      toast.success("Kommentaren er slettet");
+      toast.success(t("Kommentaren er slettet"));
       router.refresh();
     });
   };
@@ -76,37 +80,37 @@ export default function CommentItem({
               {comment.author.name}
             </Link>
             {comment.isProjectOwner && (
-              <span className="rounded-full bg-sea/15 px-2 py-px text-[11px] font-medium text-sea">Skaper</span>
+              <span className="rounded-full bg-sea/15 px-2 py-px text-[11px] font-medium text-sea">{t("Skaper")}</span>
             )}
             <time dateTime={new Date(comment.createdAt).toISOString()} suppressHydrationWarning className="text-mist/70">
-              {timeAgo(comment.createdAt)}
-              {comment.editedAt && " · redigert"}
+              {timeAgo(comment.createdAt, locale)}
+              {comment.editedAt && ` · ${t("redigert")}`}
             </time>
             {hasMenu && !editing && (
               <div className="ml-auto opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100">
                 <Menu
-                  label="Kommentarvalg"
+                  label={t("Kommentarvalg")}
                   align="end"
                   className="min-w-44"
                   trigger={({ open, toggle }) => (
-                    <button type="button" onClick={toggle} aria-haspopup="menu" aria-expanded={open} aria-label="Valg for kommentaren" className="rounded-lg p-1 text-mist hover:bg-surface hover:text-fg">
+                    <button type="button" onClick={toggle} aria-haspopup="menu" aria-expanded={open} aria-label={t("Valg for kommentaren")} className="rounded-lg p-1 text-mist hover:bg-surface hover:text-fg">
                       <MoreHorizontal className="size-4" />
                     </button>
                   )}
                 >
                   {comment.canEdit && (
                     <MenuItem icon={<PenLine className="size-4" />} onSelect={() => setEditing(true)}>
-                      Rediger
+                      {t("Rediger")}
                     </MenuItem>
                   )}
                   {comment.canDelete && (
                     <MenuItem icon={<Trash2 className="size-4" />} onSelect={remove} danger>
-                      Slett
+                      {t("Slett")}
                     </MenuItem>
                   )}
                   {canReport && (
                     <MenuItem icon={<Flag className="size-4" />} onSelect={() => setReporting(true)} danger>
-                      Rapporter
+                      {t("Rapporter")}
                     </MenuItem>
                   )}
                 </Menu>
@@ -125,7 +129,7 @@ export default function CommentItem({
               />
               <div className="mt-2 flex gap-2">
                 <Button size="xs" onClick={save} loading={pending} disabled={!body.trim()}>
-                  Lagre
+                  {t("Lagre")}
                 </Button>
                 <Button
                   size="xs"
@@ -135,7 +139,7 @@ export default function CommentItem({
                     setBody(comment.body);
                   }}
                 >
-                  Avbryt
+                  {t("Avbryt")}
                 </Button>
               </div>
               {error && <p className="mt-2 text-sm text-danger">{error}</p>}
@@ -150,7 +154,7 @@ export default function CommentItem({
               onClick={() => setReplying((v) => !v)}
               className="mt-1.5 inline-flex items-center gap-1.5 text-xs font-medium text-mist transition hover:text-fg"
             >
-              <Reply className="size-3.5" /> Svar
+              <Reply className="size-3.5" /> {t("Svar")}
             </button>
           )}
 

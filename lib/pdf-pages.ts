@@ -24,9 +24,11 @@ export async function renderPdfPages(
   file: File,
   { width = 2000, maxPages = 6, onProgress }: { width?: number; maxPages?: number; onProgress?: (page: number, total: number) => void } = {},
 ): Promise<{ pages: RenderedPage[]; totalPages: number }> {
-  const pdfjs = await import("pdfjs-dist");
+  // «legacy»-utgaven virker også i nettlesere som mangler de nyeste JavaScript-funksjonene
+  // (den vanlige bruker bl.a. Map.prototype.getOrInsertComputed og feiler i mange nettlesere).
+  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
   // Egen worker per fil, så den kan avsluttes når vi er ferdige.
-  const port = new Worker(new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url), { type: "module" });
+  const port = new Worker(new URL("pdfjs-dist/legacy/build/pdf.worker.min.mjs", import.meta.url), { type: "module" });
   const task = pdfjs.getDocument({
     data: new Uint8Array(await file.arrayBuffer()),
     worker: pdfjs.PDFWorker.create({ port }),

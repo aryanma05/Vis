@@ -1,9 +1,10 @@
 import "server-only";
 
-import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, isNull, or, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { adminEmails } from "@/lib/auth";
 import { log } from "@/lib/log";
+import { emailNotification, notify } from "@/lib/notifications";
 import { isUuid } from "@/lib/projects";
 import { UserFacingError } from "@/lib/result";
 import { getCurrentUser, type CurrentUser } from "@/lib/session";
@@ -37,6 +38,23 @@ export async function removeProject(adminId: string, projectId: string, reason: 
     .returning({ id: project.id });
   if (updated.length === 0) throw new UserFacingError("Fant ikke prosjektet.");
   log.info("admin.remove-project", { adminId, projectId });
+}
+
+// Velger ut et prosjekt (vises øverst på forsiden og i Utforsk), eller tar det ut igjen.
+// Eieren får varsel og e-post første gang det blir valgt ut.
+export async function setProjectFeatured(adminId: string, projectId: string, featured: boolean) {
+  if (!isUuid(projectId)) throw new UserFacingError("Fant ikke prosjektet.");
+  const [row] = await db
+    .update(project)
+    .set({ featuredAt: featured ? new Date() : null })
+    .where(and(eq(project.id, projectId), eq(project.status, "published"), isNull(project.removedAt)))
+    .returning({ ownerId: project.ownerId });
+  if (!row) throw new UserFacingError("Bare publiserte prosjekter kan velges ut.");
+  if (featured) {
+    await notify({ userId: row.ownerId, actorId: adminId, type: "featured", projectId });
+    void emailNotification({ userId: row.ownerId, actorId: adminId, type: "featured", projectId });
+  }
+  log.info("admin.feature-project", { adminId, projectId, featured });
 }
 
 export async function restoreProject(adminId: string, projectId: string) {
@@ -91,6 +109,10 @@ export async function listUsers(query: string, limit = 50) {
       banExpires: user.banExpires,
       createdAt: user.createdAt,
       projects: sql<number>`(select count(*)::int from ${project} where ${project.ownerId} = ${outer(user.id)})`,
+      pro: sql<"stripe" | "grant" | null>`case
+        when exists (select 1 from subscription s where s.owner_type = 'user' and s.owner_id = ${outer(user.id)} and s.status in ('active','trialing','past_due')) then 'stripe'
+        when exists (select 1 from plan_grant g where g.owner_type = 'user' and g.owner_id = ${outer(user.id)} and (g.until is null or g.until > now())) then 'grant'
+        else null end`,
       reports: sql<number>`(select count(*)::int from ${report} where ${report.targetOwnerId} = ${outer(user.id)})`,
     })
     .from(user)
@@ -112,4 +134,28 @@ export async function getModerationCounts() {
     .where(and(sql`${project.removedAt} is not null`));
   const [banned] = await db.select({ n: sql<number>`count(*)::int` }).from(user).where(eq(user.banned, true));
   return { openReports: row?.open ?? 0, totalReports: row?.total ?? 0, removedProjects: removed?.n ?? 0, bannedUsers: banned?.n ?? 0 };
+}
+
+// Bedrifter til admin, med om de er bekreftet og har Bedrift.
+export async function listCompaniesForAdmin(query: string, limit = 100) {
+  const like = `%${query.trim().replace(/[%_]/g, "")}%`;
+  const { company, job } = schema;
+  return db
+    .select({
+      id: company.id,
+      slug: company.slug,
+      name: company.name,
+      website: company.website,
+      verifiedAt: company.verifiedAt,
+      createdAt: company.createdAt,
+      jobs: sql<number>`(select count(*)::int from ${job} where ${job.companyId} = ${company.id})`,
+      business: sql<"stripe" | "grant" | null>`case
+        when exists (select 1 from subscription s where s.owner_type = 'company' and s.owner_id = ${company.id}::text and s.status in ('active','trialing','past_due')) then 'stripe'
+        when exists (select 1 from plan_grant g where g.owner_type = 'company' and g.owner_id = ${company.id}::text and (g.until is null or g.until > now())) then 'grant'
+        else null end`,
+    })
+    .from(company)
+    .where(query.trim() ? or(ilike(company.name, like), ilike(company.website, like)) : undefined)
+    .orderBy(desc(company.createdAt))
+    .limit(limit);
 }

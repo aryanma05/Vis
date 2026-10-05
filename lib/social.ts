@@ -3,6 +3,7 @@ import "server-only";
 import { and, desc, eq, inArray, ne, notInArray, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { emailNotification, notify } from "@/lib/notifications";
+import { enforce } from "@/lib/rate-limit";
 import { UserFacingError } from "@/lib/result";
 import { outer } from "@/lib/sql";
 
@@ -49,6 +50,7 @@ export async function withFollowState<T extends { id: string }>(people: T[], vie
 
 export async function followUser(followerId: string, followingId: string) {
   if (followerId === followingId) throw new UserFacingError("Du kan ikke følge deg selv.");
+  await enforce("follow", followerId);
   const [target] = await db
     .select({ id: user.id, banned: user.banned })
     .from(user)

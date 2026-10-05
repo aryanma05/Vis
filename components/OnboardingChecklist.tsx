@@ -1,9 +1,12 @@
 import Link from "next/link";
 import { ArrowRight, Check } from "lucide-react";
+import { getT } from "@/lib/i18n/server";
 import type { OnboardingStep } from "@/lib/profiles";
 
 // «Kom i gang»-listen: hva som gjenstår før profilen er komplett.
-export default function OnboardingChecklist({ steps, title = "Kom i gang" }: { steps: OnboardingStep[]; title?: string }) {
+export default async function OnboardingChecklist({ steps, title: heading = "Kom i gang" }: { steps: OnboardingStep[]; title?: string }) {
+  const t = await getT();
+  const title = t(heading);
   const done = steps.filter((s) => s.done).length;
   if (steps.length === 0 || done === steps.length) return null;
   const pct = Math.round((done / steps.length) * 100);
@@ -35,8 +38,8 @@ export default function OnboardingChecklist({ steps, title = "Kom i gang" }: { s
                 <Check className="size-3" strokeWidth={3} />
               </span>
               <span className="min-w-0 flex-1">
-                <span className={`block text-sm font-medium ${s.done ? "text-mist line-through" : "text-fg"}`}>{s.label}</span>
-                {!s.done && <span className="block text-[13px] leading-5 text-mist">{s.description}</span>}
+                <span className={`block text-sm font-medium ${s.done ? "text-mist line-through" : "text-fg"}`}>{t(s.label)}</span>
+                {!s.done && <span className="block text-[13px] leading-5 text-mist">{t(s.description, s.vars)}</span>}
               </span>
               {!s.done && <ArrowRight className="mt-0.5 size-4 shrink-0 text-mist transition group-hover:translate-x-0.5" aria-hidden="true" />}
             </Link>

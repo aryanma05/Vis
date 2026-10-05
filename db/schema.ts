@@ -19,7 +19,9 @@ import {
 } from "drizzle-orm/pg-core";
 // Relativ sti: drizzle-kit leser denne filen uten Next sine stialiaser.
 import {
+  CONTACT_REASONS,
   type CvTemplate,
+  PROJECT_PROGRESS,
   type OpenTo,
   REACTION_TYPES,
   type ReactionType,
@@ -69,6 +71,8 @@ export const user = pgTable("user", {
   banned: boolean("banned").default(false),
   banReason: text("ban_reason"),
   banExpires: timestamp("ban_expires", { withTimezone: true }),
+  // To-trinns innlogging (twoFactor-pluginen i Better Auth).
+  twoFactorEnabled: boolean("two_factor_enabled").default(false),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });
@@ -133,6 +137,23 @@ export const verification = pgTable(
   (t) => [index("verification_identifier_idx").on(t.identifier)],
 );
 
+// Hemmeligheten til appen for engangskoder og reservekodene (kryptert av Better Auth).
+export const twoFactor = pgTable(
+  "two_factor",
+  {
+    id: text("id").primaryKey(),
+    secret: text("secret").notNull(),
+    backupCodes: text("backup_codes").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    verified: boolean("verified").default(true),
+    failedVerificationCount: integer("failed_verification_count").default(0),
+    lockedUntil: timestamp("locked_until", { withTimezone: true }),
+  },
+  (t) => [index("two_factor_user_idx").on(t.userId), index("two_factor_secret_idx").on(t.secret)],
+);
+
 export const rateLimit = pgTable("rate_limit", {
   id: text("id").primaryKey(),
   key: text("key").notNull().unique(),
@@ -155,6 +176,10 @@ export type NotificationPrefs = {
   reply: boolean;
   mention: boolean;
   follow: boolean;
+  // Ukesoppsummering på e-post (standard på; kan skrus av i e-posten eller under Konto).
+  digest?: boolean;
+  // E-post når noen bruker «Kontakt meg» (standard på).
+  contact?: boolean;
 };
 
 // Én rad per bruker, opprettes første gang profilen lagres.
@@ -177,6 +202,16 @@ export const profile = pgTable("profile", {
   accentColor: text("accent_color"),
   cvTemplate: text("cv_template").$type<CvTemplate>().notNull().default("klassisk"),
   notificationPrefs: jsonb("notification_prefs").$type<NotificationPrefs>(),
+  // «Kontakt meg»-knappen på profilen. Av til personen selv slår den på.
+  contactEnabled: boolean("contact_enabled").notNull().default(false),
+  // Når siste ukesoppsummering ble sendt (så samme uke ikke sendes to ganger).
+  digestSentAt: timestamp("digest_sent_at", { withTimezone: true }),
+  // Ikke vis meg i «Hvem har sett profilen» hos andre (da ser man heller ikke selv hvem).
+  hideVisits: boolean("hide_visits").notNull().default(false),
+  // Kan finnes av bedrifter i kandidatsøket (Bedrift-planen). Av til personen slår det på.
+  visibleToCompanies: boolean("visible_to_companies").notNull().default(false),
+  // Pro: skjul «Laget med Vis» på CV-en og i innbyggingskortene.
+  hideBranding: boolean("hide_branding").notNull().default(false),
   updatedAt: updatedAt(),
 });
 
@@ -186,6 +221,8 @@ export const profile = pgTable("profile", {
 
 export const projectStatus = pgEnum("project_status", ["draft", "published"]);
 export const projectSource = pgEnum("project_source", ["manual", "github"]);
+// Om prosjektet er ferdig eller fortsatt under arbeid.
+export const projectProgress = pgEnum("project_progress", PROJECT_PROGRESS);
 
 export const project = pgTable(
   "project",
@@ -208,12 +245,15 @@ export const project = pgTable(
     // "YYYY-MM" eller "YYYY".
     projectDate: varchar("project_date", { length: 7 }),
     status: projectStatus("status").notNull().default("published"),
+    progress: projectProgress("progress").notNull().default("completed"),
     // Festet øverst på profilen (maks seks).
     pinned: boolean("pinned").notNull().default(false),
     viewCount: integer("view_count").notNull().default(0),
     // Fjernet av en moderator. Bare eieren (og admin) ser prosjektet da.
     removedAt: timestamp("removed_at", { withTimezone: true }),
     removedReason: text("removed_reason"),
+    // Valgt ut av redaksjonen (admin). Vises øverst på forsiden og i Utforsk.
+    featuredAt: timestamp("featured_at", { withTimezone: true }),
     source: projectSource("source").notNull().default("manual"),
     githubRepoId: bigint("github_repo_id", { mode: "number" }),
     githubFullName: text("github_full_name"),
@@ -230,6 +270,7 @@ export const project = pgTable(
     index("project_feed_idx").on(t.status, t.publishedAt.desc()),
     uniqueIndex("project_owner_github_repo_uniq").on(t.ownerId, t.githubRepoId),
     index("project_search_idx").using("gin", t.searchVector),
+    index("project_featured_idx").on(t.featuredAt.desc()),
   ],
 );
 
@@ -249,6 +290,25 @@ export const projectImage = pgTable(
     createdAt: createdAt(),
   },
   (t) => [index("project_image_project_idx").on(t.projectId, t.position)],
+);
+
+// Andre som har vært med på prosjektet. Eieren legger dem til; de kan fjerne seg selv.
+export const projectMember = pgTable(
+  "project_member",
+  {
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => project.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    position: integer("position").notNull().default(0),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.projectId, t.userId] }),
+    index("project_member_user_idx").on(t.userId),
+  ],
 );
 
 export const tag = pgTable("tag", {
@@ -416,6 +476,9 @@ export const notificationType = pgEnum("notification_type", [
   "mention",
   "follow",
   "reaction",
+  "contact",
+  "featured",
+  "member",
 ]);
 
 export const notification = pgTable(
@@ -433,7 +496,7 @@ export const notification = pgTable(
     projectId: uuid("project_id").references(() => project.id, { onDelete: "cascade" }),
     commentId: uuid("comment_id").references(() => comment.id, { onDelete: "cascade" }),
     // Ekstra detaljer, f.eks. hvilken reaksjon det gjelder.
-    data: jsonb("data").$type<{ reaction?: ReactionType }>(),
+    data: jsonb("data").$type<{ reaction?: ReactionType; contactId?: string }>(),
     readAt: timestamp("read_at", { withTimezone: true }),
     createdAt: createdAt(),
   },
@@ -563,4 +626,374 @@ export const storedFile = pgTable(
     createdAt: createdAt(),
   },
   (t) => [index("stored_file_owner_idx").on(t.ownerId)],
+);
+
+/* -------------------------------------------------------------------------- */
+/*  Drift: begrensninger og feillogg                                          */
+/* -------------------------------------------------------------------------- */
+
+// Tellere for begrensninger (lib/rate-limit.ts), f.eks. «skjermbilder:<bruker>».
+// Fast tidsvindu: telleren starter på nytt når vinduet er over. Ligger i databasen,
+// så grensene gjelder på tvers av serverprosesser og overlever omstart.
+export const rateBucket = pgTable(
+  "rate_bucket",
+  {
+    key: text("key").primaryKey(),
+    count: integer("count").notNull().default(0),
+    windowStart: timestamp("window_start", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("rate_bucket_window_idx").on(t.windowStart)],
+);
+
+// Feil fra serveren og nettleseren, så admin kan se dem under /admin?fane=system uten
+// å lete i loggene hos vertsleverandøren. Ryddes etter 30 dager (lib/errors.ts).
+export const errorEvent = pgTable(
+  "error_event",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    // "server", "action" eller "client".
+    source: text("source").notNull(),
+    event: text("event").notNull(),
+    message: text("message").notNull(),
+    digest: text("digest"),
+    path: text("path"),
+    stack: text("stack"),
+    userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+  },
+  (t) => [index("error_event_created_idx").on(t.createdAt.desc())],
+);
+
+/* -------------------------------------------------------------------------- */
+/*  Vekst: kontakt, samlinger og oppdateringer                                */
+/* -------------------------------------------------------------------------- */
+
+export const contactReason = pgEnum("contact_reason", CONTACT_REASONS);
+
+// «Kontakt meg» på profilen. Mottakeren får varsel og e-post med svaradressen til avsenderen.
+export const contactRequest = pgTable(
+  "contact_request",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    recipientId: text("recipient_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    senderId: text("sender_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    // Sendt på vegne av en bedrift (Bedrift-planen), ellers null.
+    companyId: uuid("company_id").references((): AnyPgColumn => company.id, { onDelete: "set null" }),
+    reason: contactReason("reason").notNull().default("annet"),
+    message: text("message").notNull(),
+    readAt: timestamp("read_at", { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index("contact_request_recipient_idx").on(t.recipientId, t.createdAt.desc()),
+    index("contact_request_sender_idx").on(t.senderId, t.createdAt.desc()),
+  ],
+);
+
+// Samlinger av prosjekter («Inspirasjon», «Beste studentprosjekter»). Private eller offentlige.
+export const collection = pgTable(
+  "collection",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    ownerId: text("owner_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    description: text("description"),
+    isPublic: boolean("is_public").notNull().default(false),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index("collection_owner_idx").on(t.ownerId, t.updatedAt.desc())],
+);
+
+export const collectionItem = pgTable(
+  "collection_item",
+  {
+    collectionId: uuid("collection_id")
+      .notNull()
+      .references(() => collection.id, { onDelete: "cascade" }),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => project.id, { onDelete: "cascade" }),
+    addedAt: timestamp("added_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.collectionId, t.projectId] }),
+    index("collection_item_project_idx").on(t.projectId),
+  ],
+);
+
+// Oppdateringer på et prosjekt («Ny versjon ute», «Lagt til mørk modus»), nyeste først.
+export const projectUpdate = pgTable(
+  "project_update",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => project.id, { onDelete: "cascade" }),
+    body: text("body").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index("project_update_project_idx").on(t.projectId, t.createdAt.desc())],
+);
+
+/* -------------------------------------------------------------------------- */
+/*  Betaling (Stripe)                                                         */
+/* -------------------------------------------------------------------------- */
+
+// Hvem betaler: en person (Pro) eller en bedrift (Bedrift).
+export const billingOwner = pgEnum("billing_owner", ["user", "company"]);
+export const planKind = pgEnum("plan_kind", ["pro", "business"]);
+
+// Kunden hos Stripe for en person eller bedrift.
+export const billingCustomer = pgTable(
+  "billing_customer",
+  {
+    ownerType: billingOwner("owner_type").notNull(),
+    ownerId: text("owner_id").notNull(),
+    stripeCustomerId: text("stripe_customer_id").notNull().unique(),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.ownerType, t.ownerId] })],
+);
+
+// Abonnementene slik Stripe sist meldte dem (webhook), én rad per abonnement.
+export const subscription = pgTable(
+  "subscription",
+  {
+    id: text("id").primaryKey(),
+    ownerType: billingOwner("owner_type").notNull(),
+    ownerId: text("owner_id").notNull(),
+    plan: planKind("plan").notNull(),
+    priceId: text("price_id"),
+    // Stripe-status: active, trialing, past_due, canceled, unpaid, incomplete …
+    status: text("status").notNull(),
+    interval: text("interval"),
+    currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
+    cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index("subscription_owner_idx").on(t.ownerType, t.ownerId)],
+);
+
+// Pro eller Bedrift gitt av admin (f.eks. til ambassadører eller skoler), uten Stripe.
+export const planGrant = pgTable(
+  "plan_grant",
+  {
+    ownerType: billingOwner("owner_type").notNull(),
+    ownerId: text("owner_id").notNull(),
+    plan: planKind("plan").notNull(),
+    // null = uten sluttdato.
+    until: timestamp("until", { withTimezone: true }),
+    note: text("note"),
+    grantedById: text("granted_by_id").references(() => user.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.ownerType, t.ownerId] })],
+);
+
+// Webhook-hendelser vi har behandlet, så samme hendelse aldri behandles to ganger.
+export const stripeEvent = pgTable("stripe_event", {
+  id: text("id").primaryKey(),
+  type: text("type").notNull(),
+  createdAt: createdAt(),
+});
+
+/* -------------------------------------------------------------------------- */
+/*  Pro                                                                       */
+/* -------------------------------------------------------------------------- */
+
+// Hvem (innloggede) som har sett en profil. Vises for Pro-brukere under Innsikt.
+export const profileVisit = pgTable(
+  "profile_visit",
+  {
+    profileUserId: text("profile_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    viewerId: text("viewer_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    visits: integer("visits").notNull().default(1),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.profileUserId, t.viewerId] }),
+    index("profile_visit_recent_idx").on(t.profileUserId, t.lastSeenAt.desc()),
+  ],
+);
+
+// Eget domene til profilen (Pro), f.eks. ola.no. Bekreftes med en TXT-post i DNS.
+export const customDomain = pgTable("custom_domain", {
+  domain: text("domain").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .unique()
+    .references(() => user.id, { onDelete: "cascade" }),
+  token: text("token").notNull(),
+  verifiedAt: timestamp("verified_at", { withTimezone: true }),
+  createdAt: createdAt(),
+});
+
+/* -------------------------------------------------------------------------- */
+/*  Bedrift                                                                   */
+/* -------------------------------------------------------------------------- */
+
+export const company = pgTable("company", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  slug: text("slug").notNull().unique(),
+  name: text("name").notNull(),
+  website: text("website"),
+  logoUrl: text("logo_url"),
+  about: text("about"),
+  location: text("location"),
+  // «1–10», «11–50», «51–200», «201–1000», «1000+».
+  size: text("size"),
+  // Bekreftet av admin (vises med hake).
+  verifiedAt: timestamp("verified_at", { withTimezone: true }),
+  createdById: text("created_by_id").references(() => user.id, { onDelete: "set null" }),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
+export const companyRole = pgEnum("company_role", ["owner", "admin", "member"]);
+
+export const companyMember = pgTable(
+  "company_member",
+  {
+    companyId: uuid("company_id")
+      .notNull()
+      .references(() => company.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    role: companyRole("role").notNull().default("member"),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.companyId, t.userId] }), index("company_member_user_idx").on(t.userId)],
+);
+
+export const jobStatus = pgEnum("job_status", ["draft", "published", "closed"]);
+
+export const job = pgTable(
+  "job",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    companyId: uuid("company_id")
+      .notNull()
+      .references(() => company.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    // Markdown.
+    description: text("description").notNull().default(""),
+    location: text("location"),
+    // "nei", "hybrid" eller "helt".
+    remote: text("remote").notNull().default("nei"),
+    // "fulltid", "deltid", "internship", "sommerjobb", "trainee", "frilans".
+    type: text("type").notNull().default("fulltid"),
+    applyUrl: text("apply_url"),
+    applyEmail: text("apply_email"),
+    deadline: date("deadline"),
+    tags: jsonb("tags").$type<string[]>().notNull().default([]),
+    status: jobStatus("status").notNull().default("draft"),
+    views: integer("views").notNull().default(0),
+    applyClicks: integer("apply_clicks").notNull().default(0),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index("job_company_idx").on(t.companyId, t.createdAt.desc()), index("job_list_idx").on(t.status, t.publishedAt.desc())],
+);
+
+// Kandidatlister for bedrifter (Bedrift-planen), f.eks. «Sommerjobb 2027».
+export const talentList = pgTable(
+  "talent_list",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    companyId: uuid("company_id")
+      .notNull()
+      .references(() => company.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index("talent_list_company_idx").on(t.companyId)],
+);
+
+export const talentListMember = pgTable(
+  "talent_list_member",
+  {
+    listId: uuid("list_id")
+      .notNull()
+      .references(() => talentList.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    note: text("note"),
+    addedAt: timestamp("added_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.listId, t.userId] })],
+);
+
+/* -------------------------------------------------------------------------- */
+/*  Utviklere: API-nøkler og webhooks                                         */
+/* -------------------------------------------------------------------------- */
+
+// Nøkler til det åpne API-et (/api/v1). Bare en hash lagres; selve nøkkelen vises én gang.
+export const apiKey = pgTable(
+  "api_key",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    // De første tegnene, så brukeren kjenner igjen nøkkelen («vis_ab12…»).
+    prefix: text("prefix").notNull(),
+    keyHash: text("key_hash").notNull().unique(),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [index("api_key_user_idx").on(t.userId)],
+);
+
+// Webhooks for bedrifter (Bedrift-planen): vi sender en POST når noe skjer med stillingene.
+export const companyWebhook = pgTable(
+  "company_webhook",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    companyId: uuid("company_id")
+      .notNull()
+      .references(() => company.id, { onDelete: "cascade" }),
+    url: text("url").notNull(),
+    // Brukes til å signere hver levering (Vis-Signature). Vises én gang når den lages.
+    secret: text("secret").notNull(),
+    events: jsonb("events").$type<string[]>().notNull().default([]),
+    active: boolean("active").notNull().default(true),
+    lastStatus: integer("last_status"),
+    lastDeliveryAt: timestamp("last_delivery_at", { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [index("company_webhook_company_idx").on(t.companyId)],
+);
+
+export const webhookDelivery = pgTable(
+  "webhook_delivery",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    webhookId: uuid("webhook_id")
+      .notNull()
+      .references(() => companyWebhook.id, { onDelete: "cascade" }),
+    event: text("event").notNull(),
+    statusCode: integer("status_code"),
+    ok: boolean("ok").notNull().default(false),
+    attempts: integer("attempts").notNull().default(1),
+    error: text("error"),
+    createdAt: createdAt(),
+  },
+  (t) => [index("webhook_delivery_webhook_idx").on(t.webhookId, t.createdAt.desc())],
 );

@@ -25,7 +25,16 @@ export const emailProviderConfigured = Boolean((BREVO_API_KEY || RESEND_API_KEY)
 // er slått på.
 export const canSendEmail = emailProviderConfigured || process.env.NODE_ENV !== "production";
 
-type Email = { to: string; subject: string; text: string; html: string };
+export type Email = {
+  to: string;
+  subject: string;
+  text: string;
+  html: string;
+  // Svar går hit (f.eks. til den som sendte en kontaktforespørsel).
+  replyTo?: { email: string; name?: string };
+  // F.eks. List-Unsubscribe på ukesoppsummeringen.
+  headers?: Record<string, string>;
+};
 
 function parseFrom(from: string) {
   const match = from.match(/^\s*(.*?)\s*<([^>]+)>\s*$/);
@@ -59,6 +68,8 @@ export async function sendEmail(email: Email) {
       subject: email.subject,
       htmlContent: email.html,
       textContent: email.text,
+      ...(email.replyTo ? { replyTo: email.replyTo } : {}),
+      ...(email.headers ? { headers: email.headers } : {}),
     });
   } else {
     await post("https://api.resend.com/emails", { Authorization: `Bearer ${RESEND_API_KEY}` }, {
@@ -67,6 +78,8 @@ export async function sendEmail(email: Email) {
       subject: email.subject,
       html: email.html,
       text: email.text,
+      ...(email.replyTo ? { reply_to: email.replyTo.name ? `${email.replyTo.name} <${email.replyTo.email}>` : email.replyTo.email } : {}),
+      ...(email.headers ? { headers: email.headers } : {}),
     });
   }
 }
@@ -221,4 +234,112 @@ export function notificationEmail({
     url: `${base}${path}`,
     footer: `Du får denne e-posten fordi du har slått på e-postvarsler på Vis. Skru dem av under Konto → Varsler: ${base}/profil/rediger/konto#varsler`,
   });
+}
+
+// «Kontakt meg»: meldingen står i e-posten, og svar går rett til avsenderen.
+export function contactEmail({
+  to,
+  senderName,
+  senderEmail,
+  senderUsername,
+  reason,
+  message,
+  path,
+}: {
+  to: string;
+  senderName: string;
+  senderEmail: string;
+  senderUsername: string;
+  reason: string;
+  message: string;
+  path: string;
+}): Email {
+  const base = siteUrl();
+  const email = buttonEmail({
+    to,
+    subject: `${senderName} vil komme i kontakt (${reason})`,
+    heading: `${senderName} vil komme i kontakt`,
+    intro: `${senderName} (@${senderUsername}) sendte deg en melding om ${reason} via profilen din på Vis. Svar på denne e-posten for å svare direkte.`,
+    quote: message.length > 1500 ? `${message.slice(0, 1497)}…` : message,
+    button: "Se profilen deres",
+    url: `${base}${path}`,
+    outro: "Vis deler ikke e-postadressen din før du svarer. Vil du ikke få flere slike meldinger, slå av «Kontakt meg» under Rediger profil.",
+    footer: `Du får denne e-posten fordi «Kontakt meg» er slått på for profilen din på Vis. Endre det her: ${base}/profil/rediger`,
+  });
+  return { ...email, replyTo: { email: senderEmail, name: senderName } };
+}
+
+export type DigestContent = {
+  name: string;
+  profileViews: number;
+  projectViews: number;
+  newFollowers: { name: string; username: string }[];
+  reactions: number;
+  comments: number;
+  fromFollowing: { title: string; owner: string; path: string }[];
+  featured: { title: string; owner: string; path: string }[];
+  unsubscribeUrl: string;
+  oneClickUrl: string;
+};
+
+// Ukesoppsummering: tall for profilen, nye følgere og nytt fra folk du følger.
+export function digestEmail(to: string, c: DigestContent): Email {
+  const base = siteUrl();
+  const first = c.name.split(" ")[0] || "der";
+  const stats = [
+    c.profileViews > 0 && `${c.profileViews} så profilen din`,
+    c.projectViews > 0 && `${c.projectViews} visninger på prosjektene dine`,
+    c.reactions > 0 && `${c.reactions} reaksjoner`,
+    c.comments > 0 && `${c.comments} kommentarer`,
+  ].filter(Boolean) as string[];
+  const list = (items: { title: string; owner: string; path: string }[]) =>
+    items
+      .map(
+        (i) =>
+          `<li style="margin:0 0 10px"><a href="${escape(base + i.path)}" style="color:${INK};font-weight:600;text-decoration:none">${escape(i.title)}</a><span style="color:#64748b"> av ${escape(i.owner)}</span></li>`,
+      )
+      .join("");
+  const section = (title: string, body: string) =>
+    `<h2 style="margin:26px 0 10px;font-size:15px;letter-spacing:-0.01em">${escape(title)}</h2>${body}`;
+
+  const inner = `
+    <h1 style="margin:0 0 10px;font-size:22px;letter-spacing:-0.02em">Hei ${escape(first)}! Her er uken din på Vis</h1>
+    ${stats.length ? `<p style="margin:0;font-size:15px;line-height:1.6;color:#334155">${escape(stats.join(" · "))}.</p>` : ""}
+    ${
+      c.newFollowers.length
+        ? section(
+            c.newFollowers.length === 1 ? "Ny følger" : `${c.newFollowers.length} nye følgere`,
+            `<p style="margin:0;font-size:14px;line-height:1.6;color:#334155">${c.newFollowers
+              .slice(0, 5)
+              .map((f) => `<a href="${escape(`${base}/@${f.username}`)}" style="color:${INK}">${escape(f.name)}</a>`)
+              .join(", ")}${c.newFollowers.length > 5 ? ` og ${c.newFollowers.length - 5} til` : ""}</p>`,
+          )
+        : ""
+    }
+    ${c.fromFollowing.length ? section("Nytt fra folk du følger", `<ul style="margin:0;padding-left:18px;font-size:14px;line-height:1.5">${list(c.fromFollowing)}</ul>`) : ""}
+    ${c.featured.length ? section("Utvalgt denne uken", `<ul style="margin:0;padding-left:18px;font-size:14px;line-height:1.5">${list(c.featured)}</ul>`) : ""}
+    <p style="margin:28px 0 0"><a href="${escape(`${base}/innsikt`)}" style="display:inline-block;background:${INK};color:#ffffff;text-decoration:none;font-weight:600;padding:12px 20px;border-radius:12px">Se innsikten din</a></p>`;
+
+  const text = [
+    `Hei ${first}! Her er uken din på Vis`,
+    stats.length ? stats.join(" · ") : "",
+    c.newFollowers.length ? `Nye følgere: ${c.newFollowers.map((f) => f.name).join(", ")}` : "",
+    c.fromFollowing.length ? `Nytt fra folk du følger:\n${c.fromFollowing.map((i) => `- ${i.title} av ${i.owner}: ${base}${i.path}`).join("\n")}` : "",
+    c.featured.length ? `Utvalgt denne uken:\n${c.featured.map((i) => `- ${i.title} av ${i.owner}: ${base}${i.path}`).join("\n")}` : "",
+    `Se innsikten din: ${base}/innsikt`,
+    `Vil du ikke ha denne e-posten? Meld deg av: ${c.unsubscribeUrl}`,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+
+  return {
+    to,
+    subject: stats.length ? `Uken din på Vis: ${stats[0]}` : "Uken din på Vis",
+    html: frame(
+      inner,
+      `Du får ukesoppsummeringen fordi du har en profil på Vis. <a href="${escape(c.unsubscribeUrl)}" style="color:#64748b">Meld deg av</a> eller endre det under Konto → Varsler.`,
+    ),
+    text,
+    headers: { "List-Unsubscribe": `<${c.oneClickUrl}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },
+  };
 }

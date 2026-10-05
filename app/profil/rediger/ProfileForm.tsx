@@ -3,11 +3,13 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { ArrowDown, ArrowUp, Check, ImagePlus, MapPin, Plus, Trash2, X } from "lucide-react";
+import { setProfileFlagsAction } from "@/app/actions/pro";
 import { removeAvatarAction, updateProfileAction, uploadAvatarAction } from "@/app/actions/profile";
 import Avatar from "@/components/Avatar";
 import MarkdownEditor from "@/components/MarkdownEditor";
 import { Button } from "@/components/ui/button";
 import { Field, inputClass, Section, textareaClass } from "@/components/ui/field";
+import Switch from "@/components/ui/switch";
 import { toast } from "@/components/ui/toast";
 import { ACCENTS, ACCENT_KEYS, OPEN_TO, OPEN_TO_LABELS, type AccentKey, type OpenTo } from "@/lib/constants";
 import { prepareImage } from "@/lib/prepare-image";
@@ -26,6 +28,7 @@ export type ProfileValues = {
   accentColor: AccentKey | null;
   links: Link[];
   customSections: CustomSection[];
+  contactEnabled: boolean;
 };
 
 const README_TEMPLATE = `## Hei! 👋
@@ -43,7 +46,18 @@ Kort om hvem du er og hva du brenner for.
 
 const newId = () => Math.random().toString(36).slice(2, 10);
 
-export default function ProfileForm({ initial, image, username }: { initial: ProfileValues; image: string | null; username: string }) {
+export default function ProfileForm({
+  initial,
+  image,
+  username,
+  visibleToCompanies: initialVisible = false,
+}: {
+  initial: ProfileValues;
+  image: string | null;
+  username: string;
+  visibleToCompanies?: boolean;
+}) {
+  const [visibleToCompanies, setVisibleToCompanies] = useState(initialVisible);
   const router = useRouter();
   const [values, setValues] = useState(initial);
   const [saved, setSaved] = useState(initial);
@@ -244,6 +258,31 @@ export default function ProfileForm({ initial, image, username }: { initial: Pro
               maxLength={400}
             />
           </Field>
+          <div className="mt-6 max-w-md">
+            <Switch
+              checked={values.contactEnabled}
+              onChange={(on) => set("contactEnabled", on)}
+              label="«Kontakt meg»-knapp på profilen"
+              description="Innloggede kan sende deg en melding om jobb, oppdrag eller samarbeid. Du får den som varsel og på e-post, og svarer direkte fra e-posten."
+            />
+          </div>
+          <div className="mt-5 max-w-md">
+            <Switch
+              checked={visibleToCompanies}
+              onChange={async (on) => {
+                setVisibleToCompanies(on);
+                const result = await setProfileFlagsAction({ visibleToCompanies: on });
+                if (!result.ok) {
+                  setVisibleToCompanies(!on);
+                  toast.error(result.error);
+                  return;
+                }
+                toast.success(on ? "Bedrifter kan nå finne deg" : "Du er skjult for bedrifter");
+              }}
+              label="Synlig for bedrifter"
+              description="Bedrifter med Bedrift-abonnement kan finne deg i kandidatsøket og sende deg en melding. De ser bare det som står på profilen din, aldri e-posten. Lagres med en gang."
+            />
+          </div>
         </Section>
 
         <Section title="Om meg" description="En lengre README på profilen. Fortell historien din, hva du kan og hva du liker å jobbe med.">

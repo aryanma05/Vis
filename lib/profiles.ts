@@ -4,12 +4,13 @@ import { cache } from "react";
 import { and, asc, desc, eq, ilike, inArray, or, sql, type SQL } from "drizzle-orm";
 import { db, schema } from "@/db";
 import type { OpenTo, ProfileSection, SocialLink } from "@/db/schema";
-import { OPEN_TO, type AccentKey, type CvTemplate } from "@/lib/constants";
+import { FIELDS, OPEN_TO, type AccentKey, type CvTemplate, type FieldKey } from "@/lib/constants";
 import { getCv } from "@/lib/cv";
 import { getCvDocument } from "@/lib/cv-document";
 import { getProjectsByOwner, publicProject } from "@/lib/projects";
 import { getFollowCounts, isFollowing, personColumns, withFollowState, type PersonCard } from "@/lib/social";
 import type { ProfileInput } from "@/lib/validation";
+import { siteHost } from "@/lib/site";
 import { outer } from "@/lib/sql";
 
 const { cvSkill, follow, profile, project, projectImage, projectTag, reaction, tag, user } = schema;
@@ -34,6 +35,7 @@ const profileColumns = {
   customSections: profile.customSections,
   accentColor: profile.accentColor,
   cvTemplate: profile.cvTemplate,
+  contactEnabled: profile.contactEnabled,
 };
 
 // Én oppslag per request, selv om både generateMetadata og siden spør.
@@ -112,6 +114,7 @@ export async function updateProfile(userId: string, input: ProfileInput) {
     openTo: input.openTo,
     customSections: input.customSections,
     accentColor: input.accentColor,
+    contactEnabled: input.contactEnabled,
   };
 
   await db.transaction(async (tx) => {
@@ -147,8 +150,9 @@ export async function searchPeople(
     location,
     openTo,
     tag: tagSlug,
+    field,
     limit = 36,
-  }: { viewerId?: string | null; location?: string | null; openTo?: OpenTo | null; tag?: string | null; limit?: number } = {},
+  }: { viewerId?: string | null; location?: string | null; openTo?: OpenTo | null; tag?: string | null; field?: FieldKey | null; limit?: number } = {},
 ): Promise<PersonCard[]> {
   const conditions: SQL[] = [notBanned];
   const q = query.trim();
@@ -166,6 +170,18 @@ export async function searchPeople(
   }
   if (location?.trim()) conditions.push(ilike(profile.location, `%${location.trim().replace(/[%_]/g, "")}%`));
   if (openTo && OPEN_TO.includes(openTo)) conditions.push(sql`${profile.openTo} @> ${JSON.stringify([openTo])}::jsonb`);
+  if (field && FIELDS[field]) {
+    const words = FIELDS[field].words;
+    conditions.push(
+      or(
+        ...words.map((w) => ilike(profile.headline, `%${w}%`)),
+        sql`exists (select 1 from ${cvSkill} where ${cvSkill.userId} = ${outer(user.id)} and (${sql.join(
+          words.map((w) => sql`${cvSkill.name} ilike ${`%${w}%`}`),
+          sql` or `,
+        )}))`,
+      )!,
+    );
+  }
   if (tagSlug) {
     conditions.push(
       sql`exists (select 1 from ${project} p join ${projectTag} pt on pt.project_id = p.id join ${tag} t on t.id = pt.tag_id
@@ -294,7 +310,7 @@ export async function getPlatformStats() {
 /*  Kom i gang                                                                */
 /* -------------------------------------------------------------------------- */
 
-export type OnboardingStep = { key: string; label: string; description: string; href: string; done: boolean };
+export type OnboardingStep = { key: string; label: string; description: string; vars?: Record<string, string>; href: string; done: boolean };
 
 // Stegene en ny bruker bør gjøre. Vises på forsiden og profilen til alt er gjort.
 export async function getOnboarding(userId: string, username: string): Promise<OnboardingStep[]> {
@@ -324,7 +340,7 @@ export async function getOnboarding(userId: string, username: string): Promise<O
     {
       key: "cv",
       label: "Importer CV-en",
-      description: "Last opp PDF, så fyller vi ut erfaring og utdanning.",
+      description: "Last opp PDF eller Word, så fyller vi ut erfaring og utdanning.",
       href: "/profil/rediger/cv",
       done: row.cv > 0,
     },
@@ -345,9 +361,20 @@ export async function getOnboarding(userId: string, username: string): Promise<O
     {
       key: "del",
       label: "Del profilen",
-      description: `vis.no/@${username} – legg den i bioen din eller del den med venner.`,
+      description: "{link} – legg den i bioen din eller del den med venner.",
+      vars: { link: `${siteHost()}/@${username}` },
       href: `/@${username}`,
       done: row.projects > 0 && Boolean(row.headline),
     },
   ];
+}
+
+// Personvern- og Pro-valgene til kontosiden.
+export async function getOwnProfileFlags(userId: string) {
+  const [row] = await db
+    .select({ hideVisits: profile.hideVisits, hideBranding: profile.hideBranding, visibleToCompanies: profile.visibleToCompanies })
+    .from(profile)
+    .where(eq(profile.userId, userId))
+    .limit(1);
+  return { hideVisits: row?.hideVisits ?? false, hideBranding: row?.hideBranding ?? false, visibleToCompanies: row?.visibleToCompanies ?? false };
 }

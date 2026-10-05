@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { loadMoreProjectsAction } from "@/app/actions/feed";
+import { useT } from "@/components/LocaleProvider";
 import ProjectCard from "@/components/ProjectCard";
 import { Button } from "@/components/ui/button";
 import type { ProjectCard as Card } from "@/lib/projects";
@@ -18,6 +19,7 @@ export default function ProjectFeed({
   source?: "latest" | "following";
   columns?: 2 | 3;
 }) {
+  const t = useT();
   const [projects, setProjects] = useState(initial);
   const [next, setNext] = useState(cursor);
   const [pending, startTransition] = useTransition();
@@ -43,7 +45,7 @@ export default function ProjectFeed({
       {next && (
         <div className="mt-14 flex justify-center">
           <Button variant="outline" onClick={loadMore} loading={pending}>
-            {pending ? "Henter flere …" : "Vis flere prosjekter"}
+            {pending ? t("Henter flere …") : t("Vis flere prosjekter")}
           </Button>
         </div>
       )}

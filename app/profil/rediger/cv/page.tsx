@@ -11,8 +11,6 @@ export const metadata: Metadata = { title: "Rediger CV", robots: { index: false 
 export default async function EditCvPage() {
   const user = await requireUser();
   const [cv, doc, profile] = await Promise.all([getCv(user.id), getCvDocument(user.id, user.id), getOwnProfile(user.id)]);
-  // CV-lesing trenger en nøkkel til språkmodellen. Uten den skjules «fyll ut»-knappene.
-  const canParse = Boolean(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN);
 
   return (
     <main className="pb-28 md:pb-16 md:pl-24">
@@ -22,7 +20,6 @@ export default async function EditCvPage() {
           cv={cv}
           username={user.username}
           template={profile?.cvTemplate ?? "klassisk"}
-          canParse={canParse}
           doc={
             doc && {
               fileUrl: doc.fileUrl,

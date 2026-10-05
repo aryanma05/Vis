@@ -487,6 +487,53 @@ dialog.modal[open] > * {
   }
 }
 
+/* Mindre gjennomsiktighet (innstilling i iOS/macOS/Windows): glasset blir tett, så
+   teksten aldri står over noe som skinner gjennom. */
+@media (prefers-reduced-transparency: reduce) {
+  :root,
+  :root[data-theme] {
+    --card: var(--surface);
+    --card-hover: var(--surface-2);
+    --glass: var(--surface);
+    --glass-strong: var(--surface);
+    --sheen: transparent;
+  }
+  .glass,
+  .glass-strong,
+  .glass-dark,
+  dialog.modal::backdrop {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+  body::before {
+    opacity: 0.4;
+  }
+}
+
+/* Mer kontrast: dempet tekst blir mørkere/lysere og kantene tydeligere. */
+@media (prefers-contrast: more) {
+  :root,
+  :root[data-theme] {
+    --mist: color-mix(in srgb, var(--fg) 82%, var(--ink));
+    --line: color-mix(in srgb, var(--fg) 30%, transparent);
+    --rim: color-mix(in srgb, var(--fg) 34%, transparent);
+    --card: color-mix(in srgb, var(--surface) 92%, transparent);
+    --glass: color-mix(in srgb, var(--surface) 94%, transparent);
+    --glass-strong: var(--surface);
+  }
+}
+
+/* Windows høykontrast: glass og kort trenger synlige kanter. */
+@media (forced-colors: active) {
+  .glass,
+  .glass-strong,
+  .glass-card,
+  .glass-chip,
+  .glass-thumb {
+    border: 1px solid CanvasText;
+  }
+}
+
 /* -------------------------------------------------------------------------- */
 /*  README-visning (components/Markdown.tsx)                                  */
 /* -------------------------------------------------------------------------- */

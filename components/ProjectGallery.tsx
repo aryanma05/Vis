@@ -2,16 +2,18 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Expand, X } from "lucide-react";
+import { useT } from "@/components/LocaleProvider";
 
 type Image = { id: string; url: string; alt: string | null };
 
 // Bildene som en «bento»: det første stort, de neste mindre ved siden av. Klikk
 // åpner fullskjerm der man kan bla med piltaster, knapper eller sveip.
 export default function ProjectGallery({ images, title }: { images: Image[]; title: string }) {
+  const t = useT();
   const [open, setOpen] = useState<number | null>(null);
   const count = images.length;
   const touchX = useRef<number | null>(null);
-  const alt = (img: Image, i: number) => img.alt ?? `${title} – bilde ${i + 1} av ${count}`;
+  const alt = (img: Image, i: number) => img.alt ?? t("{title} – bilde {n} av {count}", { title, n: i + 1, count });
 
   const go = useCallback((delta: number) => setOpen((i) => (i === null ? i : (i + delta + count) % count)), [count]);
 
@@ -81,7 +83,7 @@ export default function ProjectGallery({ images, title }: { images: Image[]; tit
                 className="absolute inset-0 flex items-center justify-center rounded-[20px] bg-black/45 text-2xl font-semibold text-white backdrop-blur-md transition hover:bg-black/35 md:rounded-[28px]"
               >
                 +{count - 3}
-                <span className="sr-only"> bilder til</span>
+                <span className="sr-only"> {t("bilder til")}</span>
               </button>
             )}
           </div>
@@ -111,7 +113,7 @@ export default function ProjectGallery({ images, title }: { images: Image[]; tit
             <button
               type="button"
               onClick={() => setOpen(null)}
-              aria-label="Lukk"
+              aria-label={t("Lukk")}
               className="flex size-10 items-center justify-center glass-dark rounded-full transition hover:bg-white/20"
             >
               <X className="size-5" />
@@ -134,7 +136,7 @@ export default function ProjectGallery({ images, title }: { images: Image[]; tit
                     e.stopPropagation();
                     go(-1);
                   }}
-                  aria-label="Forrige bilde"
+                  aria-label={t("Forrige bilde")}
                   className="absolute left-3 top-1/2 flex size-12 -translate-y-1/2 items-center justify-center glass-dark rounded-full transition hover:bg-white/20 md:left-6"
                 >
                   <ChevronLeft className="size-6" />
@@ -145,7 +147,7 @@ export default function ProjectGallery({ images, title }: { images: Image[]; tit
                     e.stopPropagation();
                     go(1);
                   }}
-                  aria-label="Neste bilde"
+                  aria-label={t("Neste bilde")}
                   className="absolute right-3 top-1/2 flex size-12 -translate-y-1/2 items-center justify-center glass-dark rounded-full transition hover:bg-white/20 md:right-6"
                 >
                   <ChevronRight className="size-6" />

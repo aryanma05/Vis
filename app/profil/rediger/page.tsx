@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getOwnProfile } from "@/lib/profiles";
+import { getOwnProfile, getOwnProfileFlags } from "@/lib/profiles";
 import { requireUser } from "@/lib/session";
 import { shownUsername } from "@/lib/username";
 import EditNav from "./EditNav";
@@ -11,7 +11,7 @@ export const metadata: Metadata = { title: "Rediger profil", robots: { index: fa
 
 export default async function EditProfilePage() {
   const user = await requireUser();
-  const profile = await getOwnProfile(user.id);
+  const [profile, flags] = await Promise.all([getOwnProfile(user.id), getOwnProfileFlags(user.id)]);
   if (!profile) notFound();
 
   return (
@@ -21,6 +21,7 @@ export default async function EditProfilePage() {
         <ProfileForm
           image={profile.image}
           username={shownUsername(user)}
+          visibleToCompanies={flags.visibleToCompanies}
           initial={{
             name: profile.name,
             headline: profile.headline ?? "",
@@ -33,6 +34,7 @@ export default async function EditProfilePage() {
             accentColor: profile.accentColor,
             links: profile.links,
             customSections: profile.customSections,
+            contactEnabled: profile.contactEnabled ?? false,
           }}
         />
         <div className="lg:max-w-[calc(100%-340px)]">

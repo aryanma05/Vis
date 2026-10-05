@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useT } from "@/components/LocaleProvider";
 import { LogoBadge } from "@/components/Logo";
 
 // Logoen (bare merket, uten ordet) øverst til venstre på desktop, midt over sidemenyen.
@@ -9,11 +10,12 @@ import { LogoBadge } from "@/components/Logo";
 // toppen hvis du allerede er der.
 export default function HomeLogo() {
   const pathname = usePathname();
+  const t = useT();
 
   return (
     <Link
       href="/"
-      aria-label={pathname === "/" ? "Vis – til toppen" : "Vis – til forsiden"}
+      aria-label={t(pathname === "/" ? "Vis – til toppen" : "Vis – til forsiden")}
       onClick={(event) => {
         if (pathname !== "/" || event.metaKey || event.ctrlKey || event.shiftKey) return;
         event.preventDefault();

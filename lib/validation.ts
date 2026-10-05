@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ACCENT_KEYS, OPEN_TO } from "@/lib/constants";
+import { ACCENT_KEYS, MAX_PROJECT_MEMBERS, OPEN_TO, PROJECT_PROGRESS } from "@/lib/constants";
 import { MAX_TAGS_PER_PROJECT } from "@/lib/tag-names";
 
 const emptyToNull = (v: string | null | undefined) => (v ? v : null);
@@ -57,6 +57,15 @@ const tagList = z
   .refine((v) => v.length <= MAX_TAGS_PER_PROJECT, `Maks ${MAX_TAGS_PER_PROJECT} teknologier.`)
   .refine((v) => v.every((t) => t.length <= 40), "En teknologi kan ha maks 40 tegn.");
 
+// Medlemmer som kommaseparerte brukernavn. Mangler feltet, røres ikke medlemmene
+// (f.eks. ved import), mens et tomt felt fjerner alle.
+const memberList = z
+  .string()
+  .max(2_000)
+  .nullish()
+  .transform((v) => (v == null ? undefined : [...new Set(v.split(",").map((u) => u.trim().toLowerCase()).filter(Boolean))]))
+  .refine((v) => !v || v.length <= MAX_PROJECT_MEMBERS, `Maks ${MAX_PROJECT_MEMBERS} medlemmer.`);
+
 export const projectInput = z.object({
   title: z.string().trim().min(1, "Prosjektet må ha en tittel.").max(100, "Maks 100 tegn."),
   summary: optionalText(200),
@@ -68,6 +77,12 @@ export const projectInput = z.object({
   projectDate: yearMonth,
   tags: tagList,
   status: z.enum(["draft", "published"]).default("published"),
+  // Mangler den, beholdes det som er lagret (nye prosjekter blir «fullført»).
+  progress: z
+    .enum(PROJECT_PROGRESS)
+    .nullish()
+    .transform((v) => v ?? undefined),
+  members: memberList,
 });
 
 export type ProjectInput = z.output<typeof projectInput>;
@@ -100,6 +115,7 @@ export const profileInput = z.object({
   openTo: z.array(z.enum(OPEN_TO)).max(OPEN_TO.length).default([]),
   customSections: z.array(customSection).max(8).default([]),
   accentColor: z.enum(ACCENT_KEYS).nullish().transform((v) => v ?? null),
+  contactEnabled: z.boolean().default(false),
 });
 
 export type ProfileInput = z.output<typeof profileInput>;

@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { addCommentAction } from "@/app/actions/comments";
 import { quickSearchAction } from "@/app/actions/search";
 import Avatar from "@/components/Avatar";
+import { useT } from "@/components/LocaleProvider";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
 
@@ -30,6 +31,7 @@ export default function CommentForm({
   compact?: boolean;
 }) {
   const router = useRouter();
+  const t = useT();
   const ref = useRef<HTMLTextAreaElement>(null);
   const [body, setBody] = useState(initialText);
   const [error, setError] = useState<string | null>(null);
@@ -94,7 +96,7 @@ export default function CommentForm({
       }
       setBody("");
       onDone?.();
-      toast.success(parentId ? "Svaret er publisert" : "Kommentaren er publisert");
+      toast.success(t(parentId ? "Svaret er publisert" : "Kommentaren er publisert"));
       router.refresh();
     });
 
@@ -151,27 +153,27 @@ export default function CommentForm({
             }}
             rows={compact ? 2 : 3}
             maxLength={MAX}
-            placeholder={parentId ? "Skriv et svar …" : "Hva synes du? Still et spørsmål eller gi et tips. Skriv @ for å nevne noen."}
-            aria-label={parentId ? "Svar" : "Kommentar"}
+            placeholder={t(parentId ? "Skriv et svar …" : "Hva synes du? Still et spørsmål eller gi et tips. Skriv @ for å nevne noen.")}
+            aria-label={t(parentId ? "Svar" : "Kommentar")}
             className="block w-full resize-none bg-transparent px-4 py-3 text-[15px] leading-6 text-fg outline-none placeholder:text-mist/50"
           />
           <div className="flex items-center justify-between gap-3 border-t border-line/60 px-3 py-2">
-            <p className="text-xs text-mist/70">{body.length > MAX - 200 ? `${MAX - body.length} tegn igjen` : "⌘ + Enter for å sende"}</p>
+            <p className="text-xs text-mist/70">{body.length > MAX - 200 ? t("{n} tegn igjen", { n: MAX - body.length }) : t("⌘ + Enter for å sende")}</p>
             <div className="flex gap-2">
               {onDone && (
                 <Button type="button" variant="ghost" size="xs" onClick={onDone}>
-                  Avbryt
+                  {t("Avbryt")}
                 </Button>
               )}
               <Button type="submit" size="xs" loading={pending} disabled={!body.trim()}>
-                {parentId ? "Svar" : "Kommenter"}
+                {t(parentId ? "Svar" : "Kommenter")}
               </Button>
             </div>
           </div>
         </div>
 
         {showPeople && (
-          <ul role="listbox" aria-label="Nevn en person" className="glass-strong absolute left-0 right-0 top-full z-30 mt-2 overflow-hidden rounded-[20px] p-1.5 sm:right-auto sm:w-80">
+          <ul role="listbox" aria-label={t("Nevn en person")} className="glass-strong absolute left-0 right-0 top-full z-30 mt-2 overflow-hidden rounded-[20px] p-1.5 sm:right-auto sm:w-80">
             {suggestions.map((p, i) => (
               <li key={p.username}>
                 <button
