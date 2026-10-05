@@ -112,7 +112,7 @@ export async function setCustomDomain(userId: string, input: string) {
   if (!(await isPro(userId))) throw new UserFacingError("Eget domene krever Pro.");
   const domain = normalizeDomain(input);
   if (!DOMAIN.test(domain)) throw new UserFacingError("Skriv domenet slik: dittnavn.no eller portefolje.dittnavn.no.");
-  if (domain === siteHost() || domain.endsWith(".onrender.com") || domain.endsWith(".vercel.app")) throw new UserFacingError("Bruk et domene du eier selv.");
+  if (domain === siteHost() || domain.endsWith(`.${siteHost()}`) || domain.endsWith(".onrender.com") || domain.endsWith(".vercel.app")) throw new UserFacingError("Bruk et domene du eier selv.");
   const [taken] = await db.select({ userId: customDomain.userId }).from(customDomain).where(eq(customDomain.domain, domain)).limit(1);
   if (taken && taken.userId !== userId) throw new UserFacingError("Domenet er allerede i bruk.");
   const token = randomBytes(12).toString("hex");

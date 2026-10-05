@@ -19,6 +19,16 @@ export function siteUrl(): string {
 // Domenet uten protokoll, til visning (f.eks. i delingsbilder).
 export const siteHost = () => new URL(siteUrl()).host;
 
+// Andre adresser til appen selv: www-varianten og Render-/Vercel-adressen. Når appen har
+// fått eget domene (BETTER_AUTH_URL), sender proxy.ts sidene dit, så innlogging, delte
+// lenker og søkemotorer bare ser én adresse.
+export function redirectsToSite(host: string): boolean {
+  const own = new URL(siteUrl()).hostname;
+  if (host === own) return false;
+  const aliases = [`www.${own}`, process.env.RENDER_EXTERNAL_HOSTNAME, process.env.VERCEL_PROJECT_PRODUCTION_URL];
+  return aliases.some((alias) => alias?.toLowerCase() === host);
+}
+
 export const SITE_NAME = "Vis";
 export const SITE_TAGLINE = "Prosjektene dine, samlet på ett sted.";
 export const SITE_DESCRIPTION =
