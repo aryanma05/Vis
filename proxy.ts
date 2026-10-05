@@ -1,12 +1,16 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { isOwnHost, usernameForHost } from "@/lib/domain-lookup";
-import { siteUrl } from "@/lib/site";
+import { redirectsToSite, siteUrl } from "@/lib/site";
 
 // Egne domener (Pro): ola.no viser profilen til Ola, ola.no/cv viser CV-en. Alt annet på
 // et eget domene sendes til hovedsiden, der innlogging og resten av appen ligger.
-// På appens egne adresser gjør denne ingenting (ingen databaseoppslag).
+// www og den gamle Render-adressen sendes til appens domene. Ellers gjør denne ingenting
+// på appens egne adresser (ingen databaseoppslag).
 export async function proxy(request: NextRequest) {
   const host = (request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? "").split(":")[0].toLowerCase();
+  if (redirectsToSite(host)) {
+    return NextResponse.redirect(new URL(`${request.nextUrl.pathname}${request.nextUrl.search}`, siteUrl()), 308);
+  }
   if (isOwnHost(host)) return NextResponse.next();
 
   let username: string | null = null;

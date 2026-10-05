@@ -356,6 +356,41 @@ CV-er i Neon-databasen (Render sin disk tømmes ved hver omstart). Bildene krymp
 2400 px WebP, så de tar lite plass. Neon sitt gratisnivå har 0,5 GB; blir det trangt, sett
 `BLOB_READ_WRITE_TOKEN` fra en Blob-store på vercel.com, så havner nye filer der.
 
+### Eget domene for appen (visplatform.no)
+
+Domenet er registrert hos Norgesdomene, og DNS ligger hos dem (`ns1/ns2.norgesdns.no`).
+Gjør stegene i denne rekkefølgen, så siden aldri er nede underveis:
+
+1. **Render** → tjenesten → *Settings* → *Custom Domains* → *Add Custom Domain*:
+   `visplatform.no`. Render legger selv til `www.visplatform.no` og sender den til rotdomenet.
+2. **Norgesdomene** → domenet → DNS: fjern eventuelle standardposter (parkeringsside,
+   videresending, AAAA-poster), og legg inn:
+
+   | Type | Navn | Verdi |
+   | --- | --- | --- |
+   | A | `@` (visplatform.no) | `216.24.57.1` |
+   | CNAME | `www` | `<tjenesten>.onrender.com` (adressen Render-tjenesten har nå) |
+
+3. Vent til begge domenene er *Verified* og har sertifikat hos Render (som regel minutter,
+   noen ganger opptil et par timer). Sjekk at `https://visplatform.no` viser appen.
+4. Oppdater innloggingen, fordi tilbakekallsadressen flyttes til domenet:
+   - GitHub OAuth-appen: *Authorization callback URL* =
+     `https://visplatform.no/api/auth/callback/github` og *Homepage URL* = `https://visplatform.no`.
+   - Google: legg til `https://visplatform.no/api/auth/callback/google` under *Authorized
+     redirect URIs*, `https://visplatform.no` under *Authorized JavaScript origins* og
+     `visplatform.no` under *Authorized domains* på OAuth-samtykkeskjermen.
+5. **Render** → *Environment*: `BETTER_AUTH_URL=https://visplatform.no` (uten / på slutten).
+   Lagre og deploy. Fra nå sender `proxy.ts` sider på onrender.com-adressen og
+   `www.visplatform.no` videre til `https://visplatform.no`. API-et (`/api/...`) svarer
+   fortsatt på onrender.com-adressen, så webhooks og cron virker mens du flytter dem.
+6. Flytt det som peker på den gamle adressen: Stripe-webhooken
+   (`https://visplatform.no/api/stripe/webhook`), cron-jobben for ukesoppsummeringen og
+   `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` hvis det brukes. Send gjerne inn
+   `https://visplatform.no/sitemap.xml` i Google Search Console.
+
+Innlogginger på den gamle adressen gjelder ikke på domenet (informasjonskapsler følger
+adressen), så brukerne må logge inn på nytt én gang.
+
 ### E-post (bekreftelse og glemt passord)
 
 Render sin gratisversjon blokkerer SMTP, så e-post sendes via HTTP-API-et til Brevo:
