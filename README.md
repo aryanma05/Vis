@@ -13,6 +13,12 @@ prosjektene dine på én lenke (`/@brukernavn`), pluss en feed der man oppdager 
 
 - **Profil** på `/@brukernavn` med visittkort, README-seksjon, egne seksjoner, aksentfarge,
   «åpen for»-status, prosjekter (festede først), aktivitetskart og følgere.
+- **Utseende**: banner med farge, gradient, mønster, ferdige illustrasjoner (SVG) eller eget
+  bilde som kan flyttes, og et kjæledyr på profilen (åtte arter, farger, navn og tilbehør)
+  som følger musepekeren og hilser når man trykker på det.
+- **Prestasjoner** som på GitHub (`lib/achievement-defs.ts`): 18 merker, mange med nivåer
+  (×2 bronse, ×3 sølv, ×4 gull). Regnes ut når profilen vises og lagres i `user_achievement`;
+  eieren får en feiring når noe nytt er låst opp. Noe tilbehør til kjæledyret låses opp med merker.
 - **CV** på `/@brukernavn/cv` i fem maler (klassisk, moderne og kompakt, pluss elegant og
   tydelig med Pro), på norsk eller engelsk, redigerbar med dra-og-slipp, import fra
   PDF/Word (feltene fylles ut automatisk, se under) og eksport som PDF via utskrift.

@@ -2,9 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { runAction } from "@/lib/action";
+import { markAchievementsSeen } from "@/lib/achievements";
 import { isPro } from "@/lib/billing";
 import { CV_TEMPLATE_LABELS, CV_TEMPLATES, isProTemplate, type CvTemplate } from "@/lib/constants";
-import { setAvatar, setCvTemplate, updateProfile } from "@/lib/profiles";
+import { setAvatar, setBannerImage, setCvTemplate, updateProfile } from "@/lib/profiles";
 import { fail, UserFacingError } from "@/lib/result";
 import { requireUserForAction } from "@/lib/session";
 import { deleteStoredFiles, storageKeyFromUrl, storeImage } from "@/lib/storage";
@@ -35,6 +36,27 @@ export async function uploadAvatarAction(formData: FormData) {
     revalidatePath("/", "layout");
     return { url: stored.url };
   }, "profile.avatar");
+}
+
+// Skjemafelt: banner (bilde). Lagres med en gang, og det forrige bannerbildet slettes.
+export async function uploadBannerAction(formData: FormData) {
+  return runAction(async () => {
+    const user = await requireUserForAction();
+    const file = formData.get("banner");
+    if (!(file instanceof File) || file.size === 0) throw new UserFacingError("Velg et bilde.");
+    const stored = await storeImage(file, `banners/${user.id}`, { ownerId: user.id });
+    const banner = await setBannerImage(user.id, stored.url);
+    revalidatePath(`/profil/${user.username}`);
+    return { banner };
+  }, "profile.banner");
+}
+
+// Eieren har sett feiringen av nye prestasjoner.
+export async function markAchievementsSeenAction() {
+  return runAction(async () => {
+    const user = await requireUserForAction();
+    await markAchievementsSeen(user.id);
+  }, "profile.achievements-seen");
 }
 
 export async function removeAvatarAction() {

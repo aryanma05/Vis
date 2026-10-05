@@ -27,6 +27,7 @@ import {
   type ReactionType,
   REPORT_REASONS,
 } from "../lib/constants";
+import type { BannerConfig, PetConfig } from "../lib/profile-style";
 
 export type { CvTemplate, OpenTo, ReactionType };
 
@@ -200,6 +201,9 @@ export const profile = pgTable("profile", {
   customSections: jsonb("custom_sections").$type<ProfileSection[]>().notNull().default([]),
   // Aksentfarge på profilen (en av fargene i lib/profile-theme.ts).
   accentColor: text("accent_color"),
+  // Banneret øverst og kjæledyret på profilen (lib/profile-style.ts). Null = standard / ingen.
+  banner: jsonb("banner").$type<BannerConfig>(),
+  pet: jsonb("pet").$type<PetConfig>(),
   cvTemplate: text("cv_template").$type<CvTemplate>().notNull().default("klassisk"),
   notificationPrefs: jsonb("notification_prefs").$type<NotificationPrefs>(),
   // «Kontakt meg»-knappen på profilen. Av til personen selv slår den på.
@@ -544,6 +548,24 @@ export const reaction = pgTable(
     index("reaction_project_idx").on(t.projectId, t.createdAt.desc()),
     index("reaction_user_idx").on(t.userId),
   ],
+);
+
+// Prestasjonene en bruker har låst opp (lib/achievement-defs.ts). Én rad per merke med
+// det høyeste nivået; merker tas aldri bort igjen, selv om tallet de bygger på går ned.
+export const userAchievement = pgTable(
+  "user_achievement",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    key: text("key").notNull(),
+    tier: integer("tier").notNull().default(1),
+    // Når det nåværende nivået ble låst opp.
+    unlockedAt: timestamp("unlocked_at", { withTimezone: true }).notNull().defaultNow(),
+    // Når eieren så feiringen. Null = ny siden sist.
+    seenAt: timestamp("seen_at", { withTimezone: true }),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.key] })],
 );
 
 // Visninger telles per dag, uten å lagre hvem som så på (se lib/views.ts).

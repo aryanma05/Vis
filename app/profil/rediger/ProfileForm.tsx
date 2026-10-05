@@ -7,12 +7,17 @@ import { setProfileFlagsAction } from "@/app/actions/pro";
 import { removeAvatarAction, updateProfileAction, uploadAvatarAction } from "@/app/actions/profile";
 import Avatar from "@/components/Avatar";
 import MarkdownEditor from "@/components/MarkdownEditor";
+import Pet from "@/components/pet/Pet";
+import ProfileBanner from "@/components/profile/ProfileBanner";
 import { Button } from "@/components/ui/button";
 import { Field, inputClass, Section, textareaClass } from "@/components/ui/field";
 import Switch from "@/components/ui/switch";
 import { toast } from "@/components/ui/toast";
 import { ACCENTS, ACCENT_KEYS, OPEN_TO, OPEN_TO_LABELS, type AccentKey, type OpenTo } from "@/lib/constants";
 import { prepareImage } from "@/lib/prepare-image";
+import type { BannerConfig, PetConfig } from "@/lib/profile-style";
+import BannerEditor from "./BannerEditor";
+import PetEditor from "./PetEditor";
 
 type Link = { label: string; url: string };
 type CustomSection = { id: string; title: string; body: string };
@@ -29,6 +34,8 @@ export type ProfileValues = {
   links: Link[];
   customSections: CustomSection[];
   contactEnabled: boolean;
+  banner: BannerConfig | null;
+  pet: PetConfig | null;
 };
 
 const README_TEMPLATE = `## Hei! 👋
@@ -51,11 +58,13 @@ export default function ProfileForm({
   image,
   username,
   visibleToCompanies: initialVisible = false,
+  achievementTiers = {},
 }: {
   initial: ProfileValues;
   image: string | null;
   username: string;
   visibleToCompanies?: boolean;
+  achievementTiers?: Record<string, number>;
 }) {
   const [visibleToCompanies, setVisibleToCompanies] = useState(initialVisible);
   const router = useRouter();
@@ -177,6 +186,23 @@ export default function ProfileForm({
           </div>
         </Section>
 
+        <Section id="utseende" title="Banner" description="Bildet øverst på profilen. Velg en farge, et mønster, en ferdig illustrasjon eller last opp ditt eget.">
+          <BannerEditor
+            value={values.banner}
+            onChange={(banner) => set("banner", banner)}
+            onUploaded={(banner) => {
+              // Bildet er allerede lagret, så det regnes ikke som en endring som må lagres.
+              setValues((v) => ({ ...v, banner }));
+              setSaved((v) => ({ ...v, banner }));
+              router.refresh();
+            }}
+            accent={accent.color}
+            name={values.name}
+            avatar={avatar}
+            pet={values.pet}
+          />
+        </Section>
+
         <Section title="Visittkortet" description="Det første folk ser når de åpner profilen din.">
           <div className="grid gap-5 md:grid-cols-2">
             <Field label="Navn" error={err("name")}>
@@ -227,6 +253,10 @@ export default function ProfileForm({
               );
             })}
           </div>
+        </Section>
+
+        <Section title="Kjæledyr" description="En liten venn på profilen. Velg art, farge og tilbehør, og gi den et navn.">
+          <PetEditor value={values.pet} onChange={(pet) => set("pet", pet)} tiers={achievementTiers} />
         </Section>
 
         <Section title="Åpen for" description="Vis at du er tilgjengelig. Folk kan filtrere på dette i søket.">
@@ -397,8 +427,15 @@ export default function ProfileForm({
         <div className="sticky top-8 pt-10">
           <p className="caption">Forhåndsvisning</p>
           <div className="mt-3 overflow-hidden rounded-[22px] glass-card">
-            <div className="h-20" style={{ background: `linear-gradient(180deg, color-mix(in srgb, ${accent.color} 35%, transparent), transparent)` }} />
-            <div className="-mt-10 px-5 pb-5">
+            <div className="relative h-20 overflow-hidden">
+              <ProfileBanner banner={values.banner} accent={accent.color} uid="banner-card" />
+            </div>
+            <div className="relative -mt-10 px-5 pb-5">
+              {values.pet && (
+                <div className="absolute right-3 top-3">
+                  <Pet pet={values.pet} size={64} />
+                </div>
+              )}
               <Avatar name={values.name || "?"} image={avatar} size={72} className="ring-4 ring-surface" />
               <p className="mt-3 truncate text-lg font-bold tracking-tight">{values.name || "Navnet ditt"}</p>
               <p className="text-sm text-mist">@{username}</p>

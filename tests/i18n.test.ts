@@ -13,7 +13,9 @@ import {
   REACTION_LABELS,
   REMOTE_LABELS,
 } from "@/lib/constants";
+import { ACHIEVEMENTS, TIER_NAMES } from "@/lib/achievement-defs";
 import { localeFromAcceptLanguage, translate } from "@/lib/i18n";
+import { PET_SPECIES } from "@/lib/profile-style";
 import { EN } from "@/lib/i18n/en";
 
 const ROOT = join(import.meta.dirname, "..");
@@ -55,6 +57,10 @@ function keysInLists() {
     ...Object.values(OPEN_TO_LABELS),
     ...Object.values(REACTION_LABELS),
     ...Object.values(PROGRESS_LABELS),
+    ...ACHIEVEMENTS.flatMap((a) => [a.name, a.goal, a.about, ...(a.goalOne ? [a.goalOne] : [])]),
+    ...TIER_NAMES.filter(Boolean),
+    ...Object.values(PET_SPECIES).flatMap((p) => [p.label, p.sound]),
+    ...all(between("components/pet/Pet.tsx", "const PHRASES = [", "];"), /"([^"]+)"/g),
     ...Object.values(CONTACT_REASON_LABELS),
     ...Object.values(JOB_TYPE_LABELS),
     ...Object.values(REMOTE_LABELS),

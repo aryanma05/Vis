@@ -1,5 +1,14 @@
 import { z } from "zod";
 import { ACCENT_KEYS, MAX_PROJECT_MEMBERS, OPEN_TO, PROJECT_PROGRESS } from "@/lib/constants";
+import {
+  BANNER_ART_KEYS,
+  BANNER_GRADIENT_KEYS,
+  BANNER_PATTERN_KEYS,
+  PET_ACCESSORY_KEYS,
+  PET_COLOR_KEYS,
+  PET_NAME_MAX,
+  PET_SPECIES_KEYS,
+} from "@/lib/profile-style";
 import { MAX_TAGS_PER_PROJECT } from "@/lib/tag-names";
 
 const emptyToNull = (v: string | null | undefined) => (v ? v : null);
@@ -103,6 +112,25 @@ const customSection = z.object({
   body: z.string().trim().max(5000),
 });
 
+const hexColor = z.string().regex(/^#[0-9a-f]{6}$/i, "Ugyldig farge.").transform((v) => v.toLowerCase());
+
+// Bildet må være lastet opp her (sjekkes mot fillagringen i lib/profiles.ts).
+export const bannerConfig = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("accent") }),
+  z.object({ type: z.literal("color"), color: hexColor }),
+  z.object({ type: z.literal("gradient"), gradient: z.enum(BANNER_GRADIENT_KEYS) }),
+  z.object({ type: z.literal("pattern"), pattern: z.enum(BANNER_PATTERN_KEYS), color: hexColor }),
+  z.object({ type: z.literal("art"), art: z.enum(BANNER_ART_KEYS) }),
+  z.object({ type: z.literal("image"), url: z.string().max(500), y: z.number().min(0).max(100).transform(Math.round) }),
+]);
+
+export const petConfig = z.object({
+  species: z.enum(PET_SPECIES_KEYS),
+  color: z.enum(PET_COLOR_KEYS),
+  accessory: z.enum(PET_ACCESSORY_KEYS).default("ingen"),
+  name: z.string().trim().max(PET_NAME_MAX, `Navnet kan ha maks ${PET_NAME_MAX} tegn.`).default(""),
+});
+
 export const profileInput = z.object({
   name: z.string().trim().min(1, "Navn kan ikke være tomt.").max(100),
   headline: optionalText(120),
@@ -116,6 +144,9 @@ export const profileInput = z.object({
   customSections: z.array(customSection).max(8).default([]),
   accentColor: z.enum(ACCENT_KEYS).nullish().transform((v) => v ?? null),
   contactEnabled: z.boolean().default(false),
+  // Mangler feltet, røres ikke det som er lagret. null fjerner banneret / kjæledyret.
+  banner: bannerConfig.nullish(),
+  pet: petConfig.nullish(),
 });
 
 export type ProfileInput = z.output<typeof profileInput>;

@@ -64,6 +64,13 @@
       "when": 1791212236418,
       "tag": "0008_prosjektmedlemmer",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791225247786,
+      "tag": "0009_profil_og_prestasjoner",
+      "breakpoints": true
     }
   ]
 }
