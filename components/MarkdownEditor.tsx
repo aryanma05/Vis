@@ -1,21 +1,30 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Bold, Code, Heading2, Italic, Link2, List, ListOrdered, Quote, Wand2 } from "lucide-react";
+import { useLocale, useT } from "@/components/LocaleProvider";
 import Markdown from "@/components/Markdown";
+import { dateLocale, type T } from "@/lib/i18n";
 
 type Action = { label: string; Icon: typeof Bold; apply: (selected: string) => { text: string; select?: [number, number] } };
 
-const ACTIONS: Action[] = [
-  { label: "Overskrift", Icon: Heading2, apply: (s) => ({ text: `## ${s || "Overskrift"}` }) },
-  { label: "Fet", Icon: Bold, apply: (s) => ({ text: `**${s || "fet tekst"}**`, select: [2, 2 + (s || "fet tekst").length] }) },
-  { label: "Kursiv", Icon: Italic, apply: (s) => ({ text: `*${s || "kursiv"}*`, select: [1, 1 + (s || "kursiv").length] }) },
-  { label: "Lenke", Icon: Link2, apply: (s) => ({ text: `[${s || "lenketekst"}](https://)`, select: [(s || "lenketekst").length + 3, (s || "lenketekst").length + 11] }) },
-  { label: "Punktliste", Icon: List, apply: (s) => ({ text: (s || "Punkt").split("\n").map((l) => `- ${l}`).join("\n") }) },
-  { label: "Nummerert liste", Icon: ListOrdered, apply: (s) => ({ text: (s || "Punkt").split("\n").map((l, i) => `${i + 1}. ${l}`).join("\n") }) },
-  { label: "Sitat", Icon: Quote, apply: (s) => ({ text: (s || "Sitat").split("\n").map((l) => `> ${l}`).join("\n") }) },
-  { label: "Kode", Icon: Code, apply: (s) => ({ text: s.includes("\n") ? `\`\`\`\n${s}\n\`\`\`` : `\`${s || "kode"}\`` }) },
-];
+// Knappene i verktøylinjen. Uten markert tekst settes en plassholder inn på valgt språk.
+function makeActions(t: T): Action[] {
+  const bold = t("fet tekst");
+  const italic = t("kursiv");
+  const link = t("lenketekst");
+  const item = t("Punkt");
+  return [
+    { label: t("Overskrift"), Icon: Heading2, apply: (s) => ({ text: `## ${s || t("Overskrift")}` }) },
+    { label: t("Fet"), Icon: Bold, apply: (s) => ({ text: `**${s || bold}**`, select: [2, 2 + (s || bold).length] }) },
+    { label: t("Kursiv"), Icon: Italic, apply: (s) => ({ text: `*${s || italic}*`, select: [1, 1 + (s || italic).length] }) },
+    { label: t("Lenke"), Icon: Link2, apply: (s) => ({ text: `[${s || link}](https://)`, select: [(s || link).length + 3, (s || link).length + 11] }) },
+    { label: t("Punktliste"), Icon: List, apply: (s) => ({ text: (s || item).split("\n").map((l) => `- ${l}`).join("\n") }) },
+    { label: t("Nummerert liste"), Icon: ListOrdered, apply: (s) => ({ text: (s || item).split("\n").map((l, i) => `${i + 1}. ${l}`).join("\n") }) },
+    { label: t("Sitat"), Icon: Quote, apply: (s) => ({ text: (s || t("Sitat")).split("\n").map((l) => `> ${l}`).join("\n") }) },
+    { label: t("Kode"), Icon: Code, apply: (s) => ({ text: s.includes("\n") ? `\`\`\`\n${s}\n\`\`\`` : `\`${s || t("kode")}\`` }) },
+  ];
+}
 
 // Tekstfelt for markdown med verktøylinje og forhåndsvisning. Kan brukes både
 // kontrollert (value/onChange) og som vanlig skjemafelt (name/defaultValue).
@@ -29,7 +38,7 @@ export default function MarkdownEditor({
   rows = 10,
   maxLength,
   template,
-  templateLabel = "Bruk mal",
+  templateLabel,
   invalid,
 }: {
   id?: string;
@@ -44,6 +53,9 @@ export default function MarkdownEditor({
   templateLabel?: string;
   invalid?: boolean;
 }) {
+  const t = useT();
+  const locale = useLocale();
+  const actions = useMemo(() => makeActions(t), [t]);
   const ref = useRef<HTMLTextAreaElement>(null);
   const [internal, setInternal] = useState(defaultValue);
   const [tab, setTab] = useState<"write" | "preview">("write");
@@ -78,21 +90,21 @@ export default function MarkdownEditor({
     <div className={`overflow-hidden rounded-[18px] bg-fill inset-ring inset-shadow-[0_1px_2px_rgb(0_0_0/0.1)] transition focus-within:bg-fill-2 focus-within:ring-2 focus-within:ring-sea/50 ${invalid ? "inset-ring-danger/70" : "inset-ring-line"}`}>
       <div className="flex flex-wrap items-center gap-1 border-b border-line px-2 py-1.5">
         <div role="tablist" className="mr-2 flex rounded-lg bg-ink/60 p-0.5">
-          {(["write", "preview"] as const).map((t) => (
+          {(["write", "preview"] as const).map((key) => (
             <button
-              key={t}
+              key={key}
               type="button"
               role="tab"
-              aria-selected={tab === t}
-              onClick={() => setTab(t)}
-              className={`rounded-md px-2.5 py-1 text-xs font-medium transition ${tab === t ? "bg-surface-2 text-fg" : "text-mist hover:text-fg"}`}
+              aria-selected={tab === key}
+              onClick={() => setTab(key)}
+              className={`rounded-md px-2.5 py-1 text-xs font-medium transition ${tab === key ? "bg-surface-2 text-fg" : "text-mist hover:text-fg"}`}
             >
-              {t === "write" ? "Skriv" : "Forhåndsvis"}
+              {key === "write" ? t("Skriv") : t("Forhåndsvis")}
             </button>
           ))}
         </div>
         {tab === "write" &&
-          ACTIONS.map((a) => (
+          actions.map((a) => (
             <button
               key={a.label}
               type="button"
@@ -108,12 +120,12 @@ export default function MarkdownEditor({
           <button
             type="button"
             onClick={() => {
-              if (value.trim() && !confirm("Erstatte teksten med malen?")) return;
+              if (value.trim() && !confirm(t("Erstatte teksten med malen?"))) return;
               set(template);
             }}
             className="ml-auto inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-ice transition hover:bg-surface-2"
           >
-            <Wand2 className="size-3.5" /> {templateLabel}
+            <Wand2 className="size-3.5" /> {templateLabel ?? t("Bruk mal")}
           </button>
         )}
       </div>
@@ -131,13 +143,13 @@ export default function MarkdownEditor({
           className="block min-h-40 w-full resize-y bg-transparent px-4 py-3 font-mono text-[13.5px] leading-6 text-fg outline-none placeholder:font-sans placeholder:text-mist/45"
         />
       ) : (
-        <div className="min-h-40 px-5 py-4">{value.trim() ? <Markdown>{value}</Markdown> : <p className="text-sm text-mist">Ingenting å forhåndsvise ennå.</p>}</div>
+        <div className="min-h-40 px-5 py-4">{value.trim() ? <Markdown>{value}</Markdown> : <p className="text-sm text-mist">{t("Ingenting å forhåndsvise ennå.")}</p>}</div>
       )}
       <div className="flex justify-between border-t border-line/60 px-4 py-1.5 text-[11px] text-mist/70">
-        <span>Markdown støttes: **fet**, *kursiv*, lister, lenker og kode.</span>
+        <span>{t("Markdown støttes: **fet**, *kursiv*, lister, lenker og kode.")}</span>
         {maxLength && (
           <span>
-            {value.length.toLocaleString("nb-NO")} / {maxLength.toLocaleString("nb-NO")}
+            {value.length.toLocaleString(dateLocale(locale))} / {maxLength.toLocaleString(dateLocale(locale))}
           </span>
         )}
       </div>

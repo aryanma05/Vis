@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { BarChart3, Eye, EyeOff, PenLine, Pin, PinOff, Trash2 } from "lucide-react";
 import { deleteProjectAction, setProjectPinnedAction, setProjectStatusAction } from "@/app/actions/projects";
+import { useT } from "@/components/LocaleProvider";
 import Dialog from "@/components/ui/dialog";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
@@ -23,6 +24,7 @@ export default function ProjectOwnerActions({
   username: string;
 }) {
   const router = useRouter();
+  const t = useT();
   const [pending, startTransition] = useTransition();
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -30,7 +32,7 @@ export default function ProjectOwnerActions({
     startTransition(async () => {
       const result = await fn();
       if (!result.ok) {
-        toast.error(result.error ?? "Noe gikk galt.");
+        toast.error(result.error ?? t("Noe gikk galt."));
         return;
       }
       if (success) toast.success(success);
@@ -44,7 +46,7 @@ export default function ProjectOwnerActions({
         toast.error(result.error);
         return;
       }
-      toast.success("Prosjektet er slettet");
+      toast.success(t("Prosjektet er slettet"));
       router.push(`/@${username}?fane=prosjekter`);
       router.refresh();
     });
@@ -59,17 +61,17 @@ export default function ProjectOwnerActions({
     >
       <p className="mr-auto px-1 text-sm text-mist">
         {removed ? (
-          <span className="font-medium text-danger">Fjernet av en moderator. Bare du ser prosjektet.</span>
+          <span className="font-medium text-danger">{t("Fjernet av en moderator. Bare du ser prosjektet.")}</span>
         ) : draft ? (
           <>
-            <span className="font-medium text-warn">Utkast.</span> Bare du ser dette prosjektet.
+            <span className="font-medium text-warn">{t("Utkast.")}</span> {t("Bare du ser dette prosjektet.")}
           </>
         ) : (
-          "Ditt prosjekt"
+          t("Ditt prosjekt")
         )}
       </p>
       <ButtonLink href={`/prosjekt/${projectId}/rediger`} variant="secondary" size="sm">
-        <PenLine className="size-4" /> Rediger
+        <PenLine className="size-4" /> {t("Rediger")}
       </ButtonLink>
       <div className="flex w-full items-center gap-2 sm:w-auto">
         {!draft && !removed && (
@@ -78,10 +80,17 @@ export default function ProjectOwnerActions({
             size="sm"
             disabled={pending}
             className="max-sm:flex-1"
-            onClick={() => run(() => setProjectPinnedAction(projectId, !pinned), pinned ? "Løsnet fra profilen" : "Festet på profilen")}
+            onClick={() => run(() => setProjectPinnedAction(projectId, !pinned), pinned ? t("Løsnet fra profilen") : t("Festet på profilen"))}
           >
             {pinned ? <PinOff className="size-4" /> : <Pin className="size-4" />}
-            {pinned ? "Løsne" : <><span className="sm:hidden">Fest</span><span className="max-sm:hidden">Fest på profilen</span></>}
+            {pinned ? (
+              t("Løsne")
+            ) : (
+              <>
+                <span className="sm:hidden">{t("Fest")}</span>
+                <span className="max-sm:hidden">{t("Fest på profilen")}</span>
+              </>
+            )}
           </Button>
         )}
         {!removed && (
@@ -90,27 +99,40 @@ export default function ProjectOwnerActions({
             variant={draft ? "primary" : "secondary"}
             disabled={pending}
             className="max-sm:flex-1"
-            onClick={() => run(() => setProjectStatusAction(projectId, draft ? "published" : "draft"), draft ? "Prosjektet er publisert" : "Gjort om til utkast")}
+            onClick={() => run(() => setProjectStatusAction(projectId, draft ? "published" : "draft"), draft ? t("Prosjektet er publisert") : t("Gjort om til utkast"))}
           >
             {draft ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
-            {draft ? "Publiser" : <><span className="sm:hidden">Utkast</span><span className="max-sm:hidden">Gjør til utkast</span></>}
+            {draft ? (
+              t("Publiser")
+            ) : (
+              <>
+                <span className="sm:hidden">{t("Utkast")}</span>
+                <span className="max-sm:hidden">{t("Gjør til utkast")}</span>
+              </>
+            )}
           </Button>
         )}
-        <ButtonLink href="/innsikt" variant="ghost" size="icon-sm" aria-label="Innsikt">
+        <ButtonLink href="/innsikt" variant="ghost" size="icon-sm" aria-label={t("Innsikt")}>
           <BarChart3 className="size-4" />
         </ButtonLink>
-        <Button variant="ghost" size="icon-sm" aria-label="Slett prosjektet" onClick={() => setConfirmDelete(true)} className="hover:text-danger">
+        <Button variant="ghost" size="icon-sm" aria-label={t("Slett prosjektet")} onClick={() => setConfirmDelete(true)} className="hover:text-danger">
           <Trash2 className="size-4" />
         </Button>
       </div>
 
-      <Dialog open={confirmDelete} onClose={() => setConfirmDelete(false)} title="Slette prosjektet?" description="Bildene, kommentarene og reaksjonene forsvinner også. Dette kan ikke angres." size="sm">
+      <Dialog
+        open={confirmDelete}
+        onClose={() => setConfirmDelete(false)}
+        title={t("Slette prosjektet?")}
+        description={t("Bildene, kommentarene og reaksjonene forsvinner også. Dette kan ikke angres.")}
+        size="sm"
+      >
         <div className="flex justify-end gap-3">
           <Button variant="ghost" onClick={() => setConfirmDelete(false)}>
-            Avbryt
+            {t("Avbryt")}
           </Button>
           <Button variant="danger" loading={pending} onClick={remove}>
-            <Trash2 className="size-4" /> Slett for godt
+            <Trash2 className="size-4" /> {t("Slett for godt")}
           </Button>
         </div>
       </Dialog>

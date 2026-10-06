@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import OptionalLabel from "@/components/ui/optional-label";
 
 // Felles stil for tekstfelter. aria-invalid gir rød ramme.
 // Felter som litt nedsenket glass. aria-invalid gir rød kant.
@@ -47,7 +48,7 @@ export function Field({
     <Wrapper className={`block min-w-0 ${className}`}>
       <Label {...(htmlFor ? { htmlFor } : {})} className={labelClass}>
         {label}
-        {optional && <span className="ml-1.5 font-normal text-mist">valgfritt</span>}
+        {optional && <OptionalLabel />}
       </Label>
       {children}
       {error ? <FieldError>{error}</FieldError> : hint ? <Hint>{hint}</Hint> : null}
@@ -61,16 +62,26 @@ export function Section({
   description,
   children,
   id,
+  icon,
 }: {
   title: ReactNode;
   description?: ReactNode;
   children: ReactNode;
   id?: string;
+  // Lite ikon foran tittelen, så seksjonen kan kjennes igjen uten å lese.
+  icon?: ReactNode;
 }) {
   return (
     <section id={id} className="grid scroll-mt-24 gap-5 border-b border-line py-10 last:border-b-0 md:grid-cols-[220px_1fr] md:gap-12">
       <div>
-        <h2 className="text-[15px] font-semibold text-fg">{title}</h2>
+        <h2 className="flex items-center gap-2 text-[15px] font-semibold text-fg">
+          {icon && (
+            <span className="text-mist [&>svg]:size-4" aria-hidden="true">
+              {icon}
+            </span>
+          )}
+          {title}
+        </h2>
         {description && <p className="mt-1 text-sm leading-6 text-mist">{description}</p>}
       </div>
       <div className="min-w-0">{children}</div>

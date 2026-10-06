@@ -16,7 +16,7 @@ const hash = (key: string) => createHash("sha256").update(key).digest("hex");
 export async function createApiKey(userId: string, name: string) {
   const clean = name.trim().slice(0, 60) || "Min nøkkel";
   const [{ n }] = await db.select({ n: count() }).from(apiKey).where(and(eq(apiKey.userId, userId), isNull(apiKey.revokedAt)));
-  if (n >= MAX_KEYS) throw new UserFacingError(`Du kan ha opptil ${MAX_KEYS} aktive nøkler.`);
+  if (n >= MAX_KEYS) throw new UserFacingError("Du kan ha opptil {n} aktive nøkler.", { n: MAX_KEYS });
   const key = `vis_${randomBytes(24).toString("base64url")}`;
   await db.insert(apiKey).values({ userId, name: clean, prefix: key.slice(0, 10), keyHash: hash(key) });
   return key;

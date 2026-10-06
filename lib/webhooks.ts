@@ -56,7 +56,7 @@ export async function createWebhook(viewerId: string, companyId: string, input: 
   const events = input.events.filter((e): e is WebhookEvent => e in WEBHOOK_EVENTS);
   if (events.length === 0) throw new UserFacingError("Velg minst én hendelse.");
   const [{ n }] = await db.select({ n: count() }).from(companyWebhook).where(eq(companyWebhook.companyId, companyId));
-  if (n >= MAX_WEBHOOKS) throw new UserFacingError(`Dere kan ha opptil ${MAX_WEBHOOKS} webhooks.`);
+  if (n >= MAX_WEBHOOKS) throw new UserFacingError("Dere kan ha opptil {n} webhooks.", { n: MAX_WEBHOOKS });
   const secret = `whsec_${randomBytes(24).toString("base64url")}`;
   await db.insert(companyWebhook).values({ companyId, url, secret, events });
   return { secret };

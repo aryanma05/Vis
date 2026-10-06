@@ -30,7 +30,7 @@ export type ProjectComment = {
 function cleanBody(body: string) {
   const text = body.replace(/\r\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
   if (!text) throw new UserFacingError("Kommentaren er tom.");
-  if (text.length > MAX_COMMENT_LENGTH) throw new UserFacingError(`Maks ${MAX_COMMENT_LENGTH} tegn.`);
+  if (text.length > MAX_COMMENT_LENGTH) throw new UserFacingError("Maks {n} tegn.", { n: MAX_COMMENT_LENGTH });
   return text;
 }
 

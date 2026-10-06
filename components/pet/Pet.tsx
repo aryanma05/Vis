@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion, useAnimationControls, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion, useAnimationControls } from "framer-motion";
+import { useReduceMotion } from "@/components/settings/display-prefs";
 import { useT } from "@/components/LocaleProvider";
 import PetSvg from "@/components/pet/PetSvg";
 import { PET_SPECIES, type PetConfig } from "@/lib/profile-style";
@@ -15,7 +16,7 @@ type Heart = { id: number; x: number; rotate: number };
 // Størrelsen settes med `size` (piksler) eller med klasser i `className`.
 export default function Pet({ pet, owner, size, className = "" }: { pet: PetConfig; owner?: string; size?: number; className?: string }) {
   const t = useT();
-  const reduce = useReducedMotion() ?? false;
+  const reduce = useReduceMotion();
   const ref = useRef<HTMLButtonElement>(null);
   const controls = useAnimationControls();
   const [look, setLook] = useState({ x: 0, y: 0 });

@@ -2,13 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, Briefcase, Compass, Home, LogIn, Palette, Plus, Search } from "lucide-react";
+import { Bell, Briefcase, Compass, Handshake, Home, LogIn, Plus, Search, Settings } from "lucide-react";
 import Avatar from "@/components/Avatar";
 import NavUserMenu, { type NavUser } from "@/components/nav/NavUserMenu";
-import ThemeSwitch from "@/components/nav/ThemeSwitch";
 import { openSearch } from "@/components/nav/search-events";
 import { useT } from "@/components/LocaleProvider";
-import { Menu } from "@/components/ui/menu";
+import { openSettings } from "@/components/settings/settings-events";
 
 export type { NavUser };
 
@@ -25,6 +24,7 @@ const itemBase =
 
 // Flytende sidemeny i glass på desktop. Menyvalgene endrer seg etter om du er logget inn.
 // Logoen står for seg selv øverst til venstre (components/nav/HomeLogo.tsx), ikke her.
+// Innstillingene (tannhjulet) ligger alltid nederst.
 export default function Sidebar({ user = null }: { user?: NavUser }) {
   const pathname = usePathname();
   const t = useT();
@@ -33,6 +33,7 @@ export default function Sidebar({ user = null }: { user?: NavUser }) {
   const items = [
     { href: "/", label: t(user ? "Strømmen" : "Hjem"), Icon: Home },
     { href: "/sok", label: t("Utforsk"), Icon: Compass },
+    { href: "/partnere", label: t("Finn partnere"), Icon: Handshake },
     { href: "/stillinger", label: t("Stillinger"), Icon: Briefcase },
     ...(user ? [{ href: "/varsler", label: t("Varsler"), Icon: Bell, badge: user.unread ?? 0 }] : []),
   ];
@@ -136,32 +137,21 @@ export default function Sidebar({ user = null }: { user?: NavUser }) {
               </Link>
               <Tip>{t("Lag profil")}</Tip>
             </div>
-            <Menu
-              label="Tema"
-              side="right"
-              align="end"
-              className="w-52 p-2"
-              trigger={({ open, toggle }) => (
-                <div className="group relative">
-                  <button
-                    type="button"
-                    onClick={toggle}
-                    aria-haspopup="menu"
-                    aria-expanded={open}
-                    aria-label={t("Fargetema")}
-                    className={`${itemBase} text-mist hover:bg-fill hover:text-fg`}
-                  >
-                    <Palette className="size-[19px]" />
-                  </button>
-                  {!open && <Tip>{t("Tema")}</Tip>}
-                </div>
-              )}
-            >
-              <p className="px-2 pb-2 pt-1 caption">{t("Utseende")}</p>
-              <ThemeSwitch />
-            </Menu>
           </>
         )}
+
+        <div className="group relative">
+          <button
+            type="button"
+            onClick={() => openSettings()}
+            aria-haspopup="dialog"
+            aria-label={t("Innstillinger")}
+            className={`${itemBase} text-mist hover:bg-fill hover:text-fg [&>svg]:transition-transform [&>svg]:duration-500 hover:[&>svg]:rotate-90`}
+          >
+            <Settings className="size-[19px]" />
+          </button>
+          <Tip>{t("Innstillinger")}</Tip>
+        </div>
       </nav>
     </aside>
   );

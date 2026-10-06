@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useT } from "@/components/LocaleProvider";
+import { prefersReducedMotion } from "@/lib/display-prefs";
 import { ChevronDown, ChevronUp } from "lucide-react";
 
 const COLLAPSED = 520;
@@ -71,7 +72,7 @@ export default function ReadMore({ children, minutes }: { children: React.ReactN
         setHeight(COLLAPSED);
         setState("collapsed");
         const top = el.getBoundingClientRect().top;
-        if (top < 0) window.scrollBy({ top: top - 96, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+        if (top < 0) window.scrollBy({ top: top - 96, behavior: prefersReducedMotion() ? "auto" : "smooth" });
       }),
     );
   };

@@ -1,10 +1,10 @@
 "use client";
 
 import { useId, useState } from "react";
+import { useLocale, useT } from "@/components/LocaleProvider";
+import { dateLocale } from "@/lib/i18n";
 
 type Day = { day: string; views: number };
-
-const fmtDay = (iso: string, opts: Intl.DateTimeFormatOptions) => new Date(`${iso}T12:00:00`).toLocaleDateString("nb-NO", opts);
 
 // Runde tall på y-aksen: 0, 5, 10 … eller 0, 50, 100 …
 function niceMax(max: number) {
@@ -21,6 +21,9 @@ function niceMax(max: number) {
 // søyle for å se tallet. Tallene finnes også i tabellen under.
 export default function DailyBars({ title, days }: { title: string; days: Day[] }) {
   const id = useId();
+  const t = useT();
+  const nf = dateLocale(useLocale());
+  const fmtDay = (iso: string, opts: Intl.DateTimeFormatOptions) => new Date(`${iso}T12:00:00`).toLocaleDateString(nf, opts);
   const [active, setActive] = useState<number | null>(null);
   const max = niceMax(Math.max(...days.map((d) => d.views), 0));
   const ticks = [0, max / 2, max];
@@ -29,13 +32,13 @@ export default function DailyBars({ title, days }: { title: string; days: Day[] 
   return (
     <figure aria-labelledby={`${id}-title`}>
       <figcaption id={`${id}-title`} className="sr-only">
-        {title}: {total} totalt de siste {days.length} dagene
+        {title}: {t("{n} totalt de siste {days} dagene", { n: total, days: days.length })}
       </figcaption>
       <div className="relative">
         <div className="relative ml-9 h-44">
-          {ticks.map((t) => (
-            <div key={t} className="absolute inset-x-0 border-t border-line/70" style={{ bottom: `${(t / max) * 100}%` }} aria-hidden="true">
-              <span className="absolute -left-9 -translate-y-1/2 text-[10.5px] tabular-nums text-mist">{t.toLocaleString("nb-NO")}</span>
+          {ticks.map((tick) => (
+            <div key={tick} className="absolute inset-x-0 border-t border-line/70" style={{ bottom: `${(tick / max) * 100}%` }} aria-hidden="true">
+              <span className="absolute -left-9 -translate-y-1/2 text-[10.5px] tabular-nums text-mist">{tick.toLocaleString(nf)}</span>
             </div>
           ))}
           <div className="absolute inset-0 flex items-end gap-[2px]" onMouseLeave={() => setActive(null)}>
@@ -43,7 +46,7 @@ export default function DailyBars({ title, days }: { title: string; days: Day[] 
               <button
                 key={d.day}
                 type="button"
-                aria-label={`${fmtDay(d.day, { day: "numeric", month: "long" })}: ${d.views} visninger`}
+                aria-label={`${fmtDay(d.day, { day: "numeric", month: "long" })}: ${t("{n} visninger", { n: d.views })}`}
                 onMouseEnter={() => setActive(i)}
                 onFocus={() => setActive(i)}
                 onBlur={() => setActive(null)}
@@ -65,7 +68,7 @@ export default function DailyBars({ title, days }: { title: string; days: Day[] 
               className="pointer-events-none absolute -top-2 z-10 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-xl border border-line bg-surface px-3 py-2 text-xs shadow-lg"
               style={{ left: `${((active + 0.5) / days.length) * 100}%` }}
             >
-              <span className="block text-sm font-semibold text-fg">{days[active].views.toLocaleString("nb-NO")} visninger</span>
+              <span className="block text-sm font-semibold text-fg">{t("{n} visninger", { n: days[active].views.toLocaleString(nf) })}</span>
               <span className="text-mist">{fmtDay(days[active].day, { weekday: "long", day: "numeric", month: "long" })}</span>
             </div>
           )}
@@ -73,16 +76,16 @@ export default function DailyBars({ title, days }: { title: string; days: Day[] 
         <div className="ml-9 mt-2 flex justify-between text-[10.5px] text-mist" aria-hidden="true">
           <span>{fmtDay(days[0].day, { day: "numeric", month: "short" })}</span>
           <span>{fmtDay(days[Math.floor(days.length / 2)].day, { day: "numeric", month: "short" })}</span>
-          <span>I dag</span>
+          <span>{t("I dag")}</span>
         </div>
       </div>
       <details className="mt-4 text-sm">
-        <summary className="cursor-pointer text-mist hover:text-fg">Vis som tabell</summary>
+        <summary className="cursor-pointer text-mist hover:text-fg">{t("Vis som tabell")}</summary>
         <table className="mt-3 w-full text-left text-[13px]">
           <thead>
             <tr className="text-mist">
-              <th className="py-1.5 font-medium">Dato</th>
-              <th className="py-1.5 text-right font-medium">Visninger</th>
+              <th className="py-1.5 font-medium">{t("Dato")}</th>
+              <th className="py-1.5 text-right font-medium">{t("Visninger")}</th>
             </tr>
           </thead>
           <tbody className="tabular-nums">

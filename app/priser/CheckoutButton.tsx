@@ -30,7 +30,8 @@ export default function CheckoutButton({
     const result = portal ? await openPortalAction(companyId) : await startCheckoutAction(plan ?? "pro", interval, companyId);
     if (!result.ok || !result.data) {
       setPending(false);
-      toast.error(result.ok ? "Noe gikk galt. Prøv igjen." : result.error);
+      if (result.ok) toast.error("Noe gikk galt. Prøv igjen.");
+      else toast.error(result.error);
       return;
     }
     window.location.href = result.data;

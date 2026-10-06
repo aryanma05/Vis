@@ -6,33 +6,42 @@ import { EmptyState } from "@/components/ui/misc";
 import { Tabs } from "@/components/ui/tabs";
 import { timeAgo } from "@/lib/format";
 import { CONTACT_REASON_LABELS } from "@/lib/constants";
+import type { T } from "@/lib/i18n";
+import { getLocale, getT } from "@/lib/i18n/server";
 import { listNotifications, type NotificationItem } from "@/lib/notifications";
 import { requireUser } from "@/lib/session";
 import MarkRead from "./MarkRead";
 
-export const metadata: Metadata = { title: "Varsler", robots: { index: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getT())("Varsler"), robots: { index: false } };
+}
 
-function describe(n: NotificationItem) {
-  const project = n.project?.title ?? "et prosjekt";
+function describe(n: NotificationItem, t: T) {
+  const project = <b className="font-semibold text-fg">{n.project?.title ?? t("et prosjekt")}</b>;
   switch (n.type) {
     case "comment":
-      return { Icon: MessageCircle, tone: "text-ice", text: <>kommenterte på <b className="font-semibold text-fg">{project}</b></> };
+      return { Icon: MessageCircle, tone: "text-ice", text: <>{t("kommenterte på")} {project}</> };
     case "reply":
-      return { Icon: Reply, tone: "text-ice", text: <>svarte deg på <b className="font-semibold text-fg">{project}</b></> };
+      return { Icon: Reply, tone: "text-ice", text: <>{t("svarte deg på")} {project}</> };
     case "mention":
-      return { Icon: AtSign, tone: "text-ice", text: <>nevnte deg på <b className="font-semibold text-fg">{project}</b></> };
+      return { Icon: AtSign, tone: "text-ice", text: <>{t("nevnte deg på")} {project}</> };
     case "follow":
-      return { Icon: UserPlus, tone: "text-success", text: <>begynte å følge deg</> };
+      return { Icon: UserPlus, tone: "text-success", text: <>{t("begynte å følge deg")}</> };
     case "contact":
       return {
         Icon: Mail,
         tone: "text-success",
-        text: <>vil komme i kontakt{n.contactReason ? ` (${CONTACT_REASON_LABELS[n.contactReason].toLowerCase()})` : ""}</>,
+        text: (
+          <>
+            {t("vil komme i kontakt")}
+            {n.contactReason ? ` (${t(CONTACT_REASON_LABELS[n.contactReason]).toLowerCase()})` : ""}
+          </>
+        ),
       };
     case "member":
-      return { Icon: Users, tone: "text-success", text: <>la deg til som medlem i <b className="font-semibold text-fg">{project}</b></> };
+      return { Icon: Users, tone: "text-success", text: <>{t("la deg til som medlem i")} {project}</> };
     case "featured":
-      return { Icon: Sparkles, tone: "text-warn", text: <>valgte ut <b className="font-semibold text-fg">{project}</b>. Det vises nå på forsiden.</> };
+      return { Icon: Sparkles, tone: "text-warn", text: <>{t("valgte ut")} {project}. {t("Det vises nå på forsiden.")}</> };
     case "reaction": {
       const Icon = n.reaction === "Nyttig" ? Lightbulb : n.reaction === "Inspirerende" ? Star : Heart;
       return {
@@ -40,7 +49,7 @@ function describe(n: NotificationItem) {
         tone: "text-[#ff9fb5]",
         text: (
           <>
-            synes <b className="font-semibold text-fg">{project}</b> er {(n.reaction ?? "Lik").toLowerCase() === "lik" ? "bra" : n.reaction?.toLowerCase()}
+            {t("synes")} {project} {n.reaction === "Nyttig" ? t("er nyttig") : n.reaction === "Inspirerende" ? t("er inspirerende") : t("er bra")}
           </>
         ),
       };
@@ -69,7 +78,7 @@ function dayLabel(date: Date) {
 
 export default async function NotificationsPage({ searchParams }: { searchParams: Promise<{ vis?: string }> }) {
   const user = await requireUser();
-  const { vis } = await searchParams;
+  const [{ vis }, t, locale] = await Promise.all([searchParams, getT(), getLocale()]);
   const unreadOnly = vis === "uleste";
   const notifications = await listNotifications(user.id, { unreadOnly });
   const hasUnread = notifications.some((n) => n.unread);
@@ -88,36 +97,36 @@ export default async function NotificationsPage({ searchParams }: { searchParams
       <div className="mx-auto max-w-3xl">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="caption">Innboks</p>
-            <h1 className="mt-3 text-4xl font-bold tracking-tight md:text-5xl">Varsler</h1>
+            <p className="caption">{t("Innboks")}</p>
+            <h1 className="mt-3 text-4xl font-bold tracking-tight md:text-5xl">{t("Varsler")}</h1>
           </div>
           <Link href="/profil/rediger/konto#varsler" className="inline-flex items-center gap-2 text-sm text-mist transition hover:text-fg">
-            <Settings className="size-4" /> E-postvarsler
+            <Settings className="size-4" /> {t("E-postvarsler")}
           </Link>
         </div>
 
         <div className="mt-8">
           <Tabs
-            label="Filtrer varsler"
+            label={t("Filtrer varsler")}
             active={unreadOnly ? "uleste" : "alle"}
             items={[
-              { key: "alle", label: "Alle", href: "/varsler" },
-              { key: "uleste", label: "Uleste", href: "/varsler?vis=uleste" },
+              { key: "alle", label: t("Alle"), href: "/varsler" },
+              { key: "uleste", label: t("Uleste"), href: "/varsler?vis=uleste" },
             ]}
           />
         </div>
 
         {notifications.length === 0 ? (
-          <EmptyState className="mt-10" icon={<Bell className="size-5" />} title={unreadOnly ? "Ingen uleste varsler" : "Ingen varsler ennå"}>
-            Når noen kommenterer, reagerer, nevner deg, følger deg eller vil komme i kontakt, dukker det opp her.
+          <EmptyState className="mt-10" icon={<Bell className="size-5" />} title={unreadOnly ? t("Ingen uleste varsler") : t("Ingen varsler ennå")}>
+            {t("Når noen kommenterer, reagerer, nevner deg, følger deg eller vil komme i kontakt, dukker det opp her.")}
           </EmptyState>
         ) : (
           groups.map((group) => (
             <section key={group.label} className="mt-8">
-              <h2 className="caption">{group.label}</h2>
+              <h2 className="caption">{t(group.label)}</h2>
               <ul className="mt-3 divide-y divide-line overflow-hidden rounded-[22px] glass-card">
                 {group.items.map((n) => {
-                  const { Icon, tone, text } = describe(n);
+                  const { Icon, tone, text } = describe(n, t);
                   return (
                     <li key={n.id}>
                       <Link href={href(n)} className={`relative flex gap-4 px-4 py-4 transition hover:bg-surface/70 md:px-5 ${n.unread ? "bg-sea/[0.06]" : ""}`}>
@@ -129,14 +138,14 @@ export default async function NotificationsPage({ searchParams }: { searchParams
                         </span>
                         <div className="min-w-0 flex-1">
                           <p className="text-[15px] leading-6 text-fg/85">
-                            <b className="font-semibold text-fg">{n.type === "featured" ? "Redaksjonen" : n.actor.name}</b> {text}
+                            <b className="font-semibold text-fg">{n.type === "featured" ? t("Redaksjonen") : n.actor.name}</b> {text}
                           </p>
                           {n.excerpt && <p className="mt-1 line-clamp-2 text-sm text-mist">«{n.excerpt}»</p>}
                           <p className="mt-1 text-xs text-mist/70" suppressHydrationWarning>
-                            {timeAgo(n.createdAt)}
+                            {timeAgo(n.createdAt, locale)}
                           </p>
                         </div>
-                        {n.unread && <span className="mt-2 size-2.5 shrink-0 rounded-full bg-sea" aria-label="Ulest" />}
+                        {n.unread && <span className="mt-2 size-2.5 shrink-0 rounded-full bg-sea" aria-label={t("Ulest")} />}
                       </Link>
                     </li>
                   );

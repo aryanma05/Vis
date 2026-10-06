@@ -6,6 +6,7 @@ import { useRef, useState, useTransition } from "react";
 import { Check, FileUp, Printer } from "lucide-react";
 import { applyCvImportAction, importCvAction, parseStoredCvAction, saveCvAction } from "@/app/actions/cv";
 import { setCvTemplateAction } from "@/app/actions/profile";
+import { useT } from "@/components/LocaleProvider";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Section } from "@/components/ui/field";
 import { toast } from "@/components/ui/toast";
@@ -214,6 +215,7 @@ export default function CvStudio({
   template: CvTemplate;
 }) {
   const router = useRouter();
+  const t = useT();
   const initial = useRef(fromSaved(cv));
   const [state, setState] = useState<CvState>(initial.current);
   const [draft, setDraft] = useState<Pending | null>(null);
@@ -264,7 +266,7 @@ export default function CvStudio({
       toast.error(result.error);
       return;
     }
-    toast.success(`${CV_TEMPLATE_LABELS[next].name} er valgt`);
+    toast.success(t("{name} er valgt", { name: t(CV_TEMPLATE_LABELS[next].name) }));
   }
 
   const save = () =>
@@ -293,72 +295,76 @@ export default function CvStudio({
 
   return (
     <>
-      <Section title="Mal" description="Hvordan CV-en ser ut på profilen og når du laster den ned som PDF.">
-        <div role="radiogroup" aria-label="CV-mal" className="grid gap-3 sm:grid-cols-3">
-          {CV_TEMPLATES.map((t) => {
-            const on = template === t;
+      <Section title={t("Mal")} description={t("Hvordan CV-en ser ut på profilen og når du laster den ned som PDF.")}>
+        <div role="radiogroup" aria-label={t("CV-mal")} className="grid gap-3 sm:grid-cols-3">
+          {CV_TEMPLATES.map((key) => {
+            const on = template === key;
             return (
               <button
-                key={t}
+                key={key}
                 type="button"
                 role="radio"
                 aria-checked={on}
-                onClick={() => chooseTemplate(t)}
+                onClick={() => chooseTemplate(key)}
                 className={`group rounded-[20px] p-2 text-left ring-inset transition ${on ? "bg-sea/10 ring-2 ring-sea/70" : "ring-1 ring-line hover:bg-fill"}`}
               >
                 <span className="block aspect-[210/150] overflow-hidden rounded-xl ring-1 ring-black/10">
-                  <TemplateThumb template={t} />
+                  <TemplateThumb template={key} />
                 </span>
                 <span className="mt-2.5 flex items-center justify-between px-1">
                   <span className="flex items-center gap-1.5 text-sm font-semibold">
-                    {CV_TEMPLATE_LABELS[t].name}
-                    {CV_TEMPLATE_LABELS[t].pro && <span className="rounded-full bg-warn/15 px-1.5 py-0.5 text-[10px] font-semibold text-warn">Pro</span>}
+                    {t(CV_TEMPLATE_LABELS[key].name)}
+                    {CV_TEMPLATE_LABELS[key].pro && <span className="rounded-full bg-warn/15 px-1.5 py-0.5 text-[10px] font-semibold text-warn">Pro</span>}
                   </span>
                   {on && <Check className="size-4 text-ice" />}
                 </span>
-                <span className="block px-1 pb-1 text-xs text-mist">{CV_TEMPLATE_LABELS[t].description}</span>
+                <span className="block px-1 pb-1 text-xs text-mist">{t(CV_TEMPLATE_LABELS[key].description)}</span>
               </button>
             );
           })}
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
           <ButtonLink href={`/@${username}/cv`} variant="secondary" size="sm">
-            Forhåndsvis
+            {t("Forhåndsvis")}
           </ButtonLink>
           <ButtonLink href={`/@${username}/cv?skriv=1`} variant="ghost" size="sm">
-            <Printer className="size-4" /> Last ned som PDF
+            <Printer className="size-4" /> {t("Last ned som PDF")}
           </ButtonLink>
         </div>
       </Section>
 
       <Section
-        title="Importer CV"
-        description="Last opp CV-en som PDF eller bilde. Den vises på profilen, og fra en PDF kan vi fylle ut feltene under for deg."
+        title={t("Importer CV")}
+        description={t("Last opp CV-en som PDF eller bilde. Den vises på profilen, og fra en PDF kan vi fylle ut feltene under for deg.")}
       >
         <CvDocumentPanel initial={doc} autofilling={autofilling} onAutofill={() => readCv(parseStoredCvAction)} />
         <p className="mt-5 text-[13px] leading-5 text-mist/80">
-          <span className="font-medium text-fg">Fra LinkedIn?</span> Gå til profilen din på LinkedIn, trykk «Mer» → «Lagre som PDF», og last opp
-          filen her.
+          <span className="font-medium text-fg">{t("Fra LinkedIn?")}</span>{" "}
+          {t("Gå til profilen din på LinkedIn, trykk «Mer» → «Lagre som PDF», og last opp filen her.")}
         </p>
       </Section>
 
-      <Section title="Innhold" description="Erfaring, utdanning og ferdigheter. Dra i håndtaket eller bruk pilene for å endre rekkefølgen.">
+      <Section title={t("Innhold")} description={t("Erfaring, utdanning og ferdigheter. Dra i håndtaket eller bruk pilene for å endre rekkefølgen.")}>
         {draft && (
           <div className="mb-8 rounded-[20px] bg-sea/10 p-5">
             <p className="flex items-center gap-2 font-medium">
-              <Check className="size-4 text-success" /> Vi fant {draft.parsed.experience.length} erfaringer, {draft.parsed.education.length} utdanninger og{" "}
-              {draft.parsed.skills.length} ferdigheter.
+              <Check className="size-4 text-success" />{" "}
+              {t("Vi fant {experience} erfaringer, {education} utdanninger og {skills} ferdigheter.", {
+                experience: draft.parsed.experience.length,
+                education: draft.parsed.education.length,
+                skills: draft.parsed.skills.length,
+              })}
             </p>
-            <p className="mt-1 text-sm text-mist">Du har allerede fylt ut noe. Hva vil du gjøre?</p>
+            <p className="mt-1 text-sm text-mist">{t("Du har allerede fylt ut noe. Hva vil du gjøre?")}</p>
             <div className="mt-4 flex flex-wrap gap-2">
               <Button size="sm" onClick={() => applyDraft(draft, "replace")}>
-                Erstatt
+                {t("Erstatt")}
               </Button>
               <Button size="sm" variant="secondary" onClick={() => applyDraft(draft, "merge")}>
-                Legg til
+                {t("Legg til")}
               </Button>
               <Button size="sm" variant="ghost" onClick={() => setDraft(null)}>
-                Avbryt
+                {t("Avbryt")}
               </Button>
             </div>
           </div>
@@ -367,9 +373,9 @@ export default function CvStudio({
         <CvEditor value={state} onChange={setState} />
 
         <p className="mt-10 text-sm text-mist/80">
-          Har du CV-en bare i Word?{" "}
+          {t("Har du CV-en bare i Word?")}{" "}
           <button type="button" onClick={() => docxRef.current?.click()} disabled={autofilling} className="inline-flex items-center gap-1 text-ice hover:underline">
-            <FileUp className="size-3.5" /> Les inn feltene fra en .docx-fil
+            <FileUp className="size-3.5" /> {t("Les inn feltene fra en .docx-fil")}
           </button>
           <input
             ref={docxRef}
@@ -389,12 +395,12 @@ export default function CvStudio({
       </Section>
 
       <div className="sticky bottom-24 z-20 mt-2 flex items-center justify-end gap-4 glass rounded-[26px] py-2 pl-5 pr-2 md:bottom-6">
-        <p className="mr-auto text-sm text-mist">{dirty || applied ? "Du har endringer som ikke er lagret." : "Alt er lagret."}</p>
+        <p className="mr-auto text-sm text-mist">{dirty || applied ? t("Du har endringer som ikke er lagret.") : t("Alt er lagret.")}</p>
         <Link href={`/@${username}?fane=cv`} className="hidden text-sm text-mist hover:text-fg sm:block">
-          Se CV-en
+          {t("Se CV-en")}
         </Link>
         <Button size="sm" onClick={save} loading={saving} disabled={!dirty && !applied}>
-          Lagre CV
+          {t("Lagre CV")}
         </Button>
       </div>
     </>

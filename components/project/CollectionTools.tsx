@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { PenLine, Trash2, X } from "lucide-react";
 import { deleteCollectionAction, setCollectionItemAction, updateCollectionAction } from "@/app/actions/collections";
+import { useT } from "@/components/LocaleProvider";
 import { Button } from "@/components/ui/button";
 import Dialog from "@/components/ui/dialog";
 import { Field, inputClass, textareaClass } from "@/components/ui/field";
@@ -19,6 +20,7 @@ export function CollectionOwnerTools({
   initial: { title: string; description: string | null; isPublic: boolean };
 }) {
   const router = useRouter();
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [values, setValues] = useState({ ...initial, description: initial.description ?? "" });
   const [pending, start] = useTransition();
@@ -36,7 +38,7 @@ export function CollectionOwnerTools({
 
   const remove = () =>
     start(async () => {
-      if (!window.confirm("Slette samlingen? Prosjektene slettes ikke.")) return;
+      if (!window.confirm(t("Slette samlingen? Prosjektene slettes ikke."))) return;
       const result = await deleteCollectionAction(id);
       if (!result.ok) {
         toast.error(result.error);
@@ -51,32 +53,32 @@ export function CollectionOwnerTools({
     <>
       <div className="flex gap-2">
         <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>
-          <PenLine className="size-4" /> Rediger
+          <PenLine className="size-4" /> {t("Rediger")}
         </Button>
         <Button size="sm" variant="ghost" onClick={remove} className="hover:text-danger">
-          <Trash2 className="size-4" /> Slett
+          <Trash2 className="size-4" /> {t("Slett")}
         </Button>
       </div>
-      <Dialog open={open} onClose={() => setOpen(false)} title="Rediger samlingen">
+      <Dialog open={open} onClose={() => setOpen(false)} title={t("Rediger samlingen")}>
         <div className="mt-5 space-y-4">
-          <Field label="Navn">
+          <Field label={t("Navn")}>
             <input className={inputClass} value={values.title} maxLength={80} onChange={(e) => setValues((v) => ({ ...v, title: e.target.value }))} />
           </Field>
-          <Field label="Beskrivelse" optional>
+          <Field label={t("Beskrivelse")} optional>
             <textarea className={`${textareaClass} min-h-20`} value={values.description} maxLength={500} onChange={(e) => setValues((v) => ({ ...v, description: e.target.value }))} />
           </Field>
           <Switch
             checked={values.isPublic}
             onChange={(on) => setValues((v) => ({ ...v, isPublic: on }))}
-            label="Offentlig"
-            description="Vises på profilen din, og alle med lenken kan se den."
+            label={t("Offentlig")}
+            description={t("Vises på profilen din, og alle med lenken kan se den.")}
           />
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>
-              Avbryt
+              {t("Avbryt")}
             </Button>
             <Button size="sm" onClick={save} loading={pending}>
-              Lagre
+              {t("Lagre")}
             </Button>
           </div>
         </div>
@@ -87,6 +89,7 @@ export function CollectionOwnerTools({
 
 export function RemoveFromCollection({ collectionId, projectId }: { collectionId: string; projectId: string }) {
   const router = useRouter();
+  const t = useT();
   const [pending, start] = useTransition();
   return (
     <button
@@ -104,7 +107,7 @@ export function RemoveFromCollection({ collectionId, projectId }: { collectionId
       }
       className="mt-2 inline-flex items-center gap-1 text-xs text-mist transition hover:text-danger"
     >
-      <X className="size-3.5" /> Fjern fra samlingen
+      <X className="size-3.5" /> {t("Fjern fra samlingen")}
     </button>
   );
 }

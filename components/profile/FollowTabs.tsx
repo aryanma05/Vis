@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
+import { useReduceMotion } from "@/components/settings/display-prefs";
 import { useT } from "@/components/LocaleProvider";
 import { Tabs } from "@/components/ui/tabs";
 
@@ -29,7 +30,7 @@ export default function FollowTabs({
   following: ReactNode;
 }) {
   const t = useT();
-  const reduce = useReducedMotion();
+  const reduce = useReduceMotion();
   const [mode, setMode] = useState<Mode>(initial);
   const [direction, setDirection] = useState(0);
 

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { SearchX, Users } from "lucide-react";
+import { ArrowRight, Handshake, SearchX, Users } from "lucide-react";
 import ProjectMasonry from "@/components/ProjectMasonry";
 import { PersonTile } from "@/components/social/PersonRow";
 import { ButtonLink } from "@/components/ui/button";
@@ -118,6 +118,11 @@ export default async function SearchPage({ searchParams }: Props) {
               )}
             </h2>
             {state.tag && <ButtonLink href={`/tag/${state.tag}`} variant="link">{t("Se siden for {name}", { name: activeTag?.name ?? state.tag })}</ButtonLink>}
+            {state.type === "personer" && !state.tag && (
+              <ButtonLink href="/partnere" variant="secondary" size="sm">
+                <Handshake className="size-4" /> {t("Finn prosjektpartnere")} <ArrowRight className="size-4" />
+              </ButtonLink>
+            )}
           </div>
 
           {state.type === "prosjekter" ? (

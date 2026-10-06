@@ -2,9 +2,10 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Search, X } from "lucide-react";
+import { Search, UserX, X } from "lucide-react";
 import { quickSearchAction } from "@/app/actions/search";
 import Avatar from "@/components/Avatar";
+import { useT } from "@/components/LocaleProvider";
 import { inputClass } from "@/components/ui/field";
 
 export type MemberOption = { username: string; name: string; image: string | null };
@@ -25,10 +26,13 @@ export default function MemberPicker({
   exclude?: string;
   max: number;
 }) {
+  const t = useT();
   const listId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<MemberOption[]>([]);
+  // Søket resultatene hører til, så «ingen treff» bare vises når søket faktisk er ferdig.
+  const [searched, setSearched] = useState("");
   const [active, setActive] = useState(0);
   const [open, setOpen] = useState(false);
 
@@ -36,6 +40,7 @@ export default function MemberPicker({
   const taken = new Set([...value.map((m) => m.username), ...(exclude ? [exclude.toLowerCase()] : [])]);
   const suggestions = q ? results.filter((p) => !taken.has(p.username)) : [];
   const full = value.length >= max;
+  const noMatch = Boolean(q) && searched === q && suggestions.length === 0;
 
   useEffect(() => {
     if (!q) return;
@@ -44,6 +49,7 @@ export default function MemberPicker({
       const result = await quickSearchAction(q).catch(() => null);
       if (stale || !result) return;
       setResults(result.people.map(({ username, name, image }) => ({ username, name, image })));
+      setSearched(q);
       setActive(0);
     }, 150);
     return () => {
@@ -62,6 +68,8 @@ export default function MemberPicker({
 
   const remove = (username: string) => onChange(value.filter((m) => m.username !== username));
   const showList = open && suggestions.length > 0;
+  // Teksten står igjen i feltet uten at noen er lagt til: si fra, ellers forsvinner den ved lagring.
+  const leftover = !open && Boolean(q) && !full;
 
   return (
     <div>
@@ -76,7 +84,7 @@ export default function MemberPicker({
           aria-expanded={showList}
           aria-controls={listId}
           aria-autocomplete="list"
-          aria-label="Søk etter medlemmer"
+          aria-label={t("Søk etter medlemmer")}
           autoComplete="off"
           autoCapitalize="none"
           spellCheck={false}
@@ -107,7 +115,7 @@ export default function MemberPicker({
               setOpen(false);
             }
           }}
-          placeholder={full ? `Maks ${max} medlemmer` : "Søk etter navn eller @brukernavn"}
+          placeholder={full ? t("Maks {n} medlemmer.", { n: max }) : t("Søk etter navn eller @brukernavn")}
           className={`${inputClass} pl-10`}
         />
 
@@ -116,7 +124,7 @@ export default function MemberPicker({
             <motion.ul
               id={listId}
               role="listbox"
-              aria-label="Forslag"
+              aria-label={t("Forslag")}
               initial={{ opacity: 0, y: -4, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -4, scale: 0.98 }}
@@ -149,8 +157,20 @@ export default function MemberPicker({
         </AnimatePresence>
       </div>
 
+      {open && noMatch && (
+        <p className="mt-2 flex items-center gap-2 text-[13px] text-mist" role="status">
+          <UserX className="size-4 shrink-0" aria-hidden="true" />
+          {t("Fant ingen som heter «{q}». Personen må ha en profil på Vis.", { q })}
+        </p>
+      )}
+      {leftover && (
+        <p className="mt-2 text-[13px] text-warn" role="status">
+          {t("Trykk på personen i listen for å legge dem til.")}
+        </p>
+      )}
+
       {value.length > 0 && (
-        <ul className="mt-3 flex flex-wrap gap-2" aria-label="Medlemmer">
+        <ul className="mt-3 flex flex-wrap gap-2" aria-label={t("Medlemmer")}>
           <AnimatePresence initial={false}>
             {value.map((m) => (
               <motion.li
@@ -167,8 +187,8 @@ export default function MemberPicker({
                 <button
                   type="button"
                   onClick={() => remove(m.username)}
-                  aria-label={`Fjern ${m.name}`}
-                  title={`Fjern ${m.name}`}
+                  aria-label={t("Fjern {name}", { name: m.name })}
+                  title={t("Fjern {name}", { name: m.name })}
                   className="flex size-6 items-center justify-center rounded-full text-mist transition hover:bg-fill-2 hover:text-fg"
                 >
                   <X className="size-3.5" />

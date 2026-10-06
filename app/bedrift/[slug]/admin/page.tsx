@@ -13,12 +13,21 @@ import { Tabs } from "@/components/ui/tabs";
 import { getCompanyPlan, getDisplayPrices } from "@/lib/billing";
 import { getCompanyBySlug, getMembership, listCompanyMembers } from "@/lib/companies";
 import { FIELD_KEYS, FIELDS, OPEN_TO, OPEN_TO_LABELS, type FieldKey, type OpenTo } from "@/lib/constants";
+import { formatDate } from "@/lib/format";
+import type { Locale, T } from "@/lib/i18n";
+import { getLocale, getT } from "@/lib/i18n/server";
 import { listCompanyJobs } from "@/lib/jobs";
 import { requireUser } from "@/lib/session";
 import { getTalentList, listMembershipsFor, listTalentLists, searchCandidates } from "@/lib/talent";
 import { listWebhooks, WEBHOOK_EVENTS } from "@/lib/webhooks";
 
-export const metadata: Metadata = { title: "Administrer bedrift", robots: { index: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getT())("Administrer bedrift"), robots: { index: false } };
+}
+
+// «1 990 kr» / «NOK 1,990»
+const formatPrice = (amount: number, locale: Locale) =>
+  locale === "en" ? `NOK ${amount.toLocaleString("en-GB")}` : `${amount.toLocaleString("nb-NO")} kr`;
 
 const TABS = ["stillinger", "kandidater", "lister", "profil", "medlemmer", "utviklere", "abonnement"] as const;
 type Tab = (typeof TABS)[number];
@@ -29,20 +38,20 @@ type Props = {
 
 const ROLE_LABEL = { owner: "Eier", admin: "Administrator", member: "Medlem" } as const;
 
-function Upsell({ companyId, price, canBuy }: { companyId: string; price: number; canBuy: boolean }) {
+function Upsell({ companyId, price, canBuy, t }: { companyId: string; price: string; canBuy: boolean; t: T }) {
   return (
     <div className="rounded-[22px] glass-card p-6">
       <p className="flex items-center gap-2 font-semibold">
-        <Lock className="size-4 text-mist" /> Krever Bedrift
+        <Lock className="size-4 text-mist" /> {t("Krever Bedrift")}
       </p>
       <p className="mt-2 max-w-xl text-sm text-mist">
-        Søk blant folk som har valgt å være synlige for bedrifter, lag lister med notater, eksporter til Excel og ta kontakt direkte. {price.toLocaleString("nb-NO")} kr i
-        måneden, ingen bindingstid.
+        {t("Søk blant folk som har valgt å være synlige for bedrifter, lag lister med notater, eksporter til Excel og ta kontakt direkte.")}{" "}
+        {t("{price} i måneden, ingen bindingstid.", { price })}
       </p>
       {canBuy && (
         <div className="mt-4">
           <CheckoutButton plan="business" companyId={companyId}>
-            Start Bedrift
+            {t("Start Bedrift")}
           </CheckoutButton>
         </div>
       )}
@@ -52,7 +61,7 @@ function Upsell({ companyId, price, canBuy }: { companyId: string; price: number
 
 export default async function CompanyAdminPage({ params, searchParams }: Props) {
   const user = await requireUser();
-  const [{ slug }, query] = await Promise.all([params, searchParams]);
+  const [{ slug }, query, t, locale] = await Promise.all([params, searchParams, getT(), getLocale()]);
   const company = await getCompanyBySlug(slug);
   if (!company) notFound();
   const role = await getMembership(user.id, company.id);
@@ -63,6 +72,7 @@ export default async function CompanyAdminPage({ params, searchParams }: Props) 
   const [plan, prices] = await Promise.all([getCompanyPlan(company.id), getDisplayPrices()]);
   const business = plan.plan === "business";
   const base = `/bedrift/${company.slug}/admin`;
+  const monthly = formatPrice(prices["business:month"].amount, locale);
 
   const filters = {
     q: query.q?.slice(0, 100) ?? "",
@@ -88,22 +98,24 @@ export default async function CompanyAdminPage({ params, searchParams }: Props) 
           <ArrowLeft className="size-4" /> {company.name}
         </Link>
         <div className="mt-4 flex flex-wrap items-end justify-between gap-4">
-          <h1 className="text-4xl font-bold tracking-tight">Administrer</h1>
-          <span className={`rounded-full px-3 py-1 text-xs font-semibold ${business ? "bg-success/15 text-success" : "bg-fill text-mist"}`}>{business ? "Bedrift" : "Gratis"}</span>
+          <h1 className="text-4xl font-bold tracking-tight">{t("Administrer")}</h1>
+          <span className={`rounded-full px-3 py-1 text-xs font-semibold ${business ? "bg-success/15 text-success" : "bg-fill text-mist"}`}>
+            {business ? t("Bedrift") : t("Gratis")}
+          </span>
         </div>
 
         <div className="mt-8">
           <Tabs
-            label="Bedrift"
+            label={t("Bedrift")}
             active={tab}
             items={[
-              { key: "stillinger", label: "Stillinger", href: base },
-              { key: "kandidater", label: "Kandidater", href: `${base}?fane=kandidater` },
-              { key: "lister", label: "Lister", href: `${base}?fane=lister` },
-              { key: "profil", label: "Bedriftsprofil", href: `${base}?fane=profil` },
-              { key: "medlemmer", label: "Medlemmer", href: `${base}?fane=medlemmer` },
+              { key: "stillinger", label: t("Stillinger"), href: base },
+              { key: "kandidater", label: t("Kandidater"), href: `${base}?fane=kandidater` },
+              { key: "lister", label: t("Lister"), href: `${base}?fane=lister` },
+              { key: "profil", label: t("Bedriftsprofil"), href: `${base}?fane=profil` },
+              { key: "medlemmer", label: t("Medlemmer"), href: `${base}?fane=medlemmer` },
               { key: "utviklere", label: "Webhooks", href: `${base}?fane=utviklere` },
-              { key: "abonnement", label: "Abonnement", href: `${base}?fane=abonnement` },
+              { key: "abonnement", label: t("Abonnement"), href: `${base}?fane=abonnement` },
             ]}
           />
         </div>
@@ -112,14 +124,14 @@ export default async function CompanyAdminPage({ params, searchParams }: Props) 
           {tab === "stillinger" && (
             <section>
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="text-sm text-mist">{business ? "Ubegrenset med stillinger." : "Gratis: én aktiv stilling om gangen."}</p>
+                <p className="text-sm text-mist">{business ? t("Ubegrenset med stillinger.") : t("Gratis: én aktiv stilling om gangen.")}</p>
                 <ButtonLink href={`${base}/stilling/ny`} size="sm">
-                  <Plus className="size-4" /> Ny stilling
+                  <Plus className="size-4" /> {t("Ny stilling")}
                 </ButtonLink>
               </div>
               {jobs.length === 0 ? (
-                <EmptyState className="mt-6" title="Ingen stillinger ennå">
-                  Legg ut den første. Den vises på bedriftssiden og under Stillinger.
+                <EmptyState className="mt-6" title={t("Ingen stillinger ennå")}>
+                  {t("Legg ut den første. Den vises på bedriftssiden og under Stillinger.")}
                 </EmptyState>
               ) : (
                 <ul className="mt-6 divide-y divide-line overflow-hidden rounded-[22px] glass-card">
@@ -131,13 +143,13 @@ export default async function CompanyAdminPage({ params, searchParams }: Props) 
                         </Link>
                         <p className="mt-0.5 flex flex-wrap items-center gap-x-3 text-sm text-mist">
                           <span className={j.status === "published" ? "text-success" : j.status === "draft" ? "text-warn" : ""}>
-                            {j.status === "published" ? "Publisert" : j.status === "draft" ? "Utkast" : "Lukket"}
+                            {j.status === "published" ? t("Publisert") : j.status === "draft" ? t("Utkast") : t("Lukket")}
                           </span>
                           <span className="inline-flex items-center gap-1">
-                            <Eye className="size-3.5" /> {j.views} visninger
+                            <Eye className="size-3.5" /> {t("{n} visninger", { n: j.views })}
                           </span>
                           <span className="inline-flex items-center gap-1">
-                            <MousePointerClick className="size-3.5" /> {j.applyClicks} søknadsklikk
+                            <MousePointerClick className="size-3.5" /> {t("{n} søknadsklikk", { n: j.applyClicks })}
                           </span>
                         </p>
                       </div>
@@ -151,41 +163,45 @@ export default async function CompanyAdminPage({ params, searchParams }: Props) 
 
           {tab === "kandidater" &&
             (!business ? (
-              <Upsell companyId={company.id} price={prices["business:month"].amount} canBuy={canManage} />
+              <Upsell companyId={company.id} price={monthly} canBuy={canManage} t={t} />
             ) : (
               <section>
                 <form action={base} className="flex flex-wrap gap-2">
                   <input type="hidden" name="fane" value="kandidater" />
-                  <input name="q" defaultValue={filters.q} placeholder="Ferdighet, rolle eller navn" aria-label="Søk" className="h-10 min-w-56 flex-1 rounded-full bg-fill px-4 outline-none inset-ring inset-ring-line focus:ring-2 focus:ring-sea/50" />
-                  <input name="sted" defaultValue={filters.location ?? ""} placeholder="Sted" aria-label="Sted" className="h-10 w-36 rounded-full bg-fill px-4 outline-none inset-ring inset-ring-line focus:ring-2 focus:ring-sea/50" />
-                  <select name="fag" defaultValue={filters.field ?? ""} aria-label="Fagfelt" className="h-10 rounded-full bg-fill px-4 outline-none inset-ring inset-ring-line">
-                    <option value="">Alle fagfelt</option>
+                  <input name="q" defaultValue={filters.q} placeholder={t("Ferdighet, rolle eller navn")} aria-label={t("Søk")} className="h-10 min-w-56 flex-1 rounded-full bg-fill px-4 outline-none inset-ring inset-ring-line focus:ring-2 focus:ring-sea/50" />
+                  <input name="sted" defaultValue={filters.location ?? ""} placeholder={t("Sted")} aria-label={t("Sted")} className="h-10 w-36 rounded-full bg-fill px-4 outline-none inset-ring inset-ring-line focus:ring-2 focus:ring-sea/50" />
+                  <select name="fag" defaultValue={filters.field ?? ""} aria-label={t("Fagfelt")} className="h-10 rounded-full bg-fill px-4 outline-none inset-ring inset-ring-line">
+                    <option value="">{t("Alle fagfelt")}</option>
                     {FIELD_KEYS.map((k) => (
                       <option key={k} value={k}>
-                        {FIELDS[k].label}
+                        {t(FIELDS[k].label)}
                       </option>
                     ))}
                   </select>
-                  <select name="apen" defaultValue={filters.openTo ?? ""} aria-label="Åpen for" className="h-10 rounded-full bg-fill px-4 outline-none inset-ring inset-ring-line">
-                    <option value="">Åpen for alt</option>
+                  <select name="apen" defaultValue={filters.openTo ?? ""} aria-label={t("Åpen for")} className="h-10 rounded-full bg-fill px-4 outline-none inset-ring inset-ring-line">
+                    <option value="">{t("Åpen for alt")}</option>
                     {OPEN_TO.map((o) => (
                       <option key={o} value={o}>
-                        {OPEN_TO_LABELS[o]}
+                        {t(OPEN_TO_LABELS[o])}
                       </option>
                     ))}
                   </select>
                   <button type="submit" className="h-10 rounded-full bg-primary px-5 text-sm font-semibold text-on-primary">
-                    Søk
+                    {t("Søk")}
                   </button>
                 </form>
                 {lists.length === 0 && (
                   <p className="mt-4 text-sm text-mist">
-                    Tips: lag en liste under <Link href={`${base}?fane=lister`} className="text-ice hover:underline">Lister</Link> for å samle kandidater.
+                    {t("Tips: lag en liste under")}{" "}
+                    <Link href={`${base}?fane=lister`} className="text-ice hover:underline">
+                      {t("Lister")}
+                    </Link>{" "}
+                    {t("for å samle kandidater.")}
                   </p>
                 )}
                 {candidates.length === 0 ? (
-                  <EmptyState className="mt-8" title="Ingen treff">
-                    Bare folk som selv har slått på «Synlig for bedrifter» vises her.
+                  <EmptyState className="mt-8" title={t("Ingen treff")}>
+                    {t("Bare folk som selv har slått på «Synlig for bedrifter» vises her.")}
                   </EmptyState>
                 ) : (
                   <ul className="mt-6 divide-y divide-line overflow-hidden rounded-[22px] glass-card">
@@ -196,10 +212,12 @@ export default async function CompanyAdminPage({ params, searchParams }: Props) 
                           <Link href={`/@${c.username}`} className="font-semibold hover:text-ice">
                             {c.name}
                           </Link>
-                          <p className="text-sm text-mist">{[c.headline, c.location, `${c.projects} prosjekter`].filter(Boolean).join(" · ")}</p>
+                          <p className="text-sm text-mist">{[c.headline, c.location, t("{n} prosjekter", { n: c.projects })].filter(Boolean).join(" · ")}</p>
                           {c.skills.length > 0 && <p className="mt-1 truncate text-xs text-mist">{c.skills.slice(0, 8).join(" · ")}</p>}
                           {(c.openTo as OpenTo[]).length > 0 && (
-                            <p className="mt-1 text-xs text-success">Åpen for {(c.openTo as OpenTo[]).map((o) => OPEN_TO_LABELS[o].toLowerCase()).join(", ")}</p>
+                            <p className="mt-1 text-xs text-success">
+                              {t("Åpen for")} {(c.openTo as OpenTo[]).map((o) => t(OPEN_TO_LABELS[o]).toLowerCase()).join(", ")}
+                            </p>
                           )}
                         </div>
                         <div className="flex gap-2">
@@ -215,25 +233,25 @@ export default async function CompanyAdminPage({ params, searchParams }: Props) 
 
           {tab === "lister" &&
             (!business && lists.length === 0 ? (
-              <Upsell companyId={company.id} price={prices["business:month"].amount} canBuy={canManage} />
+              <Upsell companyId={company.id} price={monthly} canBuy={canManage} t={t} />
             ) : list ? (
               <section>
                 <Link href={`${base}?fane=lister`} className="text-sm text-mist hover:text-fg">
-                  ← Alle lister
+                  ← {t("Alle lister")}
                 </Link>
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
                   <h2 className="text-2xl font-semibold">{list.name}</h2>
                   <div className="flex gap-2">
                     {business && (
                       <a href={`/api/bedrift/liste/${list.id}/csv`} className="inline-flex items-center gap-1.5 rounded-full glass-chip px-3 py-1.5 text-sm font-medium">
-                        <Download className="size-4" /> Last ned (Excel/CSV)
+                        <Download className="size-4" /> {t("Last ned (Excel/CSV)")}
                       </a>
                     )}
                     {canManage && <TalentListTools listId={list.id} />}
                   </div>
                 </div>
                 {list.members.length === 0 ? (
-                  <p className="mt-6 text-mist">Listen er tom. Legg til folk fra Kandidater.</p>
+                  <p className="mt-6 text-mist">{t("Listen er tom. Legg til folk fra Kandidater.")}</p>
                 ) : (
                   <ul className="mt-6 divide-y divide-line overflow-hidden rounded-[22px] glass-card">
                     {list.members.map((m) => (
@@ -256,14 +274,14 @@ export default async function CompanyAdminPage({ params, searchParams }: Props) 
               <section className="space-y-6">
                 {business && <NewTalentList companyId={company.id} />}
                 {lists.length === 0 ? (
-                  <p className="text-mist">Ingen lister ennå.</p>
+                  <p className="text-mist">{t("Ingen lister ennå.")}</p>
                 ) : (
                   <ul className="divide-y divide-line overflow-hidden rounded-[22px] glass-card">
                     {lists.map((l) => (
                       <li key={l.id}>
                         <Link href={`${base}?fane=lister&liste=${l.id}`} className="flex items-center justify-between px-5 py-4 hover:bg-fill">
                           <span className="font-medium">{l.name}</span>
-                          <span className="text-sm text-mist">{l.members} personer</span>
+                          <span className="text-sm text-mist">{t("{n} personer", { n: l.members })}</span>
                         </Link>
                       </li>
                     ))}
@@ -281,7 +299,7 @@ export default async function CompanyAdminPage({ params, searchParams }: Props) 
                 initial={{ name: company.name, website: company.website ?? "", location: company.location ?? "", size: company.size ?? "", about: company.about ?? "" }}
               />
             ) : (
-              <p className="text-mist">Bare eier og administratorer kan endre bedriftsprofilen.</p>
+              <p className="text-mist">{t("Bare eier og administratorer kan endre bedriftsprofilen.")}</p>
             ))}
 
           {tab === "medlemmer" && (
@@ -295,7 +313,7 @@ export default async function CompanyAdminPage({ params, searchParams }: Props) 
                       <Link href={`/@${m.username}`} className="font-medium hover:text-ice">
                         {m.name}
                       </Link>
-                      <p className="text-sm text-mist">{ROLE_LABEL[m.role]}</p>
+                      <p className="text-sm text-mist">{t(ROLE_LABEL[m.role])}</p>
                     </div>
                     {canManage && m.role !== "owner" && <RemoveMember companyId={company.id} userId={m.userId} />}
                   </li>
@@ -306,13 +324,14 @@ export default async function CompanyAdminPage({ params, searchParams }: Props) 
 
           {tab === "utviklere" &&
             (!business && hooks.length === 0 ? (
-              <Upsell companyId={company.id} price={prices["business:month"].amount} canBuy={canManage} />
+              <Upsell companyId={company.id} price={monthly} canBuy={canManage} t={t} />
             ) : (
               <section className="space-y-4">
                 <p className="max-w-2xl text-sm text-mist">
-                  Vi sender en POST med JSON til adressen når noe skjer med stillingene deres, signert med <code className="font-mono">Vis-Signature</code>. Se{" "}
+                  {t("Vi sender en POST med JSON til adressen når noe skjer med stillingene deres, signert med")}{" "}
+                  <code className="font-mono">Vis-Signature</code>. {t("Se")}{" "}
                   <Link href="/utviklere#webhooks" className="text-ice hover:underline">
-                    dokumentasjonen
+                    {t("dokumentasjonen")}
                   </Link>
                   .
                 </p>
@@ -322,33 +341,39 @@ export default async function CompanyAdminPage({ params, searchParams }: Props) 
 
           {tab === "abonnement" && (
             <section className="max-w-xl rounded-[22px] glass-card p-6">
-              {query.avbrutt && <p className="mb-4 text-sm text-mist">Betalingen ble avbrutt. Ingenting er trukket.</p>}
-              <p className="text-lg font-semibold">{business ? "Bedrift" : "Gratis"}</p>
+              {query.avbrutt && <p className="mb-4 text-sm text-mist">{t("Betalingen ble avbrutt. Ingenting er trukket.")}</p>}
+              <p className="text-lg font-semibold">{business ? t("Bedrift") : t("Gratis")}</p>
               {plan.source === "stripe" && plan.renewsAt && (
                 <p className="mt-1 text-sm text-mist">
-                  {plan.cancelAtPeriodEnd ? "Avsluttes" : "Fornyes"} {plan.renewsAt.toLocaleDateString("nb-NO", { day: "numeric", month: "long", year: "numeric" })}
+                  {plan.cancelAtPeriodEnd
+                    ? t("Avsluttes {date}.", { date: formatDate(plan.renewsAt, locale) })
+                    : t("Fornyes {date}", { date: formatDate(plan.renewsAt, locale) })}
                 </p>
               )}
-              {plan.source === "grant" && <p className="mt-1 text-sm text-mist">Gitt av Vis{plan.grantUntil ? ` til ${plan.grantUntil.toLocaleDateString("nb-NO")}` : ""}.</p>}
+              {plan.source === "grant" && (
+                <p className="mt-1 text-sm text-mist">
+                  {plan.grantUntil ? t("Gitt av Vis til {date}.", { date: formatDate(plan.grantUntil, locale) }) : t("Gitt av Vis.")}
+                </p>
+              )}
               {!business && (
                 <p className="mt-2 text-sm text-mist">
-                  {prices["business:month"].amount.toLocaleString("nb-NO")} kr i måneden: ubegrenset med stillinger, kandidatsøk, lister med eksport og direkte kontakt.
+                  {t("{price} i måneden: ubegrenset med stillinger, kandidatsøk, lister med eksport og direkte kontakt.", { price: monthly })}
                 </p>
               )}
               {canManage ? (
                 <div className="mt-5">
                   {plan.source === "stripe" ? (
                     <CheckoutButton portal companyId={company.id} variant="secondary">
-                      Administrer betaling og fakturaer
+                      {t("Administrer betaling og fakturaer")}
                     </CheckoutButton>
                   ) : !business ? (
                     <CheckoutButton plan="business" companyId={company.id}>
-                      Start Bedrift
+                      {t("Start Bedrift")}
                     </CheckoutButton>
                   ) : null}
                 </div>
               ) : (
-                <p className="mt-4 text-sm text-mist">Bare eier og administratorer kan endre abonnementet.</p>
+                <p className="mt-4 text-sm text-mist">{t("Bare eier og administratorer kan endre abonnementet.")}</p>
               )}
             </section>
           )}

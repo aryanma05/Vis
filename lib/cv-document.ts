@@ -102,7 +102,7 @@ export async function addCvPage(userId: string, index: number, file: File, size:
   const [row] = await db.select().from(cvDocument).where(eq(cvDocument.userId, userId)).limit(1);
   if (!row || row.mimeType !== "application/pdf") throw new UserFacingError("Last opp CV-en først.");
   if (!Number.isInteger(index) || index < 0 || index >= MAX_CV_PAGES) {
-    throw new UserFacingError(`Vi viser maks ${MAX_CV_PAGES} sider.`);
+    throw new UserFacingError("Vi viser maks {n} sider.", { n: MAX_CV_PAGES });
   }
 
   const stored = await storeImage(file, `cv/${userId}`, { ownerId: userId, isPrivate: !row.isPublic });

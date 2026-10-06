@@ -8,23 +8,24 @@ import { CollectionOwnerTools, RemoveFromCollection } from "@/components/project
 import ShareMenu from "@/components/social/ShareMenu";
 import { EmptyState } from "@/components/ui/misc";
 import { getCollection } from "@/lib/collections";
+import { getT } from "@/lib/i18n/server";
 import { getCurrentUser } from "@/lib/session";
 
 type Props = { params: Promise<{ id: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { id } = await params;
+  const [{ id }, t] = await Promise.all([params, getT()]);
   const collection = await getCollection(id, (await getCurrentUser())?.id);
-  if (!collection) return { title: "Fant ikke samlingen" };
+  if (!collection) return { title: t("Fant ikke samlingen") };
   return {
-    title: `${collection.title} – samling av ${collection.owner.name}`,
-    description: collection.description ?? `${collection.projects.length} prosjekter samlet av ${collection.owner.name} på Vis.`,
+    title: t("{title} – samling av {name}", { title: collection.title, name: collection.owner.name }),
+    description: collection.description ?? t("{n} prosjekter samlet av {name} på Vis.", { n: collection.projects.length, name: collection.owner.name }),
     robots: collection.isPublic ? undefined : { index: false },
   };
 }
 
 export default async function CollectionPage({ params }: Props) {
-  const { id } = await params;
+  const [{ id }, t] = await Promise.all([params, getT()]);
   const viewer = await getCurrentUser();
   const collection = await getCollection(id, viewer?.id);
   if (!collection) notFound();
@@ -34,7 +35,7 @@ export default async function CollectionPage({ params }: Props) {
       <div className="mx-auto max-w-6xl">
         <p className="caption inline-flex items-center gap-2">
           {collection.isPublic ? <Globe2 className="size-3.5" /> : <Lock className="size-3.5" />}
-          {collection.isPublic ? "Samling" : "Privat samling"}
+          {collection.isPublic ? t("Samling") : t("Privat samling")}
         </p>
         <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
           <div className="min-w-0">
@@ -42,7 +43,8 @@ export default async function CollectionPage({ params }: Props) {
             {collection.description && <p className="mt-3 max-w-2xl text-lg leading-8 text-mist">{collection.description}</p>}
             <Link href={`/@${collection.owner.username}`} className="mt-4 inline-flex items-center gap-2 text-sm text-mist hover:text-fg">
               <Avatar name={collection.owner.name} image={collection.owner.image} size={24} />
-              {collection.owner.name} · {collection.projects.length} {collection.projects.length === 1 ? "prosjekt" : "prosjekter"}
+              {collection.owner.name} ·{" "}
+              {collection.projects.length === 1 ? t("1 prosjekt") : t("{n} prosjekter", { n: collection.projects.length })}
             </Link>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -57,8 +59,8 @@ export default async function CollectionPage({ params }: Props) {
         </div>
 
         {collection.projects.length === 0 ? (
-          <EmptyState className="mt-12" icon={<Bookmark className="size-5" />} title="Tom samling">
-            {collection.isOwner ? "Trykk på bokmerket på et prosjekt for å lagre det her." : "Ingen prosjekter her ennå."}
+          <EmptyState className="mt-12" icon={<Bookmark className="size-5" />} title={t("Tom samling")}>
+            {collection.isOwner ? t("Trykk på bokmerket på et prosjekt for å lagre det her.") : t("Ingen prosjekter her ennå.")}
           </EmptyState>
         ) : (
           <div className="mt-12 grid grid-cols-1 gap-x-5 gap-y-9 sm:grid-cols-2 xl:grid-cols-3">

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useT } from "@/components/LocaleProvider";
 import UsernameField, { useUsernameCheck } from "@/components/UsernameField";
 import { Button } from "@/components/ui/button";
 import { Section } from "@/components/ui/field";
@@ -13,6 +14,7 @@ import { usernameError } from "@/lib/username";
 // Egen form, fordi brukernavnet endres via Better Auth og ikke profil-actionen.
 export default function UsernameForm({ current }: { current: string }) {
   const router = useRouter();
+  const t = useT();
   const [value, setValue] = useState(current);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -30,7 +32,7 @@ export default function UsernameForm({ current }: { current: string }) {
       // displayUsername beholder store bokstaver, username lagres med små.
       const { error } = await authClient.updateUser({ username: value, displayUsername: value });
       if (error) return setError(authErrorMessage(error));
-      toast.success(`Profilen din ligger nå på vis.no/@${value}`);
+      toast.success(t("Profilen din ligger nå på {link}", { link: `vis.no/@${value}` }));
       router.push(`/profil/rediger`);
       router.refresh();
     } catch {
@@ -42,7 +44,7 @@ export default function UsernameForm({ current }: { current: string }) {
 
   return (
     <form onSubmit={save}>
-      <Section title="Profiladresse" description="Brukernavnet ditt. Bytter du, slutter gamle lenker til profilen å virke.">
+      <Section title={t("Profiladresse")} description={t("Brukernavnet ditt. Bytter du, slutter gamle lenker til profilen å virke.")}>
         <div className="max-w-md">
           <UsernameField
             value={value}
@@ -54,7 +56,7 @@ export default function UsernameForm({ current }: { current: string }) {
             }}
           />
           <Button type="submit" variant="secondary" size="sm" className="mt-4" loading={pending} disabled={value === current || !value}>
-            Bytt brukernavn
+            {t("Bytt brukernavn")}
           </Button>
         </div>
       </Section>

@@ -2,7 +2,28 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { ArrowLeft, ArrowRight, Camera, GripVertical, ImagePlus, Link2, Plus, SlidersHorizontal, Star, X } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Bell,
+  BookOpen,
+  Camera,
+  CheckCircle2,
+  CodeXml,
+  Globe2,
+  GripVertical,
+  Hammer,
+  ImagePlus,
+  Layers,
+  Link2,
+  PenLine,
+  PlayCircle,
+  Plus,
+  SlidersHorizontal,
+  Star,
+  Users,
+  X,
+} from "lucide-react";
 import {
   captureScreenshotsAction,
   createProjectAction,
@@ -12,6 +33,7 @@ import {
   uploadProjectImagesAction,
 } from "@/app/actions/projects";
 import ImageEditor from "@/components/ImageEditor";
+import { useLocale, useT } from "@/components/LocaleProvider";
 import MarkdownEditor from "@/components/MarkdownEditor";
 import MemberPicker, { type MemberOption } from "@/components/MemberPicker";
 import TagInput from "@/components/TagInput";
@@ -58,7 +80,8 @@ const empty: ProjectFormValues = {
   members: [],
 };
 
-const CASE_TEMPLATE = `## Bakgrunn
+const CASE_TEMPLATE = {
+  nb: `## Bakgrunn
 
 Hvorfor lagde du dette? Hvem er det for?
 
@@ -77,7 +100,28 @@ Hvordan løste du det? Legg gjerne til skjermbilder og kodeeksempler.
 ## Resultat
 
 Hva ble resultatet, og hva lærte du?
-`;
+`,
+  en: `## Background
+
+Why did you make this? Who is it for?
+
+## My role
+
+What did you do yourself, and who did you work with?
+
+## The challenge
+
+What was hard, and what choices did you have to make?
+
+## The solution
+
+How did you solve it? Feel free to add screenshots and code samples.
+
+## Result
+
+What was the result, and what did you learn?
+`,
+};
 
 const isImageFile = (f: File) => f.type.startsWith("image/") || /\.hei[cf]$/i.test(f.name);
 
@@ -115,6 +159,8 @@ export default function ProjectForm({
   selfUsername?: string;
 }) {
   const router = useRouter();
+  const t = useT();
+  const locale = useLocale();
   const [pending, startTransition] = useTransition();
   // Settes når prosjektet er opprettet, så et nytt forsøk (f.eks. etter en bildefeil)
   // oppdaterer det i stedet for å lage et til.
@@ -152,9 +198,9 @@ export default function ProjectForm({
   async function addFiles(list: File[]) {
     const files = list.filter(isImageFile);
     if (files.length === 0) return toast.error("Det der var ikke et bilde. Bruk JPG, PNG, WebP eller GIF.");
-    if (room <= 0) return toast.error(`Et prosjekt kan ha maks ${maxImages} bilder.`);
+    if (room <= 0) return toast.error(t("Et prosjekt kan ha maks {n} bilder.", { n: maxImages }));
     const chosen = files.slice(0, room);
-    if (files.length > room) toast.info(`Bare ${room} bilder til fikk plass (maks ${maxImages}).`);
+    if (files.length > room) toast.info(t("Bare {room} bilder til fikk plass (maks {max}).", { room, max: maxImages }));
 
     setPreparing((n) => n + chosen.length);
     let last: { key: string; url: string } | null = null;
@@ -205,14 +251,14 @@ export default function ProjectForm({
       autoCaptured.current.add(text);
     }
     if (room <= 0) {
-      if (!auto) toast.error(`Et prosjekt kan ha maks ${maxImages} bilder.`);
+      if (!auto) toast.error(t("Et prosjekt kan ha maks {n} bilder.", { n: maxImages }));
       return;
     }
 
     const count = Math.min(room, 3);
     setCapturing({ host: hostOf(text), count });
     const result = await captureScreenshotsAction(text, count)
-      .catch(() => ({ ok: false as const, error: "Fikk ikke kontakt med serveren. Prøv igjen." }))
+      .catch(() => ({ ok: false as const, error: t("Fikk ikke kontakt med serveren. Prøv igjen.") }))
       .finally(() => setCapturing(null));
     if (!result.ok) {
       toast.error(result.error);
@@ -232,8 +278,8 @@ export default function ProjectForm({
       return { kind: "new" as const, key: crypto.randomUUID(), file, url: URL.createObjectURL(file) };
     });
     setItems((prev) => [...prev, ...added].slice(0, maxImages));
-    toast.success(added.length === 1 ? "La til et skjermbilde" : `La til ${added.length} skjermbilder`, {
-      description: "Trykk på et bilde for å redigere det.",
+    toast.success(added.length === 1 ? t("La til et skjermbilde") : t("La til {n} skjermbilder", { n: added.length }), {
+      description: t("Trykk på et bilde for å redigere det."),
     });
   }
 
@@ -295,7 +341,7 @@ export default function ProjectForm({
       let current = items;
       const fresh = items.filter((item) => item.kind === "new");
       for (const [n, item] of fresh.entries()) {
-        setProgress(`Laster opp bilde ${n + 1} av ${fresh.length} …`);
+        setProgress(t("Laster opp bilde {i} av {total} …", { i: n + 1, total: fresh.length }));
         const fd = new FormData();
         fd.append("images", item.file);
         const uploaded = await uploadProjectImagesAction(id, fd);
@@ -304,7 +350,7 @@ export default function ProjectForm({
           current = current.map((i) => (i.key === item.key ? { kind: "existing", key: item.key, id: saved.id, url: saved.url } : i));
           URL.revokeObjectURL(item.url);
         } else {
-          failures.push(uploaded.ok ? "ukjent feil" : uploaded.error);
+          failures.push(uploaded.ok ? t("ukjent feil") : uploaded.error);
         }
       }
       setItems(current);
@@ -318,12 +364,15 @@ export default function ProjectForm({
       setProgress(null);
 
       if (failures.length > 0) {
-        const count = failures.length === 1 ? "ett bilde" : `${failures.length} bilder`;
-        setError(`Prosjektet er lagret, men ${count} ble ikke lagret: ${failures[0]} Trykk «Lagre» for å prøve igjen.`);
+        setError(
+          failures.length === 1
+            ? t("Prosjektet er lagret, men ett bilde ble ikke lagret: {reason} Trykk «Lagre» for å prøve igjen.", { reason: failures[0] })
+            : t("Prosjektet er lagret, men {n} bilder ble ikke lagret: {reason} Trykk «Lagre» for å prøve igjen.", { n: failures.length, reason: failures[0] }),
+        );
         return;
       }
 
-      toast.success(isEdit ? "Endringene er lagret" : status === "published" ? "Prosjektet er publisert" : "Utkastet er lagret");
+      toast.success(isEdit ? t("Endringene er lagret") : status === "published" ? t("Prosjektet er publisert") : t("Utkastet er lagret"));
       router.push(`/prosjekt/${id}`);
       router.refresh();
     });
@@ -369,7 +418,7 @@ export default function ProjectForm({
   return (
     <form ref={formRef} onSubmit={onSubmit} className="pb-4">
       {/* Lenken og bildene */}
-      <section aria-label="Bilder" className="space-y-4">
+      <section aria-label={t("Bilder")} className="space-y-4">
         <input
           ref={inputRef}
           type="file"
@@ -384,7 +433,7 @@ export default function ProjectForm({
 
         <div className="rounded-[22px] glass-card p-4 sm:p-5">
           <label htmlFor="demoUrl" className="block text-sm font-medium text-fg">
-            Lenke til prosjektet <span className="font-normal text-mist">valgfritt</span>
+            {t("Lenke til prosjektet")} <span className="font-normal text-mist">{t("valgfritt")}</span>
           </label>
           <div className="mt-2 flex flex-col gap-2 sm:flex-row">
             <div className="relative min-w-0 flex-1">
@@ -403,7 +452,7 @@ export default function ProjectForm({
                   if (looksLikeUrl(pasted) && !demoUrl.trim()) capture(pasted, { auto: true });
                 }}
                 onBlur={() => capture(demoUrl, { auto: true })}
-                placeholder="dittprosjekt.no"
+                placeholder={t("dittprosjekt.no")}
                 aria-invalid={Boolean(err("demoUrl")) || undefined}
                 aria-describedby="demoUrl-hint"
                 className={`${inputClass} pl-10`}
@@ -411,14 +460,14 @@ export default function ProjectForm({
             </div>
             <Button variant="secondary" onClick={() => capture(demoUrl)} loading={capturing !== null} disabled={room <= 0 && !capturing}>
               {!capturing && <Camera className="size-4" />}
-              {capturing ? "Tar skjermbilder …" : items.length > 0 ? "Ta flere skjermbilder" : "Ta skjermbilder"}
+              {capturing ? t("Tar skjermbilder …") : items.length > 0 ? t("Ta flere skjermbilder") : t("Ta skjermbilder")}
             </Button>
           </div>
           {err("demoUrl") ? (
             <FieldError>{err("demoUrl")}</FieldError>
           ) : (
             <p id="demoUrl-hint" className="mt-1.5 text-[13px] leading-5 text-mist">
-              Lim inn lenken, så tar vi skjermbilder av siden og legger dem til under. Du kan fjerne, flytte og redigere dem etterpå.
+              {t("Vi tar skjermbilder av siden for deg.")}
             </p>
           )}
         </div>
@@ -435,8 +484,8 @@ export default function ProjectForm({
             <span className="flex size-12 items-center justify-center rounded-full glass-chip text-fg transition group-hover:scale-105">
               <ImagePlus className="size-5" />
             </span>
-            <span className="mt-3 text-lg font-semibold text-fg">Legg til bilder</span>
-            <span className="mt-1 text-sm text-mist">Dra dem hit, klikk for å velge, eller lim inn med ⌘V · opptil {maxImages}</span>
+            <span className="mt-3 text-lg font-semibold text-fg">{t("Legg til bilder")}</span>
+            <span className="mt-1 text-sm text-mist">{t("Dra, klikk eller lim inn · maks {n}", { n: maxImages })}</span>
           </button>
         ) : (
           <div className="space-y-3" {...dropHandlers}>
@@ -462,7 +511,7 @@ export default function ProjectForm({
                   />
                   {index === 0 ? (
                     <span className="glass-dark absolute left-2 top-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium">
-                      <Star className="size-3" /> Forside
+                      <Star className="size-3" /> {t("Forside")}
                     </span>
                   ) : (
                     <span className="glass-dark absolute left-2 top-2 cursor-grab rounded-full p-1.5 opacity-0 transition group-hover:opacity-100" aria-hidden="true">
@@ -471,7 +520,7 @@ export default function ProjectForm({
                   )}
                   <div className="absolute inset-x-2 bottom-2 flex items-center justify-between gap-1">
                     {index > 0 ? (
-                      <OverlayButton onClick={() => move(index, 0)} label="Gjør til forsidebilde" icon={<Star className="size-3.5" />} />
+                      <OverlayButton onClick={() => move(index, 0)} label={t("Gjør til forsidebilde")} icon={<Star className="size-3.5" />} />
                     ) : (
                       <span />
                     )}
@@ -479,13 +528,13 @@ export default function ProjectForm({
                       {/* På mobil redigerer man ved å trykke på bildet, så knappene får plass. */}
                       <OverlayButton
                         onClick={() => setEditing({ key: item.key, url: item.url })}
-                        label="Rediger"
+                        label={t("Rediger")}
                         icon={<SlidersHorizontal className="size-3.5" />}
                         className="max-sm:hidden"
                       />
-                      {index > 0 && <OverlayButton onClick={() => move(index, index - 1)} label="Flytt fremover" icon={<ArrowLeft className="size-3.5" />} />}
-                      {index < items.length - 1 && <OverlayButton onClick={() => move(index, index + 1)} label="Flytt bakover" icon={<ArrowRight className="size-3.5" />} />}
-                      <OverlayButton onClick={() => remove(index)} label="Fjern bildet" icon={<X className="size-3.5" />} danger />
+                      {index > 0 && <OverlayButton onClick={() => move(index, index - 1)} label={t("Flytt fremover")} icon={<ArrowLeft className="size-3.5" />} />}
+                      {index < items.length - 1 && <OverlayButton onClick={() => move(index, index + 1)} label={t("Flytt bakover")} icon={<ArrowRight className="size-3.5" />} />}
+                      <OverlayButton onClick={() => remove(index)} label={t("Fjern bildet")} icon={<X className="size-3.5" />} danger />
                     </div>
                   </div>
                 </figure>
@@ -504,13 +553,26 @@ export default function ProjectForm({
                   className="flex aspect-[16/10] flex-col items-center justify-center rounded-[18px] bg-fill text-mist transition hover:bg-fill-2 hover:text-fg"
                 >
                   <Plus className="size-5" />
-                  <span className="mt-1 text-sm">Legg til bilder</span>
+                  <span className="mt-1 text-sm">{t("Legg til bilder")}</span>
                 </button>
               )}
             </div>
-            <p className="text-xs text-mist">
-              Det første bildet blir forsiden. Trykk på et bilde for å redigere det, og dra for å endre rekkefølgen.{" "}
-              {capturing ? `Tar skjermbilder av ${capturing.host} …` : preparing > 0 ? "Gjør klar bilder …" : ""}
+            <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-mist">
+              <span className="inline-flex items-center gap-1.5">
+                <Star className="size-3.5" aria-hidden="true" /> {t("Første bilde er forsiden")}
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <SlidersHorizontal className="size-3.5" aria-hidden="true" /> {t("Trykk for å redigere")}
+              </span>
+              <span className="inline-flex items-center gap-1.5 max-sm:hidden">
+                <GripVertical className="size-3.5" aria-hidden="true" /> {t("Dra for å sortere")}
+              </span>
+              {(capturing || preparing > 0) && (
+                <span className="inline-flex items-center gap-1.5 text-fg">
+                  <Camera className="size-3.5 animate-pulse" aria-hidden="true" />
+                  {capturing ? t("Tar skjermbilder av {host} …", { host: capturing.host }) : t("Gjør klar bilder …")}
+                </span>
+              )}
             </p>
           </div>
         )}
@@ -524,7 +586,7 @@ export default function ProjectForm({
       <section className="mt-10 space-y-4">
         <div>
           <label htmlFor="title" className="sr-only">
-            Tittel
+            {t("Tittel")}
           </label>
           <input
             id="title"
@@ -532,7 +594,7 @@ export default function ProjectForm({
             required
             maxLength={100}
             defaultValue={initial.title}
-            placeholder="Navn på prosjektet"
+            placeholder={t("Navn på prosjektet")}
             aria-invalid={Boolean(err("title")) || undefined}
             className="w-full border-b border-line bg-transparent pb-3 text-4xl font-bold tracking-[-0.03em] text-fg outline-none transition placeholder:text-mist/50 focus:border-sea md:text-5xl"
           />
@@ -540,54 +602,58 @@ export default function ProjectForm({
         </div>
         <div>
           <label htmlFor="summary" className="sr-only">
-            Kort beskrivelse
+            {t("Kort beskrivelse")}
           </label>
           <input
             id="summary"
             name="summary"
             maxLength={200}
             defaultValue={initial.summary}
-            placeholder="Én setning om hva det er og hvem det er for"
+            placeholder={t("Én setning om hva det er og hvem det er for")}
             className="w-full bg-transparent text-xl text-fg outline-none placeholder:text-mist/60 md:text-2xl"
           />
           {err("summary") && <FieldError>{err("summary")}</FieldError>}
         </div>
       </section>
 
-      <Section title="Laget med" description="Teknologier og verktøy. Gjør at folk som leter etter dem, finner prosjektet.">
+      <Section icon={<Layers />} title={t("Laget med")} description={t("Teknologier og verktøy.")}>
         <TagInput name="tags" defaultValue={initial.tags} suggestions={tagSuggestions} />
         {err("tags") && <FieldError>{err("tags")}</FieldError>}
       </Section>
 
-      <Section title="Historien" description="README-en til prosjektet. Hva laget du, hvorfor, og hva lærte du? Bruk case-malen for å komme i gang.">
+      <Section icon={<BookOpen />} title={t("Historien")} description={t("Hva, hvorfor og hva du lærte.")}>
         <MarkdownEditor
           name="description"
           defaultValue={initial.description}
-          placeholder="Skriv om prosjektet med markdown …"
+          placeholder={t("Skriv om prosjektet med markdown …")}
           maxLength={20_000}
           rows={12}
-          template={CASE_TEMPLATE}
-          templateLabel="Bruk case-mal"
+          template={CASE_TEMPLATE[locale]}
+          templateLabel={t("Bruk case-mal")}
           invalid={Boolean(err("description"))}
         />
         {err("description") && <FieldError>{err("description")}</FieldError>}
       </Section>
 
-      <Section title="Detaljer" description="Alt er valgfritt, men kode og rolle gjør prosjektet mer troverdig.">
+      <Section icon={<SlidersHorizontal />} title={t("Detaljer")} description={t("Alt er valgfritt.")}>
         <div className="grid gap-5 md:grid-cols-2">
           <div>
-            <span className="mb-2 block text-sm font-medium text-fg">Er prosjektet ferdig?</span>
+            <span className="mb-2 block text-sm font-medium text-fg">{t("Er prosjektet ferdig?")}</span>
             <input type="hidden" name="progress" value={projectProgress} />
             <Segmented
-              label="Status"
+              label={t("Status")}
               value={projectProgress}
               onChange={setProjectProgress}
               options={(Object.keys(PROGRESS_LABELS) as ProjectProgress[]).map((key) => ({
                 value: key,
                 label: (
                   <span className="inline-flex items-center gap-2">
-                    <span className={`size-1.5 rounded-full ${key === "completed" ? "bg-success" : "bg-warn"}`} aria-hidden="true" />
-                    {PROGRESS_LABELS[key]}
+                    {key === "completed" ? (
+                      <CheckCircle2 className="size-4 text-success" aria-hidden="true" />
+                    ) : (
+                      <Hammer className="size-4 text-warn" aria-hidden="true" />
+                    )}
+                    {t(PROGRESS_LABELS[key])}
                   </span>
                 ),
               }))}
@@ -595,59 +661,88 @@ export default function ProjectForm({
           </div>
           <div>
             <span className="mb-2 block text-sm font-medium text-fg">
-              {projectProgress === "completed" ? "Når ble det laget?" : "Når startet du?"} <span className="font-normal text-mist/60">valgfritt</span>
+              {projectProgress === "completed" ? t("Når ble det laget?") : t("Når startet du?")} <span className="font-normal text-mist/60">{t("valgfritt")}</span>
             </span>
-            <MonthYear label="Dato" value={projectDate} onChange={setProjectDate} />
+            <MonthYear label={t("Dato")} value={projectDate} onChange={setProjectDate} />
             <input type="hidden" name="projectDate" value={projectDate} />
             {err("projectDate") && <FieldError>{err("projectDate")}</FieldError>}
           </div>
-          <Field label="Din rolle" optional hint="F.eks. «Design og frontend» eller «Alt, alene»." error={err("role")}>
-            <input name="role" defaultValue={initial.role} maxLength={80} placeholder="Fullstack" className={inputClass} />
+          <Field label={t("Din rolle")} optional error={err("role")}>
+            <input name="role" defaultValue={initial.role} maxLength={80} placeholder={t("F.eks. design og frontend")} className={inputClass} />
           </Field>
-          <Field label="Kode" optional hint="GitHub, GitLab eller lignende." error={err("repoUrl")}>
-            <input name="repoUrl" inputMode="url" defaultValue={initial.repoUrl} placeholder="https://github.com/…" className={inputClass} />
+          <Field label={t("Kode")} optional error={err("repoUrl")}>
+            <span className="relative block">
+              <CodeXml className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-mist" aria-hidden="true" />
+              <input name="repoUrl" inputMode="url" defaultValue={initial.repoUrl} placeholder="github.com/…" className={`${inputClass} pl-10`} />
+            </span>
           </Field>
-          <Field label="Video eller prototype" optional hint="YouTube, Vimeo, Loom eller Figma vises innebygd på prosjektsiden." error={err("videoUrl")} className="md:col-span-2">
-            <input name="videoUrl" inputMode="url" defaultValue={initial.videoUrl} placeholder="https://www.youtube.com/watch?v=…" className={inputClass} />
+          <Field label={t("Video eller prototype")} optional error={err("videoUrl")} className="md:col-span-2">
+            <span className="relative block">
+              <PlayCircle className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-mist" aria-hidden="true" />
+              <input
+                name="videoUrl"
+                inputMode="url"
+                defaultValue={initial.videoUrl}
+                placeholder={t("YouTube, Vimeo, Loom eller Figma")}
+                className={`${inputClass} pl-10`}
+              />
+            </span>
           </Field>
         </div>
       </Section>
 
-      <Section title="Teamet" description="Laget du det sammen med andre? Legg dem til, så ser alle hvem som var med.">
+      <Section icon={<Users />} title={t("Teamet")} description={t("Folk du laget det sammen med.")}>
         <MemberPicker name="members" value={members} onChange={setMembers} exclude={selfUsername} max={MAX_PROJECT_MEMBERS} />
         {err("members") ? (
           <FieldError>{err("members")}</FieldError>
         ) : (
-          <p className="mt-1.5 text-[13px] leading-5 text-mist">
-            {members.length === 0 ? "Bare deg foreløpig." : `Du og ${members.length === 1 ? "én til" : `${members.length} andre`}.`} De får et varsel når prosjektet er publisert, og kan fjerne seg selv.
-          </p>
+          members.length > 0 && (
+            <p className="mt-2 flex items-center gap-1.5 text-[13px] text-mist">
+              <Bell className="size-3.5 shrink-0" aria-hidden="true" />
+              {t("De får et varsel når prosjektet publiseres, og vises på prosjektet og profilen sin.")}
+            </p>
+          )
         )}
       </Section>
 
       {error && (
         <p role="alert" className="mt-6 rounded-[18px] bg-danger/10 px-4 py-3 text-sm text-danger">
-          {error}
+          {t(error)}
         </p>
       )}
 
       <div className="sticky bottom-24 z-20 mt-8 flex flex-wrap items-center justify-between gap-4 glass rounded-[26px] py-2 pl-5 pr-2 md:bottom-6">
         <input type="hidden" name="status" value={status} />
         <Segmented
-          label="Synlighet"
+          label={t("Synlighet")}
           size="sm"
           value={status}
           onChange={setStatus}
           options={[
-            { value: "published", label: "Publisert" },
-            { value: "draft", label: "Utkast" },
+            {
+              value: "published",
+              label: (
+                <span className="inline-flex items-center gap-1.5">
+                  <Globe2 className="size-3.5" aria-hidden="true" /> {t("Publisert")}
+                </span>
+              ),
+            },
+            {
+              value: "draft",
+              label: (
+                <span className="inline-flex items-center gap-1.5">
+                  <PenLine className="size-3.5" aria-hidden="true" /> {t("Utkast")}
+                </span>
+              ),
+            },
           ]}
         />
         <div className="flex gap-2">
           <Button variant="ghost" onClick={() => router.back()}>
-            Avbryt
+            {t("Avbryt")}
           </Button>
           <Button type="submit" loading={busy}>
-            {progress ?? (pending ? "Lagrer …" : isEdit || savedId ? "Lagre" : status === "published" ? "Publiser" : "Lagre utkast")}
+            {progress ?? (pending ? t("Lagrer …") : isEdit || savedId ? t("Lagre") : status === "published" ? t("Publiser") : t("Lagre utkast"))}
           </Button>
         </div>
       </div>

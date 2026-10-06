@@ -28,8 +28,8 @@ export async function sendContactRequest(
 ) {
   const reason = (CONTACT_REASONS as readonly string[]).includes(input.reason) ? (input.reason as ContactReason) : "annet";
   const message = input.message.trim().replace(/\n{3,}/g, "\n\n");
-  if (message.length < CONTACT_MIN) throw new UserFacingError(`Skriv litt mer (minst ${CONTACT_MIN} tegn), så de vet hva det gjelder.`);
-  if (message.length > CONTACT_MAX) throw new UserFacingError(`Meldingen kan være maks ${CONTACT_MAX} tegn.`);
+  if (message.length < CONTACT_MIN) throw new UserFacingError("Skriv litt mer (minst {n} tegn), så de vet hva det gjelder.", { n: CONTACT_MIN });
+  if (message.length > CONTACT_MAX) throw new UserFacingError("Meldingen kan være maks {n} tegn.", { n: CONTACT_MAX });
   if (sender.id === recipientId) throw new UserFacingError("Du kan ikke kontakte deg selv.");
   if (sender.emailVerified === false) throw new UserFacingError("Bekreft e-postadressen din før du kontakter andre.");
 

@@ -43,7 +43,7 @@ export async function createCollection(userId: string, input: CollectionInput) {
   const fields = clean(input);
   await enforce("collection", userId);
   const [{ n }] = await db.select({ n: count() }).from(collection).where(eq(collection.ownerId, userId));
-  if (n >= MAX_COLLECTIONS) throw new UserFacingError(`Du kan ha opptil ${MAX_COLLECTIONS} samlinger.`);
+  if (n >= MAX_COLLECTIONS) throw new UserFacingError("Du kan ha opptil {n} samlinger.", { n: MAX_COLLECTIONS });
   const [row] = await db.insert(collection).values({ ownerId: userId, ...fields }).returning({ id: collection.id });
   return row.id;
 }
@@ -85,7 +85,7 @@ export async function setCollectionItem(userId: string, collectionId: string, pr
       .limit(1);
     if (!visible) throw new UserFacingError("Fant ikke prosjektet.");
     const [{ n }] = await db.select({ n: count() }).from(collectionItem).where(eq(collectionItem.collectionId, collectionId));
-    if (n >= MAX_COLLECTION_ITEMS) throw new UserFacingError(`En samling kan ha opptil ${MAX_COLLECTION_ITEMS} prosjekter.`);
+    if (n >= MAX_COLLECTION_ITEMS) throw new UserFacingError("En samling kan ha opptil {n} prosjekter.", { n: MAX_COLLECTION_ITEMS });
     await db.insert(collectionItem).values({ collectionId, projectId }).onConflictDoNothing();
   }
   await db.update(collection).set({ updatedAt: new Date() }).where(eq(collection.id, collectionId));

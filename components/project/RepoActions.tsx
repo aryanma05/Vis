@@ -54,6 +54,7 @@ export function CloneField({ cloneUrl, zipUrl }: { cloneUrl: string; zipUrl: str
 // Eieren kan hente README-en på nytt når repoet har endret seg.
 export function SyncReadmeButton({ projectId }: { projectId: string }) {
   const router = useRouter();
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
 
@@ -72,21 +73,21 @@ export function SyncReadmeButton({ projectId }: { projectId: string }) {
   return (
     <>
       <button type="button" onClick={() => setOpen(true)} className="inline-flex items-center gap-2 text-sm font-medium text-mist transition hover:text-ice">
-        <RefreshCw className="size-4" aria-hidden="true" /> Hent README på nytt
+        <RefreshCw className="size-4" aria-hidden="true" /> {t("Hent README på nytt")}
       </button>
       <Dialog
         open={open}
         onClose={() => setOpen(false)}
-        title="Hente README-en på nytt?"
-        description="Beskrivelsen byttes ut med den nyeste README-en fra GitHub. Endringer du har gjort i beskrivelsen her, forsvinner. Tittel, bilder og tagger beholdes."
+        title={t("Hente README-en på nytt?")}
+        description={t("Beskrivelsen byttes ut med den nyeste README-en fra GitHub. Endringer du har gjort i beskrivelsen her, forsvinner. Tittel, bilder og tagger beholdes.")}
         size="sm"
       >
         <div className="flex justify-end gap-3">
           <Button variant="ghost" onClick={() => setOpen(false)}>
-            Avbryt
+            {t("Avbryt")}
           </Button>
           <Button loading={pending} onClick={sync}>
-            <RefreshCw className="size-4" /> Hent på nytt
+            <RefreshCw className="size-4" /> {t("Hent på nytt")}
           </Button>
         </div>
       </Dialog>

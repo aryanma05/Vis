@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { runAction } from "@/lib/action";
+import { invalidInput, runAction } from "@/lib/action";
 import { applyCvImport, cvInput, discardCvImport, importCv, saveCv } from "@/lib/cv";
 import {
   addCvPage,
@@ -10,9 +10,9 @@ import {
   setCvDocumentVisibility,
   uploadCvDocument,
 } from "@/lib/cv-document";
-import { fail, UserFacingError } from "@/lib/result";
+import { UserFacingError } from "@/lib/result";
 import { requireUserForAction } from "@/lib/session";
-import { fieldErrors, parsedCv, type ParsedCv } from "@/lib/validation";
+import { parsedCv, type ParsedCv } from "@/lib/validation";
 
 // Skjemafelt: file (PDF, .docx eller bilde, maks 4 MB). Returnerer et utkast til gjennomgang.
 export async function importCvAction(formData: FormData) {
@@ -28,9 +28,8 @@ export async function applyCvImportAction(
   importId: string,
   options: { mode?: "replace" | "merge"; edited?: ParsedCv } = {},
 ) {
-  if (options.edited && !parsedCv.safeParse(options.edited).success) return fail("Ugyldig CV-utkast.");
-
   return runAction(async () => {
+    if (options.edited && !parsedCv.safeParse(options.edited).success) throw new UserFacingError("Ugyldig CV-utkast.");
     const user = await requireUserForAction();
     await applyCvImport(user.id, importId, {
       mode: options.mode === "merge" ? "merge" : "replace",
@@ -50,7 +49,7 @@ export async function discardCvImportAction(importId: string) {
 // Manuell redigering: sender hele CV-en (erfaring, utdanning, ferdigheter).
 export async function saveCvAction(cv: unknown) {
   const parsed = cvInput.safeParse(cv);
-  if (!parsed.success) return fail("Sjekk feltene i CV-en.", fieldErrors(parsed.error));
+  if (!parsed.success) return invalidInput(parsed.error, "cv");
 
   return runAction(async () => {
     const user = await requireUserForAction();

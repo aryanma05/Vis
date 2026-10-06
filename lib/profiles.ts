@@ -121,7 +121,7 @@ async function checkPet(userId: string, pet: PetConfig | null | undefined) {
   if (!pet) return;
   const requires = (PET_ACCESSORIES[pet.accessory] as { requires?: { key: string; tier: number } }).requires;
   if (requires && ((await achievementTiers(userId)).get(requires.key) ?? 0) < requires.tier) {
-    throw new UserFacingError(`${PET_ACCESSORIES[pet.accessory].label} er ikke låst opp ennå.`);
+    throw new UserFacingError("Dette tilbehøret er ikke låst opp ennå.");
   }
 }
 

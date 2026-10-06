@@ -52,7 +52,7 @@ export async function prepareImage(file: File, { maxSide = MAX_SIDE }: { maxSide
   if (blob?.type !== "image/webp") {
     blob = file.type === "image/png" ? await toBlob(canvas, "image/png") : await toBlob(canvas, "image/jpeg", 0.9);
   }
-  if (!blob) throw new Error(`Klarte ikke å gjøre klar «${file.name}».`);
+  if (!blob) throw new Error("Klarte ikke å gjøre klar bildet.");
 
   const extension = blob.type === "image/webp" ? "webp" : blob.type === "image/png" ? "png" : "jpg";
   const base = file.name.replace(/\.[^.]+$/, "") || "bilde";

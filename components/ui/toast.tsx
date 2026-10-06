@@ -2,6 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import { CheckCircle2, Info, TriangleAlert, X } from "lucide-react";
+import { useT } from "@/components/LocaleProvider";
 
 // Små beskjeder nede i hjørnet («Lagret», «Lenken er kopiert»). Kan kalles fra
 // hvilken som helst klientkomponent: toast.success("Lagret").
@@ -44,7 +45,10 @@ const EMPTY: Toast[] = [];
 const ICONS = { success: CheckCircle2, error: TriangleAlert, info: Info };
 const TONE = { success: "text-success", error: "text-danger", info: "text-sea" };
 
+// Meldingene skrives på norsk (som t()) og oversettes her. Tekst som allerede er
+// oversatt, f.eks. feil fra serveren, slipper uendret gjennom.
 export function Toaster() {
+  const tr = useT();
   // Serveren og første klientgjengivelse ser en tom liste, så de er like.
   const list = useSyncExternalStore(subscribe, () => toasts, () => EMPTY);
 
@@ -64,13 +68,13 @@ export function Toaster() {
           >
             <Icon className={`mt-0.5 size-4 shrink-0 ${TONE[t.kind]}`} aria-hidden="true" />
             <div className="min-w-0 flex-1">
-              <p className="font-medium text-fg">{t.message}</p>
-              {t.description && <p className="mt-0.5 text-mist">{t.description}</p>}
+              <p className="font-medium text-fg">{tr(t.message)}</p>
+              {t.description && <p className="mt-0.5 text-mist">{tr(t.description)}</p>}
             </div>
             <button
               type="button"
               onClick={() => dismiss(t.id)}
-              aria-label="Lukk"
+              aria-label={tr("Lukk")}
               className="-mr-1 rounded-full p-1 text-mist transition hover:bg-fill hover:text-fg"
             >
               <X className="size-3.5" />

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { resendEmailCodeAction } from "@/app/actions/auth";
 import VerifyEmailCode from "@/components/auth/VerifyEmailCode";
+import { useT } from "@/components/LocaleProvider";
 import { Button } from "@/components/ui/button";
 import { inputClass, labelClass } from "@/components/ui/field";
 import { emailError } from "@/lib/email";
@@ -11,6 +12,7 @@ import { emailError } from "@/lib/email";
 // Ber om en ny kode og lar brukeren skrive den inn her.
 export default function ResendVerification({ devHint }: { devHint: boolean }) {
   const router = useRouter();
+  const t = useT();
   const [email, setEmail] = useState("");
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -49,7 +51,7 @@ export default function ResendVerification({ devHint }: { devHint: boolean }) {
     <form onSubmit={onSubmit} noValidate className="mt-6 space-y-4">
       <div>
         <label htmlFor="email" className={labelClass}>
-          E-post
+          {t("E-post")}
         </label>
         <input
           id="email"
@@ -62,9 +64,9 @@ export default function ResendVerification({ devHint }: { devHint: boolean }) {
           className={inputClass}
         />
       </div>
-      {error && <p role="alert" className="text-sm text-danger">{error}</p>}
+      {error && <p role="alert" className="text-sm text-danger">{t(error)}</p>}
       <Button type="submit" loading={pending} className="w-full">
-        Send ny kode
+        {t("Send ny kode")}
       </Button>
     </form>
   );

@@ -76,7 +76,7 @@ export default function UsernameField({
   const invalid = Boolean(error) || check.status === "invalid" || check.status === "taken";
 
   let message: React.ReactNode = <Hint>{hint ?? t("Lenken til profilen din. Bokstaver a–z, tall og - _ .")}</Hint>;
-  if (error) message = <FieldError>{error}</FieldError>;
+  if (error) message = <FieldError>{typeof error === "string" ? t(error) : error}</FieldError>;
   else if (check.status === "checking") message = <Hint>{t("Sjekker om det er ledig …")}</Hint>;
   else if (check.status === "free") message = <p className="mt-1.5 text-[13px] font-medium text-success">✓ {t("vis.no/@{name} er ledig", { name: value })}</p>;
   else if (check.status === "current") message = <Hint>{t("Dette er brukernavnet ditt nå.")}</Hint>;

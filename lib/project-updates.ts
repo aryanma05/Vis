@@ -34,7 +34,7 @@ async function assertOwner(ownerId: string, projectId: string) {
 export async function addProjectUpdate(ownerId: string, projectId: string, body: string) {
   const text = body.trim();
   if (text.length < 3) throw new UserFacingError("Skriv hva som er nytt.");
-  if (text.length > UPDATE_MAX) throw new UserFacingError(`Oppdateringen kan være maks ${UPDATE_MAX} tegn.`);
+  if (text.length > UPDATE_MAX) throw new UserFacingError("Oppdateringen kan være maks {n} tegn.", { n: UPDATE_MAX });
   await assertOwner(ownerId, projectId);
   await enforce("projectUpdate", ownerId);
   const [row] = await db.insert(projectUpdate).values({ projectId, body: text }).returning();

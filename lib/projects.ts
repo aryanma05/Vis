@@ -13,7 +13,7 @@ import { UserFacingError } from "@/lib/result";
 import type { ProjectInput } from "@/lib/validation";
 import { outer } from "@/lib/sql";
 
-const { comment, follow, project, projectImage, projectTag, projectViewDay, reaction, tag, user, profile } = schema;
+const { comment, follow, project, projectImage, projectMember, projectTag, projectViewDay, reaction, tag, user, profile } = schema;
 
 export const MAX_PROJECT_IMAGES = 8;
 export const MAX_PINNED = 6;
@@ -524,10 +524,13 @@ export async function getTopCreatorsForTag(slug: string, limit = 6) {
     .limit(limit);
 }
 
-// Prosjektene på en profil. Eieren ser også utkastene og fjernede prosjekter sine.
-// Festede prosjekter først.
+// Prosjektene på en profil: de personen eier, og publiserte prosjekter der personen er
+// lagt til som medlem. Eieren ser også utkastene og fjernede prosjekter sine.
+// Festede prosjekter først (bare egne kan festes).
 export async function getProjectsByOwner(ownerId: string, viewerId?: string | null) {
-  const conditions: SQL[] = [eq(project.ownerId, ownerId)];
+  const own = eq(project.ownerId, ownerId);
+  const asMember = sql`exists (select 1 from ${projectMember} where ${projectMember.projectId} = ${outer(project.id)} and ${projectMember.userId} = ${ownerId})`;
+  const conditions: SQL[] = [or(own, and(asMember, publicProject()))!];
   if (viewerId !== ownerId) conditions.push(publicProject());
 
   const rows = await db
@@ -535,7 +538,7 @@ export async function getProjectsByOwner(ownerId: string, viewerId?: string | nu
     .from(project)
     .innerJoin(user, eq(user.id, project.ownerId))
     .where(and(...conditions))
-    .orderBy(desc(project.pinned), desc(sql`coalesce(${project.projectDate}, '')`), desc(project.createdAt));
+    .orderBy(desc(sql`(${own} and ${project.pinned})`), desc(sql`coalesce(${project.projectDate}, '')`), desc(project.createdAt));
 
   return toCards(rows);
 }
@@ -672,7 +675,7 @@ export async function setProjectPinned(ownerId: string, projectId: string, pinne
       .select({ count: sql<number>`count(*)::int` })
       .from(project)
       .where(and(eq(project.ownerId, ownerId), eq(project.pinned, true), ne(project.id, projectId)));
-    if (count >= MAX_PINNED) throw new UserFacingError(`Du kan feste maks ${MAX_PINNED} prosjekter.`);
+    if (count >= MAX_PINNED) throw new UserFacingError("Du kan feste maks {n} prosjekter.", { n: MAX_PINNED });
   }
   await db.update(project).set({ pinned }).where(eq(project.id, projectId));
 }
@@ -714,7 +717,7 @@ export async function addProjectImages(ownerId: string, projectId: string, files
 
   const existing = await countImages(projectId);
   if (existing + files.length > MAX_PROJECT_IMAGES) {
-    throw new UserFacingError(`Et prosjekt kan ha maks ${MAX_PROJECT_IMAGES} bilder.`);
+    throw new UserFacingError("Et prosjekt kan ha maks {n} bilder.", { n: MAX_PROJECT_IMAGES });
   }
 
   // Last opp alle først, så vi ikke ender med halvveis lagrede prosjekter.
@@ -742,7 +745,7 @@ export async function addProjectImages(ownerId: string, projectId: string, files
 export async function addProjectScreenshots(ownerId: string, projectId: string, url: string) {
   await assertOwner(ownerId, projectId);
   const room = MAX_PROJECT_IMAGES - (await countImages(projectId));
-  if (room <= 0) throw new UserFacingError(`Et prosjekt kan ha maks ${MAX_PROJECT_IMAGES} bilder.`);
+  if (room <= 0) throw new UserFacingError("Et prosjekt kan ha maks {n} bilder.", { n: MAX_PROJECT_IMAGES });
 
   const address = normalizeProjectUrl(url);
   const shots = await captureScreenshots(address, { max: Math.min(room, MAX_SCREENSHOTS) });

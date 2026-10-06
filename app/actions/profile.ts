@@ -1,19 +1,19 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { runAction } from "@/lib/action";
+import { invalidInput, runAction } from "@/lib/action";
 import { markAchievementsSeen } from "@/lib/achievements";
 import { isPro } from "@/lib/billing";
-import { CV_TEMPLATE_LABELS, CV_TEMPLATES, isProTemplate, type CvTemplate } from "@/lib/constants";
+import { CV_TEMPLATES, isProTemplate, type CvTemplate } from "@/lib/constants";
 import { setAvatar, setBannerImage, setCvTemplate, updateProfile } from "@/lib/profiles";
-import { fail, UserFacingError } from "@/lib/result";
+import { UserFacingError } from "@/lib/result";
 import { requireUserForAction } from "@/lib/session";
 import { deleteStoredFiles, storageKeyFromUrl, storeImage } from "@/lib/storage";
-import { fieldErrors, profileInput } from "@/lib/validation";
+import { profileInput } from "@/lib/validation";
 
 export async function updateProfileAction(input: unknown) {
   const parsed = profileInput.safeParse(input);
-  if (!parsed.success) return fail("Sjekk feltene i skjemaet.", fieldErrors(parsed.error));
+  if (!parsed.success) return invalidInput(parsed.error);
 
   return runAction(async () => {
     const user = await requireUserForAction();
@@ -72,7 +72,7 @@ export async function setCvTemplateAction(template: CvTemplate) {
   return runAction(async () => {
     const user = await requireUserForAction();
     if (!CV_TEMPLATES.includes(template)) throw new UserFacingError("Ukjent mal.");
-    if (isProTemplate(template) && !(await isPro(user.id))) throw new UserFacingError(`${CV_TEMPLATE_LABELS[template].name} er en Pro-mal.`);
+    if (isProTemplate(template) && !(await isPro(user.id))) throw new UserFacingError("Denne CV-malen krever Pro.");
     await setCvTemplate(user.id, template);
     revalidatePath(`/profil/${user.username}`);
     revalidatePath(`/profil/${user.username}/cv`);

@@ -31,6 +31,13 @@ prosjektene dine på én lenke (`/@brukernavn`), pluss en feed der man oppdager 
   commits og bidragsytere, og eieren kan hente README-en på nytt.
 - **Oppdag**: nyeste, populære (trending) og «Følger»-feed, søk etter prosjekter og
   personer, tag-sider på `/tag/<navn>`.
+- **Prosjektpartnere** (`/partnere`): folk som har krysset av for «Samarbeid» under «Åpen for»,
+  med hva de vil lage («Hva ser du etter?»), ferdigheter og hva de jobber med nå. Søk på
+  ferdighet, idé, sted og fagfelt, og ta kontakt med «Kontakt»-knappen. Du kan vise eller skjule
+  deg rett fra siden (`lib/partners.ts`).
+- **Team på prosjekter**: legg til folk du har laget prosjektet med. De får et varsel, vises
+  på prosjektet, og prosjektet vises også på profilene deres. Ukjente brukernavn gir en feil i
+  stedet for å forsvinne.
 - **Sosialt**: følg folk, reaksjoner (Lik/Nyttig/Inspirerende), kommentarer med svar og
   @omtaler, varsler i appen og på e-post (styres på kontosiden).
 - **Innsikt** (`/innsikt`): visninger av profil og prosjekter, følgere og reaksjoner.
@@ -38,7 +45,9 @@ prosjektene dine på én lenke (`/@brukernavn`), pluss en feed der man oppdager 
   slette kommentarer og utestenge brukere. Retningslinjer på `/retningslinjer`.
 - **Konto**: e-postbekreftelse og nytt passord med 6-sifret kode, innlogging med
   GitHub/Google, dataeksport og sletting av konto.
-- **Norsk og engelsk**: språkvalg i bunnteksten (se «Språk» under).
+- **Norsk og engelsk**: alt er på norsk, og engelsk kan velges i innstillingene (se «Språk» under).
+- **Innstillinger** (tannhjulet i menyen, profilmenyen og ⌘K): språk, fargetema og tilgjengelighet
+  (reduser bevegelse, tettere flater, mer kontrast), lagret i nettleseren, pluss snarveier til kontoen.
 - **Åpent API og webhooks** for utviklere og bedrifter (`/utviklere`).
 - **SEO**: titler og beskrivelser per side, delingsbilder (Open Graph) for forsiden,
   profiler og prosjekter, `sitemap.xml` og `robots.txt`.
@@ -261,20 +270,36 @@ Dokumentasjonen for brukerne ligger på `/utviklere`.
 
 ## Språk
 
-Norsk er grunnspråket, og engelsk kan velges i bunnteksten (`/sprak?til=en`, lagres i
-informasjonskapselen `vis-sprak`). Uten valg brukes engelsk bare når nettleseren foretrekker
-engelsk foran skandinaviske språk.
+Norsk er grunnspråket, og alle ser norsk til de selv velger engelsk – nettleserens språk
+brukes ikke. Engelsk velges under Innstillinger (tannhjulet) eller i bunnteksten, og lagres i
+informasjonskapselen `vis-sprak`. Byttet skjer uten at siden lastes på nytt: valget settes i
+nettleseren, `router.refresh()` henter siden på nytt språk, og React sin `<ViewTransition>` toner
+over (`components/LocaleProvider.tsx`, `::view-transition-*(.sprakbytte)` i `app/globals.css`).
+`/sprak?til=en` gjør det samme uten JavaScript.
 
 - Teksten i koden er norsk og sendes gjennom `t("…")`: `getT()` fra `lib/i18n/server.ts` i
   serverkomponenter, `useT()` fra `components/LocaleProvider.tsx` i klientkomponenter.
   Variabler skrives `t("{n} prosjekter", { n })`.
 - Den engelske ordboka er `lib/i18n/en.ts`, med den norske teksten som nøkkel. Mangler en
-  oversettelse, vises norsk. `tests/i18n.test.ts` feiler hvis en tekst i `t()` mangler
-  engelsk, eller hvis variablene ikke stemmer.
-- Oversatt: navigasjon, forside og strøm, profil, prosjektside, CV (også `?sprak=en` på
-  CV-en uavhengig av resten av siden), utforsk, stillinger, bedrifter, priser, innlogging og
-  registrering, `/utviklere` og feilsidene. Redigeringssider, admin, e-poster og de juridiske
-  sidene (vilkår, personvern) er foreløpig bare på norsk.
+  oversettelse, vises norsk. `tests/i18n.test.ts` feiler hvis en tekst i `t()`, en etikettliste,
+  en `UserFacingError` eller en `toast(…)` mangler engelsk, eller hvis variablene ikke stemmer.
+- Feilmeldinger fra serveren: `new UserFacingError("Maks {n} tegn.", { n })` oversettes i
+  `runAction` (`lib/action.ts`). Skjemafeil fra zod får egne norske standardmeldinger, og
+  `fieldErrors(error, locale)` / `invalidInput(error)` gir dem på brukerens språk.
+- Toast-meldinger oversettes i `Toaster`, så `toast.success("Lagret")` holder.
+- Oversatt: hele appen, også redigering, konto, varsler, innsikt, bedriftssidene og feilsidene.
+  Vilkår, personvern og retningslinjer har en engelsk versjon der det står at den norske teksten
+  gjelder. Ikke oversatt: admin (`/admin`), e-poster, delingsbilder og innbyggingskortene.
+
+## Innstillinger
+
+`components/settings/SettingsDialog.tsx` åpnes med `openSettings()` fra tannhjulet nederst i
+sidemenyen, tannhjulet i topplinjen på mobil, «Innstillinger» i profilmenyen og søkepaletten.
+Visningsvalgene (`lib/display-prefs.ts`) speiler operativsystemets `prefers-reduced-motion`,
+`prefers-reduced-transparency` og `prefers-contrast`: de lagres i `localStorage`, settes som
+`data-motion`, `data-transparency` og `data-contrast` på `<html>` før siden tegnes, og CSS-en i
+`app/globals.css` gjelder for både innstillingen og systemvalget. «Reduser bevegelse» styrer også
+framer-motion (`MotionPrefs` og `useReduceMotion()`).
 
 ## CV-import
 
