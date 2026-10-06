@@ -1,8 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { animate, motion, motionValue, useMotionValue, useReducedMotion, useTransform, type MotionValue } from "framer-motion";
+import { animate, motion, motionValue, useMotionValue, useTransform, type MotionValue } from "framer-motion";
 import { Check } from "lucide-react";
+import { useT } from "@/components/LocaleProvider";
+import { useReduceMotion } from "@/components/settings/display-prefs";
 import "./CodeSlots.css";
 
 // Felt for engangskoder (sekssifret kode på e-post). Sifrene «lander» i hver sin
@@ -50,7 +52,7 @@ export default function CodeSlots({
   settle = 0.3,
   rise = 8,
   cascade = 20,
-  ariaLabel = "Engangskode",
+  ariaLabel,
   className = "",
 }: {
   length?: number;
@@ -74,7 +76,8 @@ export default function CodeSlots({
   className?: string;
 }) {
   const uid = useId();
-  const reduce = useReducedMotion() ?? false;
+  const t = useT();
+  const reduce = useReduceMotion();
   const inputRef = useRef<HTMLInputElement>(null);
   const rowRef = useRef<HTMLDivElement>(null);
   const [slots, setSlots] = useState(() => toSlots(value ?? defaultValue, length));
@@ -389,7 +392,7 @@ export default function CodeSlots({
           pattern="[0-9]*"
           value=""
           maxLength={length}
-          aria-label={ariaLabel}
+          aria-label={ariaLabel ?? t("Engangskode")}
           aria-invalid={status === "error"}
           aria-describedby={`${uid}-count`}
           disabled={disabled}
@@ -426,7 +429,7 @@ export default function CodeSlots({
         </motion.span>
       </div>
       <span id={`${uid}-count`} className="code-slots__sr" aria-live="polite">
-        {status === "success" ? "Koden er godkjent" : `${view.filter(Boolean).length} av ${length} sifre skrevet inn`}
+        {status === "success" ? t("Koden er godkjent") : t("{n} av {total} sifre skrevet inn", { n: view.filter(Boolean).length, total: length })}
       </span>
     </div>
   );

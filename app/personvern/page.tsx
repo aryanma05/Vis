@@ -2,30 +2,51 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { analyticsProvider } from "@/components/Analytics";
 import ProsePage from "@/components/ProsePage";
+import { getLocale, getT } from "@/lib/i18n/server";
 
-export const metadata: Metadata = {
-  title: "Personvern",
-  description: "Hvilke opplysninger Vis lagrer, hvem som ser dem, og hvordan du laster ned eller sletter dem.",
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getT();
+  return {
+    title: t("Personvern"),
+    description: t("Hvilke opplysninger Vis lagrer, hvem som ser dem, og hvordan du laster ned eller sletter dem."),
+  };
+}
+
+type Setup = {
+  blob: boolean;
+  emailService: string | null;
+  github: boolean;
+  google: boolean;
+  contact?: string;
+  stripe: boolean;
+  analytics: string | null;
+  screenshots: string | null;
 };
 
 // Teksten tilpasser seg oppsettet på serveren, så den alltid stemmer med hvor dataene
 // faktisk havner (bilder i Vercel Blob eller databasen, e-posttjeneste).
-export default function PrivacyPage() {
-  const blob = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
-  const emailService = process.env.BREVO_API_KEY ? "Brevo" : process.env.RESEND_API_KEY ? "Resend" : null;
-  const github = Boolean(process.env.GITHUB_CLIENT_ID);
-  const google = Boolean(process.env.GOOGLE_CLIENT_ID);
-  const contact = process.env.CONTACT_EMAIL;
-  const stripe = Boolean(process.env.STRIPE_SECRET_KEY);
-  const analytics = analyticsProvider();
-  const screenshots = process.env.SCREENSHOT_BROWSER_PATH ? null : "Microlink";
+export default async function PrivacyPage() {
+  const setup: Setup = {
+    blob: Boolean(process.env.BLOB_READ_WRITE_TOKEN),
+    emailService: process.env.BREVO_API_KEY ? "Brevo" : process.env.RESEND_API_KEY ? "Resend" : null,
+    github: Boolean(process.env.GITHUB_CLIENT_ID),
+    google: Boolean(process.env.GOOGLE_CLIENT_ID),
+    contact: process.env.CONTACT_EMAIL,
+    stripe: Boolean(process.env.STRIPE_SECRET_KEY),
+    analytics: analyticsProvider(),
+    screenshots: process.env.SCREENSHOT_BROWSER_PATH ? null : "Microlink",
+  };
+  return (await getLocale()) === "en" ? <PrivacyEn {...setup} /> : <PrivacyNb {...setup} />;
+}
 
+// Den norske teksten er den som gjelder. Den engelske er en oversettelse (se PrivacyEn).
+function PrivacyNb({ blob, emailService, github, google, contact, stripe, analytics, screenshots }: Setup) {
   return (
     <ProsePage
       eyebrow="Personvern"
       title="Slik tar vi vare på dataene dine"
       intro="Vis er et studentprosjekt der du kan vise frem prosjektene og CV-en din. Vi lagrer bare det som trengs for at tjenesten skal virke, vi selger ingen opplysninger, og vi har ingen annonser eller sporing på tvers av nettsteder."
-      updated="4. oktober 2026"
+      updated="6. oktober 2026"
     >
       <h2>Hva vi lagrer</h2>
       <ul>
@@ -159,9 +180,10 @@ export default function PrivacyPage() {
 
       <h2>Informasjonskapsler</h2>
       <p>
-        Vi bruker én nødvendig informasjonskapsel for å holde deg innlogget, og én som husker språket hvis du velger engelsk
-        eller norsk i bunnteksten. Fargetemaet og hvilke sider du har sett i økten (så visninger ikke telles dobbelt) lagres
-        i nettleseren din. Ingen analyse- eller reklamekapsler.{stripe && " Betalingssiden hos Stripe setter sine egne kapsler for å hindre svindel."}
+        Vi bruker én nødvendig informasjonskapsel for å holde deg innlogget, og én som husker språket hvis du bytter språk i
+        innstillingene eller bunnteksten. Fargetemaet, visningsvalgene i innstillingene (som redusert bevegelse) og hvilke
+        sider du har sett i økten (så visninger ikke telles dobbelt) lagres i nettleseren din. Ingen analyse- eller
+        reklamekapsler.{stripe && " Betalingssiden hos Stripe setter sine egne kapsler for å hindre svindel."}
       </p>
 
       <h2>Dine rettigheter</h2>
@@ -180,6 +202,191 @@ export default function PrivacyPage() {
         {contact && (
           <>
             {" "}Spørsmål? Skriv til <a href={`mailto:${contact}`}>{contact}</a>.
+          </>
+        )}
+      </p>
+    </ProsePage>
+  );
+}
+
+// Oversettelse av personvernerklæringen. Hold den i takt med PrivacyNb når teksten endres.
+function PrivacyEn({ blob, emailService, github, google, contact, stripe, analytics, screenshots }: Setup) {
+  return (
+    <ProsePage
+      eyebrow="Privacy"
+      title="How we take care of your data"
+      intro={
+        <>
+          <p>
+            Vis is a student project where you can show your projects and your CV. We only store what&apos;s needed for the
+            service to work, we don&apos;t sell any information, and we have no ads or cross-site tracking.
+          </p>
+          <p className="mt-3 text-base">
+            This is an English translation for convenience. If anything differs, the{" "}
+            <a href="/sprak?til=nb&tilbake=%2Fpersonvern">Norwegian version</a> applies.
+          </p>
+        </>
+      }
+      updated="6 October 2026"
+    >
+      <h2>What we store</h2>
+      <ul>
+        <li>
+          <strong>Your account:</strong> name, email, username and password. The password is only stored as a cryptographic
+          hash, so no one (not even us) can read it.
+          {(github || google) &&
+            ` If you log in with ${[github && "GitHub", google && "Google"].filter(Boolean).join(" or ")}, we store the ID from the service${github ? " and an encrypted access token to fetch the repos you choose to import" : ""}.`}
+        </li>
+        <li>
+          <strong>What you post:</strong> profile text, profile photo, projects with images, CV, comments, reactions and who you
+          follow.
+        </li>
+        <li>
+          <strong>Login:</strong> when you&apos;re logged in, we store a session with your IP address and browser type, so you
+          can stay logged in and we can stop abuse. The session expires when you log out, or after a week without use.
+        </li>
+        <li>
+          <strong>Codes by email:</strong> six-digit codes for confirming your email or creating a new password are stored
+          encrypted (as a hash) and work for ten minutes.
+        </li>
+        <li>
+          <strong>Views:</strong> we count how many people view a profile or a project per day. The numbers are only shown to
+          the owner, under Insights, and as a total on the project.
+        </li>
+        <li>
+          <strong>Who has viewed the profile:</strong> if you&apos;re logged in when you view another profile, we store that
+          you&apos;ve been there (when and how many times). The owner sees how many have visited, and with Pro also who. You can
+          turn this off under <Link href="/profil/rediger/konto#personvern">Account → Privacy</Link>; then your visits aren&apos;t
+          stored, and you can&apos;t see who has visited you either. Visits are deleted after 13 months.
+        </li>
+        <li>
+          <strong>Contact messages:</strong> if you send a message with “Contact”, we store the message, who it&apos;s for and
+          why you&apos;re getting in touch. The recipient gets it as a notification and by email, and your email address is
+          used as the reply-to address, so the recipient can reply to you directly. The recipient&apos;s email is never shared
+          with you.
+        </li>
+        <li>
+          <strong>Payment:</strong>{" "}
+          {stripe
+            ? "if you pay for Pro or Business, the payment happens at Stripe. We store which plan you have, whether it renews and a customer ID from Stripe – never your card number. Stripe is responsible for the card details and must keep receipts according to bookkeeping rules."
+            : "payment for Pro and Business isn't set up yet. When it is, the payment will happen at Stripe, and we'll only store which plan you have – never your card number."}
+        </li>
+        <li>
+          <strong>Companies:</strong> if you create a company page, we store the company, the jobs and who&apos;s a member. We
+          count views and clicks on “Apply for the job”, but not who clicked.
+        </li>
+        <li>
+          <strong>Two-step login:</strong> if you turn it on, we store the key for the code app and your backup codes
+          encrypted.
+        </li>
+        <li>
+          <strong>API keys and webhooks:</strong> if you create an API key, we store its name, the start of the key and when it
+          was last used. The key itself is only stored as a hash. Webhook addresses and a log of the latest deliveries are
+          stored with the company they belong to.
+        </li>
+        <li>
+          <strong>Reports:</strong> if you report content, we store the report, who sent it and a copy of what was reported,
+          so the moderators can assess it. The person who is reported isn&apos;t told who reported them.
+        </li>
+      </ul>
+      <p>
+        When you upload an image, we remove its metadata (EXIF), including the GPS location where the photo was taken and which
+        camera was used.
+      </p>
+
+      <h2>Who sees what</h2>
+      <ul>
+        <li>
+          <strong>Everyone:</strong> name, username, profile photo, profile text, published projects, comments, reactions, who
+          you follow and who follows you, and your CV if you&apos;ve made it visible. The same can be fetched through the open{" "}
+          <Link href="/utviklere">API</Link> and in the embed cards – never more than what&apos;s on the public pages.
+        </li>
+        <li>
+          <strong>Only you:</strong> your email address, project drafts, a hidden CV, your notifications, private collections
+          and the numbers under Insights. Your email is never shown to others.
+        </li>
+        <li>
+          <strong>Pro users:</strong> see who has visited their profile, if you were logged in and haven&apos;t hidden yourself
+          (see above).
+        </li>
+        <li>
+          <strong>Companies with a Business subscription:</strong> can only find you in candidate search if you&apos;ve turned
+          on “Visible to companies” under Edit profile (it&apos;s off by default). They see the same as what&apos;s on your
+          profile, and can add you to their own candidate lists with notes and export the lists. If you turn it off, you
+          disappear from search. They never see your email address; if they get in touch, it happens through “Contact”.
+        </li>
+        <li>
+          <strong>Moderators:</strong> can see reports and the email address of accounts when they handle a breach of the
+          guidelines.
+        </li>
+      </ul>
+
+      <h2>Email</h2>
+      <p>
+        We send email when you need to confirm your address or create a new password, and notifications about comments,
+        replies, mentions, contact messages and a weekly summary if you&apos;ve turned it on. Every weekly summary has a link
+        to unsubscribe with one click. You choose which notifications you want under{" "}
+        <Link href="/profil/rediger/konto#varsler">Account and notifications</Link>.
+      </p>
+
+      <h2>Where the data is</h2>
+      <ul>
+        <li>The website runs at Render, and the database is at Neon, both on servers in the EU (Frankfurt).</li>
+        <li>{blob ? "Images and CV files are stored at Vercel Blob." : "Images and CV files are stored in the same database."}</li>
+        {emailService && <li>Emails are sent through {emailService}.</li>}
+        {stripe && <li>Payments are handled by Stripe, which processes card details under its own terms.</li>}
+        {screenshots && (
+          <li>
+            If you paste a link to a project, we send the address (nothing about you) to {screenshots}, which takes the
+            screenshots of the page.
+          </li>
+        )}
+        {analytics && (
+          <li>
+            We count visits with {analytics}, without cookies and without storing your IP address, only to see which pages are
+            used.
+          </li>
+        )}
+        <li>
+          If you use “fill in from the CV”, the text in the file is read on our own server. The CV isn&apos;t sent to any other
+          service.
+        </li>
+      </ul>
+
+      <h2>How long we store it</h2>
+      <ul>
+        <li>What you&apos;ve posted, until you delete it or your account.</li>
+        <li>Who has viewed a profile: 13 months after the last visit.</li>
+        <li>Error log and log of webhook deliveries: 30 days.</li>
+        <li>Counters for stopping abuse (number of attempts per IP address or account): two days.</li>
+        <li>Login: until you log out, or a week without use.</li>
+      </ul>
+
+      <h2>Cookies</h2>
+      <p>
+        We use one necessary cookie to keep you logged in, and one that remembers the language if you switch language in the
+        settings or the footer. The colour theme, the display options in the settings (such as reduced motion) and which pages
+        you&apos;ve viewed in the session (so views aren&apos;t counted twice) are stored in your browser. No analytics or
+        advertising cookies.{stripe && " Stripe's checkout page sets its own cookies to prevent fraud."}
+      </p>
+
+      <h2>Your rights</h2>
+      <p>
+        You can see, change and delete what you&apos;ve posted at any time. Under{" "}
+        <Link href="/profil/rediger/konto">Account and privacy</Link> you can download everything we&apos;ve stored about you as
+        a file, and delete your account. This immediately deletes your profile, projects, images, CV, comments, reactions,
+        followers, collections, messages and API keys. If you have an active subscription, cancel it under Account first.
+        Backups at the database provider are deleted automatically after a short time.
+      </p>
+      <p>
+        If you believe we&apos;re handling your data incorrectly, you can complain to the Norwegian Data Protection Authority,{" "}
+        <a href="https://www.datatilsynet.no/en/" target="_blank" rel="noreferrer">
+          Datatilsynet
+        </a>
+        .
+        {contact && (
+          <>
+            {" "}Questions? Write to <a href={`mailto:${contact}`}>{contact}</a>.
           </>
         )}
       </p>

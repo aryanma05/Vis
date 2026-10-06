@@ -1,11 +1,31 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { ArrowDown, ArrowUp, Check, ImagePlus, MapPin, Plus, Trash2, X } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  BookOpen,
+  Camera,
+  Check,
+  Handshake,
+  IdCard,
+  ImageIcon,
+  ImagePlus,
+  LayoutList,
+  Link2,
+  MapPin,
+  Palette,
+  PawPrint,
+  Plus,
+  Trash2,
+  X,
+} from "lucide-react";
 import { setProfileFlagsAction } from "@/app/actions/pro";
 import { removeAvatarAction, updateProfileAction, uploadAvatarAction } from "@/app/actions/profile";
 import Avatar from "@/components/Avatar";
+import { useLocale, useT } from "@/components/LocaleProvider";
 import MarkdownEditor from "@/components/MarkdownEditor";
 import Pet from "@/components/pet/Pet";
 import ProfileBanner from "@/components/profile/ProfileBanner";
@@ -19,7 +39,7 @@ import type { BannerConfig, PetConfig } from "@/lib/profile-style";
 import BannerEditor from "./BannerEditor";
 import PetEditor from "./PetEditor";
 
-type Link = { label: string; url: string };
+type ProfileLink = { label: string; url: string };
 type CustomSection = { id: string; title: string; body: string };
 export type ProfileValues = {
   name: string;
@@ -31,14 +51,15 @@ export type ProfileValues = {
   lookingFor: string;
   openTo: OpenTo[];
   accentColor: AccentKey | null;
-  links: Link[];
+  links: ProfileLink[];
   customSections: CustomSection[];
   contactEnabled: boolean;
   banner: BannerConfig | null;
   pet: PetConfig | null;
 };
 
-const README_TEMPLATE = `## Hei! 👋
+const README_TEMPLATE = {
+  nb: `## Hei! 👋
 
 Kort om hvem du er og hva du brenner for.
 
@@ -49,7 +70,20 @@ Kort om hvem du er og hva du brenner for.
 -
 
 ### Utenom jobb
-`;
+`,
+  en: `## Hi! 👋
+
+A few words about who you are and what you're passionate about.
+
+### What I'm working on now
+-
+
+### What I'm good at
+-
+
+### Outside of work
+`,
+};
 
 const newId = () => Math.random().toString(36).slice(2, 10);
 
@@ -68,6 +102,8 @@ export default function ProfileForm({
 }) {
   const [visibleToCompanies, setVisibleToCompanies] = useState(initialVisible);
   const router = useRouter();
+  const t = useT();
+  const locale = useLocale();
   const [values, setValues] = useState(initial);
   const [saved, setSaved] = useState(initial);
   const [avatar, setAvatar] = useState(image);
@@ -102,10 +138,10 @@ export default function ProfileForm({
         return;
       }
       setAvatar(result.data.url);
-      toast.success("Profilbildet er oppdatert");
+      toast.success(t("Profilbildet er oppdatert"));
       router.refresh();
     } catch (e) {
-      toast.error((e as Error).message || "Opplastingen feilet. Prøv igjen.");
+      toast.error((e as Error).message || t("Opplastingen feilet. Prøv igjen."));
     } finally {
       setUploading(false);
     }
@@ -138,7 +174,7 @@ export default function ProfileForm({
       }
       setErrors({});
       setSaved(values);
-      toast.success("Profilen er lagret");
+      toast.success(t("Profilen er lagret"));
       router.refresh();
     });
 
@@ -159,16 +195,16 @@ export default function ProfileForm({
       className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_300px]"
     >
       <div className="min-w-0">
-        <Section title="Profilbilde" description="Et tydelig bilde av deg, eller en logo. Vises på visittkortet og ved alt du gjør.">
+        <Section icon={<Camera />} title={t("Profilbilde")} description={t("Et tydelig bilde av deg, eller en logo.")}>
           <div className="flex flex-wrap items-center gap-5">
             <Avatar name={values.name || "?"} image={avatar} size={88} className="rounded-[26px]" />
             <div className="flex flex-wrap gap-2">
               <Button variant="secondary" size="sm" onClick={() => fileRef.current?.click()} loading={uploading}>
-                <ImagePlus className="size-4" /> {avatar ? "Bytt bilde" : "Last opp bilde"}
+                <ImagePlus className="size-4" /> {avatar ? t("Bytt bilde") : t("Last opp bilde")}
               </Button>
               {avatar && (
                 <Button variant="ghost" size="sm" onClick={removeAvatar} disabled={uploading}>
-                  Fjern
+                  {t("Fjern")}
                 </Button>
               )}
             </div>
@@ -186,7 +222,7 @@ export default function ProfileForm({
           </div>
         </Section>
 
-        <Section id="utseende" title="Banner" description="Bildet øverst på profilen. Velg en farge, et mønster, en ferdig illustrasjon eller last opp ditt eget.">
+        <Section id="utseende" icon={<ImageIcon />} title={t("Banner")} description={t("Bildet øverst på profilen.")}>
           <BannerEditor
             value={values.banner}
             onChange={(banner) => set("banner", banner)}
@@ -203,37 +239,37 @@ export default function ProfileForm({
           />
         </Section>
 
-        <Section title="Visittkortet" description="Det første folk ser når de åpner profilen din.">
+        <Section icon={<IdCard />} title={t("Visittkortet")} description={t("Det første folk ser når de åpner profilen din.")}>
           <div className="grid gap-5 md:grid-cols-2">
-            <Field label="Navn" error={err("name")}>
+            <Field label={t("Navn")} error={err("name")}>
               <input className={inputClass} value={values.name} onChange={(e) => set("name", e.target.value)} required maxLength={100} />
             </Field>
-            <Field label="Bosted" optional error={err("location")}>
+            <Field label={t("Bosted")} optional error={err("location")}>
               <input className={inputClass} value={values.location} onChange={(e) => set("location", e.target.value)} placeholder="Oslo" maxLength={100} />
             </Field>
-            <Field label="Tittel" hint="Én linje om hva du driver med." error={err("headline")} className="md:col-span-2">
+            <Field label={t("Tittel")} hint={t("Én linje om hva du driver med.")} error={err("headline")} className="md:col-span-2">
               <input
                 className={inputClass}
                 value={values.headline}
                 onChange={(e) => set("headline", e.target.value)}
-                placeholder="Frontend-utvikler som liker små detaljer"
+                placeholder={t("Frontend-utvikler som liker små detaljer")}
                 maxLength={120}
               />
             </Field>
-            <Field label="Kort om deg" optional hint="To–tre setninger. Vises øverst under «Om meg» og i CV-en." error={err("bio")} className="md:col-span-2">
+            <Field label={t("Kort om deg")} optional hint={t("To–tre setninger. Vises øverst under «Om meg» og i CV-en.")} error={err("bio")} className="md:col-span-2">
               <textarea
                 className={`${textareaClass} min-h-24`}
                 value={values.bio}
                 onChange={(e) => set("bio", e.target.value)}
-                placeholder="Hva jobber du med, hva er du nysgjerrig på, og hva ser du etter?"
+                placeholder={t("Hva jobber du med, hva er du nysgjerrig på, og hva ser du etter?")}
                 maxLength={600}
               />
             </Field>
           </div>
         </Section>
 
-        <Section title="Aksentfarge" description="Fargen på profilen din – omslaget, merkene og CV-malene.">
-          <div role="radiogroup" aria-label="Aksentfarge" className="flex flex-wrap gap-3">
+        <Section icon={<Palette />} title={t("Aksentfarge")} description={t("Fargen på profilen din – omslaget, merkene og CV-malene.")}>
+          <div role="radiogroup" aria-label={t("Aksentfarge")} className="flex flex-wrap gap-3">
             {ACCENT_KEYS.map((key) => {
               const on = (values.accentColor ?? "is") === key;
               return (
@@ -248,18 +284,18 @@ export default function ProfileForm({
                   <span className="flex size-10 items-center justify-center rounded-full" style={{ background: ACCENTS[key].color, color: ACCENTS[key].ink }}>
                     {on && <Check className="size-4" strokeWidth={3} />}
                   </span>
-                  <span className="text-xs text-mist">{ACCENTS[key].label}</span>
+                  <span className="text-xs text-mist">{t(ACCENTS[key].label)}</span>
                 </button>
               );
             })}
           </div>
         </Section>
 
-        <Section title="Kjæledyr" description="En liten venn på profilen. Velg art, farge og tilbehør, og gi den et navn.">
+        <Section icon={<PawPrint />} title={t("Kjæledyr")} description={t("En liten venn på profilen.")}>
           <PetEditor value={values.pet} onChange={(pet) => set("pet", pet)} tiers={achievementTiers} />
         </Section>
 
-        <Section title="Åpen for" description="Vis at du er tilgjengelig. Folk kan filtrere på dette i søket.">
+        <Section icon={<Handshake />} title={t("Åpen for")} description={t("Vis at du er tilgjengelig. Folk kan filtrere på dette i søket.")}>
           <div className="flex flex-wrap gap-2">
             {OPEN_TO.map((o) => {
               const on = values.openTo.includes(o);
@@ -274,17 +310,25 @@ export default function ProfileForm({
                   }`}
                 >
                   {on ? <Check className="size-4" /> : <Plus className="size-4 text-mist" />}
-                  {OPEN_TO_LABELS[o]}
+                  {t(OPEN_TO_LABELS[o])}
                 </button>
               );
             })}
           </div>
-          <Field label="Hva ser du etter?" optional hint="Vises som et eget felt på profilen." error={err("lookingFor")} className="mt-6">
+          {values.openTo.includes("samarbeid") && (
+            <p className="mt-3 flex items-center gap-1.5 text-[13px] text-mist">
+              <Handshake className="size-3.5 shrink-0" aria-hidden="true" />
+              <Link href="/partnere" className="hover:text-fg">
+                {t("Du vises på partnersiden når profilen er lagret.")}
+              </Link>
+            </p>
+          )}
+          <Field label={t("Hva ser du etter?")} optional hint={t("Vises som et eget felt på profilen.")} error={err("lookingFor")} className="mt-6">
             <textarea
               className={`${textareaClass} min-h-20`}
               value={values.lookingFor}
               onChange={(e) => set("lookingFor", e.target.value)}
-              placeholder="F.eks. «Noen å bygge en app sammen med i Bergen»"
+              placeholder={t("F.eks. «Noen å bygge en app sammen med i Bergen»")}
               maxLength={400}
             />
           </Field>
@@ -292,8 +336,8 @@ export default function ProfileForm({
             <Switch
               checked={values.contactEnabled}
               onChange={(on) => set("contactEnabled", on)}
-              label="«Kontakt meg»-knapp på profilen"
-              description="Innloggede kan sende deg en melding om jobb, oppdrag eller samarbeid. Du får den som varsel og på e-post, og svarer direkte fra e-posten."
+              label={t("«Kontakt meg»-knapp på profilen")}
+              description={t("Innloggede kan sende deg en melding om jobb, oppdrag eller samarbeid. Du får den som varsel og på e-post, og svarer direkte fra e-posten.")}
             />
           </div>
           <div className="mt-5 max-w-md">
@@ -307,30 +351,30 @@ export default function ProfileForm({
                   toast.error(result.error);
                   return;
                 }
-                toast.success(on ? "Bedrifter kan nå finne deg" : "Du er skjult for bedrifter");
+                toast.success(on ? t("Bedrifter kan nå finne deg") : t("Du er skjult for bedrifter"));
               }}
-              label="Synlig for bedrifter"
-              description="Bedrifter med Bedrift-abonnement kan finne deg i kandidatsøket og sende deg en melding. De ser bare det som står på profilen din, aldri e-posten. Lagres med en gang."
+              label={t("Synlig for bedrifter")}
+              description={t("Bedrifter med Bedrift-abonnement kan finne deg i kandidatsøket og sende deg en melding. De ser bare det som står på profilen din, aldri e-posten. Lagres med en gang.")}
             />
           </div>
         </Section>
 
-        <Section title="Om meg" description="En lengre README på profilen. Fortell historien din, hva du kan og hva du liker å jobbe med.">
+        <Section icon={<BookOpen />} title={t("Om meg")} description={t("Historien din, i markdown.")}>
           <MarkdownEditor
             value={values.readme}
             onChange={(v) => set("readme", v)}
-            placeholder="Skriv om deg selv med markdown …"
+            placeholder={t("Skriv om deg selv med markdown …")}
             maxLength={10_000}
-            template={README_TEMPLATE}
-            templateLabel="Start med en mal"
+            template={README_TEMPLATE[locale]}
+            templateLabel={t("Start med en mal")}
             invalid={Boolean(err("readme"))}
           />
           {err("readme") && <p className="mt-1.5 text-[13px] text-danger">{err("readme")}</p>}
         </Section>
 
-        <Section title="Lenker" description="Nettside, LinkedIn, GitHub, Dribbble eller noe annet folk bør se.">
+        <Section icon={<Link2 />} title={t("Lenker")} description={t("Nettside, LinkedIn, GitHub, Dribbble eller noe annet folk bør se.")}>
           <div className="space-y-3">
-            <Field label="Nettside" optional error={err("websiteUrl")}>
+            <Field label={t("Nettside")} optional error={err("websiteUrl")}>
               <input className={inputClass} value={values.websiteUrl} onChange={(e) => set("websiteUrl", e.target.value)} placeholder="https://" inputMode="url" />
             </Field>
             {values.links.map((link, i) => (
@@ -340,7 +384,7 @@ export default function ProfileForm({
                   value={link.label}
                   onChange={(e) => set("links", values.links.map((l, j) => (j === i ? { ...l, label: e.target.value } : l)))}
                   placeholder="LinkedIn"
-                  aria-label="Navn på lenken"
+                  aria-label={t("Navn på lenken")}
                   maxLength={40}
                 />
                 <input
@@ -349,25 +393,25 @@ export default function ProfileForm({
                   onChange={(e) => set("links", values.links.map((l, j) => (j === i ? { ...l, url: e.target.value } : l)))}
                   placeholder="https://"
                   inputMode="url"
-                  aria-label="Adresse"
+                  aria-label={t("Adresse")}
                 />
-                <Button variant="ghost" size="icon" aria-label="Fjern lenken" onClick={() => set("links", values.links.filter((_, j) => j !== i))}>
+                <Button variant="ghost" size="icon" aria-label={t("Fjern lenken")} onClick={() => set("links", values.links.filter((_, j) => j !== i))}>
                   <X className="size-4" />
                 </Button>
               </div>
             ))}
             {Object.keys(errors).some((k) => k.startsWith("links")) && (
-              <p className="text-[13px] text-danger">Sjekk at alle lenkene har navn og en gyldig adresse.</p>
+              <p className="text-[13px] text-danger">{t("Sjekk at alle lenkene har navn og en gyldig adresse.")}</p>
             )}
             {values.links.length < 10 && (
               <Button variant="link" onClick={() => set("links", [...values.links, { label: "", url: "" }])}>
-                <Plus className="size-4" /> Legg til lenke
+                <Plus className="size-4" /> {t("Legg til lenke")}
               </Button>
             )}
           </div>
         </Section>
 
-        <Section title="Egne seksjoner" description="Utmerkelser, publikasjoner, foredrag, frivillig arbeid … Hver seksjon får sin egen overskrift på profilen.">
+        <Section icon={<LayoutList />} title={t("Egne seksjoner")} description={t("Utmerkelser, foredrag, frivillig arbeid …")}>
           <div className="space-y-4">
             {values.customSections.map((s, i) => (
               <div key={s.id} className="rounded-[18px] glass-card p-4">
@@ -376,17 +420,17 @@ export default function ProfileForm({
                     className={`${inputClass} flex-1 font-semibold`}
                     value={s.title}
                     onChange={(e) => set("customSections", values.customSections.map((x) => (x.id === s.id ? { ...x, title: e.target.value } : x)))}
-                    placeholder="Tittel, f.eks. «Utmerkelser»"
+                    placeholder={t("Tittel, f.eks. «Utmerkelser»")}
                     maxLength={60}
-                    aria-label="Tittel på seksjonen"
+                    aria-label={t("Tittel på seksjonen")}
                   />
-                  <Button variant="ghost" size="icon" aria-label="Flytt opp" disabled={i === 0} onClick={() => moveSection(i, i - 1)}>
+                  <Button variant="ghost" size="icon" aria-label={t("Flytt opp")} disabled={i === 0} onClick={() => moveSection(i, i - 1)}>
                     <ArrowUp className="size-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" aria-label="Flytt ned" disabled={i === values.customSections.length - 1} onClick={() => moveSection(i, i + 1)}>
+                  <Button variant="ghost" size="icon" aria-label={t("Flytt ned")} disabled={i === values.customSections.length - 1} onClick={() => moveSection(i, i + 1)}>
                     <ArrowDown className="size-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" aria-label="Fjern seksjonen" onClick={() => set("customSections", values.customSections.filter((x) => x.id !== s.id))} className="hover:text-danger">
+                  <Button variant="ghost" size="icon" aria-label={t("Fjern seksjonen")} onClick={() => set("customSections", values.customSections.filter((x) => x.id !== s.id))} className="hover:text-danger">
                     <Trash2 className="size-4" />
                   </Button>
                 </div>
@@ -394,7 +438,7 @@ export default function ProfileForm({
                   <MarkdownEditor
                     value={s.body}
                     onChange={(v) => set("customSections", values.customSections.map((x) => (x.id === s.id ? { ...x, body: v } : x)))}
-                    placeholder="- Vinner av NM i programmering 2025"
+                    placeholder={t("- Vinner av NM i programmering 2025")}
                     rows={5}
                     maxLength={5000}
                   />
@@ -403,21 +447,21 @@ export default function ProfileForm({
             ))}
             {values.customSections.length < 8 && (
               <Button variant="secondary" size="sm" onClick={() => set("customSections", [...values.customSections, { id: newId(), title: "", body: "" }])}>
-                <Plus className="size-4" /> Ny seksjon
+                <Plus className="size-4" /> {t("Ny seksjon")}
               </Button>
             )}
           </div>
         </Section>
 
         <div className="sticky bottom-24 z-20 mt-2 flex items-center justify-end gap-4 glass rounded-[26px] py-2 pl-5 pr-2 md:bottom-6">
-          <p className="mr-auto text-sm text-mist">{dirty ? "Du har endringer som ikke er lagret." : "Alt er lagret."}</p>
+          <p className="mr-auto text-sm text-mist">{dirty ? t("Du har endringer som ikke er lagret.") : t("Alt er lagret.")}</p>
           {dirty && (
             <Button variant="ghost" size="sm" onClick={() => setValues(saved)}>
-              Angre
+              {t("Angre")}
             </Button>
           )}
           <Button type="submit" size="sm" loading={pending} disabled={!dirty}>
-            Lagre profilen
+            {t("Lagre profilen")}
           </Button>
         </div>
       </div>
@@ -425,7 +469,7 @@ export default function ProfileForm({
       {/* Forhåndsvisning av visittkortet mens man skriver. */}
       <aside className="hidden lg:block">
         <div className="sticky top-8 pt-10">
-          <p className="caption">Forhåndsvisning</p>
+          <p className="caption">{t("Forhåndsvisning")}</p>
           <div className="mt-3 overflow-hidden rounded-[22px] glass-card">
             <div className="relative h-20 overflow-hidden">
               <ProfileBanner banner={values.banner} accent={accent.color} uid="banner-card" />
@@ -437,7 +481,7 @@ export default function ProfileForm({
                 </div>
               )}
               <Avatar name={values.name || "?"} image={avatar} size={72} className="ring-4 ring-surface" />
-              <p className="mt-3 truncate text-lg font-bold tracking-tight">{values.name || "Navnet ditt"}</p>
+              <p className="mt-3 truncate text-lg font-bold tracking-tight">{values.name || t("Navnet ditt")}</p>
               <p className="text-sm text-mist">@{username}</p>
               {values.headline && <p className="mt-2 text-sm leading-6 text-fg">{values.headline}</p>}
               {values.location && (
@@ -447,7 +491,7 @@ export default function ProfileForm({
               )}
               {values.openTo.length > 0 && (
                 <p className="mt-3 rounded-xl bg-success/10 px-3 py-2 text-xs text-success">
-                  Åpen for: {values.openTo.map((o) => OPEN_TO_LABELS[o]).join(", ")}
+                  {t("Åpen for")}: {values.openTo.map((o) => t(OPEN_TO_LABELS[o])).join(", ")}
                 </p>
               )}
               <div className="mt-4 h-1.5 w-16 rounded-full" style={{ background: accent.color }} />

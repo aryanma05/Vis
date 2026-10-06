@@ -1,12 +1,15 @@
 import type { Metadata } from "next";
 import { getCv } from "@/lib/cv";
 import { getCvDocument } from "@/lib/cv-document";
+import { getT } from "@/lib/i18n/server";
 import { getOwnProfile } from "@/lib/profiles";
 import { requireUser } from "@/lib/session";
 import EditNav from "../EditNav";
 import CvStudio from "./CvStudio";
 
-export const metadata: Metadata = { title: "Rediger CV", robots: { index: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getT())("Rediger CV"), robots: { index: false } };
+}
 
 export default async function EditCvPage() {
   const user = await requireUser();

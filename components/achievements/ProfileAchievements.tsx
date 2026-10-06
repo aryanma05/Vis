@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
+import { useReduceMotion } from "@/components/settings/display-prefs";
 import { Check } from "lucide-react";
 import AchievementBadge from "@/components/achievements/AchievementBadge";
 import { useLocale, useT } from "@/components/LocaleProvider";
@@ -112,7 +113,7 @@ function AchievementsDialog({
 }) {
   const t = useT();
   const locale = useLocale();
-  const reduce = useReducedMotion();
+  const reduce = useReduceMotion();
   const byKey = new Map(achievements.map((s) => [s.key, s]));
   const earned = ranked(achievements);
   // Andre ser bare merkene som er låst opp; eieren ser alle, med fremdrift.

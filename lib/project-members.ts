@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, asc, eq, inArray, isNull, ne, notInArray, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, notInArray, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import type { Tx } from "@/lib/db-types";
 import { emailNotification, notify } from "@/lib/notifications";
@@ -41,17 +41,23 @@ export async function loadMembers(projectIds: string[]) {
   return byProject;
 }
 
-// Erstatter medlemmene med brukernavnene i `usernames`, i den rekkefølgen. Eieren selv og
-// ukjente eller utestengte brukere hoppes over.
+// Erstatter medlemmene med brukernavnene i `usernames`, i den rekkefølgen. Eieren selv
+// hoppes over. Finnes ikke et brukernavn, stopper lagringen med en feil, i stedet for at
+// personen forsvinner uten at noen merker det.
 export async function setProjectMembers(tx: Tx, projectId: string, ownerId: string, usernames: string[]) {
   const found = usernames.length
     ? await tx
         .select({ id: user.id, username: user.username })
         .from(user)
-        .where(and(inArray(user.username, usernames), ne(user.id, ownerId), notBanned))
+        .where(and(inArray(user.username, usernames), notBanned))
     : [];
   const idByUsername = new Map(found.map((u) => [u.username, u.id]));
-  const ids = usernames.flatMap((u) => idByUsername.get(u) ?? []);
+  const missing = usernames.find((u) => !idByUsername.has(u));
+  if (missing) throw new UserFacingError("Fant ingen på Vis med brukernavnet @{username}.", { username: missing });
+  const ids = usernames.flatMap((u) => {
+    const id = idByUsername.get(u);
+    return id && id !== ownerId ? [id] : [];
+  });
 
   // Beholder datoen for dem som allerede er med, så rekkefølgen bare endrer posisjonen.
   if (ids.length > 0) {

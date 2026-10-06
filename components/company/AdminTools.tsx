@@ -13,6 +13,7 @@ import {
   setJobStatusAction,
   setTalentListMemberAction,
 } from "@/app/actions/companies";
+import { useT } from "@/components/LocaleProvider";
 import { Button, buttonClass } from "@/components/ui/button";
 import Dialog from "@/components/ui/dialog";
 import { inputClass, textareaClass } from "@/components/ui/field";
@@ -24,6 +25,7 @@ type Result = { ok: true } | { ok: false; error: string };
 
 function useRun() {
   const router = useRouter();
+  const t = useT();
   const [pending, start] = useTransition();
   const run = (fn: () => Promise<Result | { ok: boolean; error?: string }>, success?: string) =>
     start(async () => {
@@ -35,29 +37,29 @@ function useRun() {
       if (success) toast.success(success);
       router.refresh();
     });
-  return { pending, run };
+  return { pending, run, t };
 }
 
 export function JobActions({ jobId, status }: { jobId: string; status: "draft" | "published" | "closed" }) {
-  const { pending, run } = useRun();
+  const { pending, run, t } = useRun();
   return (
     <div className="flex flex-wrap gap-2">
       {status !== "published" && (
-        <Button size="xs" onClick={() => run(() => setJobStatusAction(jobId, "published"), "Stillingen er publisert")} loading={pending}>
-          Publiser
+        <Button size="xs" onClick={() => run(() => setJobStatusAction(jobId, "published"), t("Stillingen er publisert"))} loading={pending}>
+          {t("Publiser")}
         </Button>
       )}
       {status === "published" && (
-        <Button size="xs" variant="secondary" onClick={() => run(() => setJobStatusAction(jobId, "closed"), "Stillingen er lukket")} loading={pending}>
-          Lukk
+        <Button size="xs" variant="secondary" onClick={() => run(() => setJobStatusAction(jobId, "closed"), t("Stillingen er lukket"))} loading={pending}>
+          {t("Lukk")}
         </Button>
       )}
       <Button
         size="xs"
         variant="ghost"
         className="hover:text-danger"
-        onClick={() => window.confirm("Slette stillingen?") && run(() => deleteJobAction(jobId), "Slettet")}
-        aria-label="Slett stillingen"
+        onClick={() => window.confirm(t("Slette stillingen?")) && run(() => deleteJobAction(jobId), t("Slettet"))}
+        aria-label={t("Slett stillingen")}
       >
         <Trash2 className="size-3.5" />
       </Button>
@@ -66,23 +68,23 @@ export function JobActions({ jobId, status }: { jobId: string; status: "draft" |
 }
 
 export function AddToList({ userId, lists, memberOf }: { userId: string; lists: { id: string; name: string }[]; memberOf: string[] }) {
-  const { run } = useRun();
+  const { run, t } = useRun();
   if (lists.length === 0) return null;
   return (
     <Menu
-      label="Legg i liste"
+      label={t("Legg i liste")}
       align="end"
       trigger={({ open, toggle }) => (
         <button type="button" onClick={toggle} aria-haspopup="menu" aria-expanded={open} className={buttonClass({ variant: "secondary", size: "xs" })}>
-          <ListPlus className="size-3.5" /> Liste
+          <ListPlus className="size-3.5" /> {t("Liste")}
         </button>
       )}
     >
-      <MenuLabel>Legg i liste</MenuLabel>
+      <MenuLabel>{t("Legg i liste")}</MenuLabel>
       {lists.map((l) => {
         const on = memberOf.includes(l.id);
         return (
-          <MenuItem key={l.id} onSelect={() => run(() => setTalentListMemberAction(l.id, userId, !on), on ? "Fjernet fra listen" : `Lagt i «${l.name}»`)} hint={on ? <Check className="size-4 text-sea" /> : undefined}>
+          <MenuItem key={l.id} onSelect={() => run(() => setTalentListMemberAction(l.id, userId, !on), on ? t("Fjernet fra listen") : t("Lagt i «{name}»", { name: l.name }))} hint={on ? <Check className="size-4 text-sea" /> : undefined}>
             {l.name}
           </MenuItem>
         );
@@ -92,6 +94,7 @@ export function AddToList({ userId, lists, memberOf }: { userId: string; lists: 
 }
 
 export function ContactCandidate({ companyId, userId, name }: { companyId: string; userId: string; name: string }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState<ContactReason>("jobb");
   const [message, setMessage] = useState("");
@@ -100,9 +103,14 @@ export function ContactCandidate({ companyId, userId, name }: { companyId: strin
   return (
     <>
       <Button size="xs" variant="secondary" onClick={() => setOpen(true)}>
-        <Mail className="size-3.5" /> Kontakt
+        <Mail className="size-3.5" /> {t("Kontakt")}
       </Button>
-      <Dialog open={open} onClose={() => setOpen(false)} title={`Kontakt ${first}`} description="Meldingen sendes som varsel og e-post. Svaret kommer til e-posten din.">
+      <Dialog
+        open={open}
+        onClose={() => setOpen(false)}
+        title={t("Kontakt {name}", { name: first })}
+        description={t("Meldingen sendes som varsel og e-post. Svaret kommer til e-posten din.")}
+      >
         <div className="mt-5">
           <div className="flex flex-wrap gap-2">
             {CONTACT_REASONS.map((r) => (
@@ -113,11 +121,11 @@ export function ContactCandidate({ companyId, userId, name }: { companyId: strin
                 onClick={() => setReason(r)}
                 className={`rounded-full px-3.5 py-1.5 text-sm font-medium ${reason === r ? "bg-primary text-on-primary" : "glass-chip"}`}
               >
-                {CONTACT_REASON_LABELS[r]}
+                {t(CONTACT_REASON_LABELS[r])}
               </button>
             ))}
           </div>
-          <textarea className={`${textareaClass} mt-4 min-h-32`} value={message} onChange={(e) => setMessage(e.target.value)} maxLength={2000} placeholder={`Hei ${first}! …`} aria-label="Melding" />
+          <textarea className={`${textareaClass} mt-4 min-h-32`} value={message} onChange={(e) => setMessage(e.target.value)} maxLength={2000} placeholder={t("Hei {name}! …", { name: first })} aria-label={t("Melding")} />
           <div className="mt-4 flex justify-end">
             <Button
               size="sm"
@@ -132,11 +140,11 @@ export function ContactCandidate({ companyId, userId, name }: { companyId: strin
                   }
                   setOpen(false);
                   setMessage("");
-                  toast.success(`Meldingen er sendt til ${first}`);
+                  toast.success(t("Meldingen er sendt til {name}", { name: first }));
                 })
               }
             >
-              Send
+              {t("Send")}
             </Button>
           </div>
         </div>
@@ -147,37 +155,37 @@ export function ContactCandidate({ companyId, userId, name }: { companyId: strin
 
 export function NewTalentList({ companyId }: { companyId: string }) {
   const [name, setName] = useState("");
-  const { pending, run } = useRun();
+  const { pending, run, t } = useRun();
   return (
     <form
       className="flex max-w-md gap-2"
       onSubmit={(e) => {
         e.preventDefault();
         if (!name.trim()) return;
-        run(() => createTalentListAction(companyId, name), "Listen er laget");
+        run(() => createTalentListAction(companyId, name), t("Listen er laget"));
         setName("");
       }}
     >
-      <input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} placeholder="Ny liste, f.eks. «Sommerjobb 2027»" maxLength={80} aria-label="Navn på listen" />
+      <input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} placeholder={t("Ny liste, f.eks. «Sommerjobb 2027»")} maxLength={80} aria-label={t("Navn på listen")} />
       <Button type="submit" size="sm" loading={pending} disabled={!name.trim()}>
-        Lag
+        {t("Lag")}
       </Button>
     </form>
   );
 }
 
 export function TalentListTools({ listId, userId }: { listId: string; userId?: string }) {
-  const { pending, run } = useRun();
+  const { pending, run, t } = useRun();
   if (userId) {
     return (
-      <Button size="xs" variant="ghost" className="hover:text-danger" loading={pending} onClick={() => run(() => setTalentListMemberAction(listId, userId, false))} aria-label="Fjern fra listen">
+      <Button size="xs" variant="ghost" className="hover:text-danger" loading={pending} onClick={() => run(() => setTalentListMemberAction(listId, userId, false))} aria-label={t("Fjern fra listen")}>
         <UserMinus className="size-3.5" />
       </Button>
     );
   }
   return (
-    <Button size="xs" variant="ghost" className="hover:text-danger" loading={pending} onClick={() => window.confirm("Slette listen?") && run(() => deleteTalentListAction(listId), "Listen er slettet")}>
-      <Trash2 className="size-3.5" /> Slett listen
+    <Button size="xs" variant="ghost" className="hover:text-danger" loading={pending} onClick={() => window.confirm(t("Slette listen?")) && run(() => deleteTalentListAction(listId), t("Listen er slettet"))}>
+      <Trash2 className="size-3.5" /> {t("Slett listen")}
     </Button>
   );
 }
@@ -185,33 +193,40 @@ export function TalentListTools({ listId, userId }: { listId: string; userId?: s
 export function AddMember({ companyId }: { companyId: string }) {
   const [username, setUsername] = useState("");
   const [role, setRole] = useState<"member" | "admin">("member");
-  const { pending, run } = useRun();
+  const { pending, run, t } = useRun();
   return (
     <form
       className="flex max-w-xl flex-wrap gap-2"
       onSubmit={(e) => {
         e.preventDefault();
         if (!username.trim()) return;
-        run(() => addCompanyMemberAction(companyId, username, role), "Lagt til");
+        run(() => addCompanyMemberAction(companyId, username, role), t("Lagt til"));
         setUsername("");
       }}
     >
-      <input className={`${inputClass} min-w-48 flex-1`} value={username} onChange={(e) => setUsername(e.target.value)} placeholder="@brukernavn" aria-label="Brukernavn" autoCapitalize="none" />
-      <select value={role} onChange={(e) => setRole(e.target.value as "member" | "admin")} className={`${inputClass} w-auto`} aria-label="Rolle">
-        <option value="member">Medlem</option>
-        <option value="admin">Administrator</option>
+      <input className={`${inputClass} min-w-48 flex-1`} value={username} onChange={(e) => setUsername(e.target.value)} placeholder={t("@brukernavn")} aria-label={t("Brukernavn")} autoCapitalize="none" />
+      <select value={role} onChange={(e) => setRole(e.target.value as "member" | "admin")} className={`${inputClass} w-auto`} aria-label={t("Rolle")}>
+        <option value="member">{t("Medlem")}</option>
+        <option value="admin">{t("Administrator")}</option>
       </select>
       <Button type="submit" size="sm" loading={pending} disabled={!username.trim()}>
-        Legg til
+        {t("Legg til")}
       </Button>
     </form>
   );
 }
 
 export function RemoveMember({ companyId, userId }: { companyId: string; userId: string }) {
-  const { pending, run } = useRun();
+  const { pending, run, t } = useRun();
   return (
-    <Button size="xs" variant="ghost" className="hover:text-danger" loading={pending} onClick={() => run(() => removeCompanyMemberAction(companyId, userId), "Fjernet")} aria-label="Fjern">
+    <Button
+      size="xs"
+      variant="ghost"
+      className="hover:text-danger"
+      loading={pending}
+      onClick={() => run(() => removeCompanyMemberAction(companyId, userId), t("Fjernet"))}
+      aria-label={t("Fjern")}
+    >
       <UserMinus className="size-3.5" />
     </Button>
   );

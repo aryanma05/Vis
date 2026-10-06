@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import FollowList from "@/components/profile/FollowList";
+import { getT } from "@/lib/i18n/server";
 import { getProfileBase } from "@/lib/profiles";
 import { getCurrentUser } from "@/lib/session";
 import { getFollowCounts, listFollowers, listFollowing } from "@/lib/social";
@@ -8,8 +9,8 @@ import { getFollowCounts, listFollowers, listFollowing } from "@/lib/social";
 type Props = { params: Promise<{ username: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const profile = await getProfileBase(decodeURIComponent((await params).username));
-  return { title: profile ? `${profile.name} følger` : "Fant ikke profilen", robots: { index: false } };
+  const [profile, t] = await Promise.all([getProfileBase(decodeURIComponent((await params).username)), getT()]);
+  return { title: profile ? t("{name} følger", { name: profile.name }) : t("Fant ikke profilen"), robots: { index: false } };
 }
 
 export default async function FollowingPage({ params }: Props) {

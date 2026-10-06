@@ -229,7 +229,7 @@ export async function lookupGithub(userId: string, input: string): Promise<Githu
   try {
     repos = await gh<ApiRepo[]>(`/users/${query.login}/repos?type=owner&sort=pushed&per_page=100`, token);
   } catch (error) {
-    if (error instanceof GithubNotFound) throw new UserFacingError(`Fant ingen GitHub-bruker som heter «${query.login}».`);
+    if (error instanceof GithubNotFound) throw new UserFacingError("Fant ingen GitHub-bruker som heter «{login}».", { login: query.login });
     throw error;
   }
   return {

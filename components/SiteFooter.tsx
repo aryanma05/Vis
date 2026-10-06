@@ -7,6 +7,7 @@ import { getT } from "@/lib/i18n/server";
 const LINKS = [
   { href: "/om", label: "Om Vis" },
   { href: "/sok", label: "Utforsk" },
+  { href: "/partnere", label: "Finn partnere" },
   { href: "/stillinger", label: "Stillinger" },
   { href: "/bedrifter", label: "For bedrifter" },
   { href: "/priser", label: "Priser" },

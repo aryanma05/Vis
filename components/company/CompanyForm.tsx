@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import { Building2, ImagePlus } from "lucide-react";
 import { createCompanyAction, deleteCompanyAction, updateCompanyAction, uploadCompanyLogoAction } from "@/app/actions/companies";
+import { useT } from "@/components/LocaleProvider";
 import MarkdownEditor from "@/components/MarkdownEditor";
 import { Button } from "@/components/ui/button";
 import { Field, inputClass, labelClass } from "@/components/ui/field";
@@ -27,6 +28,7 @@ export default function CompanyForm({
   canDelete?: boolean;
 }) {
   const router = useRouter();
+  const t = useT();
   const [values, setValues] = useState(initial);
   const [logo, setLogo] = useState(logoUrl);
   const [pending, start] = useTransition();
@@ -68,7 +70,7 @@ export default function CompanyForm({
       setLogo(result.data.url);
       toast.success("Logoen er lagret");
     } catch (error) {
-      toast.error((error as Error).message || "Klarte ikke å laste opp logoen.");
+      toast.error((error as Error).message || t("Klarte ikke å laste opp logoen."));
     } finally {
       setUploading(false);
     }
@@ -83,7 +85,7 @@ export default function CompanyForm({
             {logo ? <img src={logo} alt="" className="size-full object-cover" /> : <Building2 className="size-6 text-mist" />}
           </span>
           <Button type="button" size="sm" variant="secondary" loading={uploading} onClick={() => fileRef.current?.click()}>
-            <ImagePlus className="size-4" /> {logo ? "Bytt logo" : "Last opp logo"}
+            <ImagePlus className="size-4" /> {logo ? t("Bytt logo") : t("Last opp logo")}
           </Button>
           <input
             ref={fileRef}
@@ -98,20 +100,27 @@ export default function CompanyForm({
           />
         </div>
       )}
-      <Field label="Navn">
-        <input className={inputClass} value={values.name} onChange={(e) => set("name", e.target.value)} maxLength={80} required placeholder="F.eks. Fjordkode AS" />
+      <Field label={t("Navn")}>
+        <input
+          className={inputClass}
+          value={values.name}
+          onChange={(e) => set("name", e.target.value)}
+          maxLength={80}
+          required
+          placeholder={t("F.eks. Fjordkode AS")}
+        />
       </Field>
       <div className="grid gap-6 sm:grid-cols-2">
-        <Field label="Nettside" optional>
+        <Field label={t("Nettside")} optional>
           <input className={inputClass} value={values.website} onChange={(e) => set("website", e.target.value)} placeholder="fjordkode.no" />
         </Field>
-        <Field label="Sted" optional>
+        <Field label={t("Sted")} optional>
           <input className={inputClass} value={values.location} onChange={(e) => set("location", e.target.value)} maxLength={100} placeholder="Bergen" />
         </Field>
       </div>
       <fieldset>
         <legend className={labelClass}>
-          Størrelse <span className="font-normal text-mist">(valgfritt)</span>
+          {t("Størrelse")} <span className="font-normal text-mist">({t("valgfritt")})</span>
         </legend>
         <div className="flex flex-wrap gap-2">
           {SIZES.map((s) => (
@@ -122,17 +131,17 @@ export default function CompanyForm({
               onClick={() => set("size", values.size === s ? "" : s)}
               className={`rounded-full px-3.5 py-1.5 text-sm font-medium transition ${values.size === s ? "bg-primary text-on-primary" : "glass-chip text-fg"}`}
             >
-              {s} ansatte
+              {t("{n} ansatte", { n: s })}
             </button>
           ))}
         </div>
       </fieldset>
-      <Field label="Om bedriften" optional hint="Hva dere lager, hvordan dere jobber og hva slags folk dere ser etter." htmlFor="bedrift-om">
-        <MarkdownEditor id="bedrift-om" value={values.about} onChange={(v) => set("about", v)} maxLength={5000} placeholder="Skriv om bedriften …" />
+      <Field label={t("Om bedriften")} optional hint={t("Hva dere lager, hvordan dere jobber og hva slags folk dere ser etter.")} htmlFor="bedrift-om">
+        <MarkdownEditor id="bedrift-om" value={values.about} onChange={(v) => set("about", v)} maxLength={5000} placeholder={t("Skriv om bedriften …")} />
       </Field>
       <div className="flex flex-wrap items-center gap-3">
         <Button type="submit" loading={pending}>
-          {companyId ? "Lagre" : "Lag bedriftsside"}
+          {companyId ? t("Lagre") : t("Lag bedriftsside")}
         </Button>
         {companyId && canDelete && (
           <Button
@@ -141,7 +150,7 @@ export default function CompanyForm({
             className="hover:text-danger"
             onClick={() =>
               start(async () => {
-                if (!window.confirm("Slette bedriftssiden med alle stillinger og lister? Dette kan ikke angres.")) return;
+                if (!window.confirm(t("Slette bedriftssiden med alle stillinger og lister? Dette kan ikke angres."))) return;
                 const result = await deleteCompanyAction(companyId);
                 if (!result.ok) {
                   toast.error(result.error);
@@ -151,7 +160,7 @@ export default function CompanyForm({
               })
             }
           >
-            Slett bedriften
+            {t("Slett bedriften")}
           </Button>
         )}
       </div>

@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { addProjectScreenshotsAction, createProjectAction, updateProjectAction, uploadProjectImagesAction } from "@/app/actions/projects";
 import { Check, FolderOpen, Plus, SlidersHorizontal, X } from "lucide-react";
 import ImageEditor from "@/components/ImageEditor";
+import { useLocale, useT } from "@/components/LocaleProvider";
 import { Button, Spinner } from "@/components/ui/button";
 import { Field, inputClass } from "@/components/ui/field";
 import { toast } from "@/components/ui/toast";
@@ -17,6 +18,7 @@ import {
   rewriteReadmeImages,
   type FolderDraft,
 } from "@/lib/folder-import";
+import { dateLocale } from "@/lib/i18n";
 
 type Picker = { showDirectoryPicker?: () => Promise<FileSystemDirectoryHandle> };
 
@@ -42,6 +44,8 @@ function projectForm(draft: FolderDraft, description: string) {
 // tillegg (også når mappen ikke hadde noen).
 export default function FolderImport({ maxImages }: { maxImages: number }) {
   const router = useRouter();
+  const t = useT();
+  const locale = useLocale();
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -71,7 +75,7 @@ export default function FolderImport({ maxImages }: { maxImages: number }) {
 
   async function analyze(source: Promise<{ root: string; entries: Parameters<typeof analyzeFolder>[1] } | null>) {
     setError(null);
-    setStatus("Leser mappen…");
+    setStatus(t("Leser mappen…"));
     try {
       const result = await source;
       if (!result) throw new Error("Dra inn en mappe, ikke en enkeltfil.");
@@ -81,7 +85,7 @@ export default function FolderImport({ maxImages }: { maxImages: number }) {
       // Ikke flere bilder enn et prosjekt kan ha.
       setSelected(new Set(next.images.slice(0, maxImages).map((i) => i.path)));
     } catch (e) {
-      if ((e as Error).name !== "AbortError") setError((e as Error).message || "Klarte ikke å lese mappen.");
+      if ((e as Error).name !== "AbortError") setError((e as Error).message || t("Klarte ikke å lese mappen."));
     } finally {
       setStatus(null);
     }
@@ -96,9 +100,9 @@ export default function FolderImport({ maxImages }: { maxImages: number }) {
   async function addUploads(list: File[]) {
     const files = list.filter(isImageFile);
     if (files.length === 0) return toast.error("Det der var ikke et bilde. Bruk JPG, PNG, WebP eller GIF.");
-    if (room <= 0) return toast.error(`Et prosjekt kan ha maks ${maxImages} bilder.`);
+    if (room <= 0) return toast.error(t("Et prosjekt kan ha maks {n} bilder.", { n: maxImages }));
     const chosen = files.slice(0, room);
-    if (files.length > room) toast.info(`Bare ${room} bilder til fikk plass (maks ${maxImages}).`);
+    if (files.length > room) toast.info(t("Bare {room} bilder til fikk plass (maks {max}).", { room, max: maxImages }));
 
     setPreparing((n) => n + chosen.length);
     let last: Upload | null = null;
@@ -143,7 +147,7 @@ export default function FolderImport({ maxImages }: { maxImages: number }) {
     if (!draft) return;
     setError(null);
     try {
-      setStatus("Oppretter prosjektet…");
+      setStatus(t("Oppretter prosjektet…"));
       const baseDescription = rewriteReadmeImages(draft.description, draft.readmeDir, new Map());
       const created = await createProjectAction(projectForm(draft, baseDescription));
       if (!created.ok) throw new Error(created.error);
@@ -155,7 +159,7 @@ export default function FolderImport({ maxImages }: { maxImages: number }) {
       let failed = 0;
       let n = 0;
       const upload = async (getFile: () => File | Promise<File>) => {
-        setStatus(`Laster opp bilde ${++n} av ${total}…`);
+        setStatus(t("Laster opp bilde {i} av {total} …", { i: ++n, total }));
         try {
           const fd = new FormData();
           fd.append("images", await getFile());
@@ -175,20 +179,20 @@ export default function FolderImport({ maxImages }: { maxImages: number }) {
 
       // Ingen bilder i det hele tatt, men prosjektet har en nettside: ta skjermbilder av den.
       if (total === 0 && draft.demoUrl.trim()) {
-        setStatus("Tar skjermbilder av nettsiden…");
+        setStatus(t("Tar skjermbilder av nettsiden…"));
         await addProjectScreenshotsAction(id, draft.demoUrl.trim());
       }
 
       // README-bilder peker nå på de opplastede filene.
       if (chosen.some((img) => img.fromReadme)) {
-        setStatus("Fullfører…");
+        setStatus(t("Fullfører…"));
         await updateProjectAction(id, projectForm(draft, rewriteReadmeImages(draft.description, draft.readmeDir, uploaded)));
       }
 
       // Noen bilder feilet: åpne redigeringen, så de kan legges til på nytt.
       router.push(failed > 0 ? `/prosjekt/${id}/rediger?bildefeil=${failed}` : `/prosjekt/${id}`);
     } catch (e) {
-      setError((e as Error).message || "Noe gikk galt.");
+      setError((e as Error).message || t("Noe gikk galt."));
       setStatus(null);
     }
   }
@@ -237,21 +241,20 @@ export default function FolderImport({ maxImages }: { maxImages: number }) {
               <span className="flex size-16 items-center justify-center rounded-full glass-chip text-fg">
                 <FolderOpen className="size-7" />
               </span>
-              <p className="mt-5 text-xl font-semibold">Dra prosjektmappen hit</p>
+              <p className="mt-5 text-xl font-semibold">{t("Dra prosjektmappen hit")}</p>
               <p className="mt-2 max-w-md text-sm leading-6 text-mist">
-                Vi henter tittel, beskrivelse og skjermbilder fra README-en, og ser hvilke teknologier du har brukt.
+                {t("Vi henter tittel, beskrivelse og skjermbilder fra README-en, og ser hvilke teknologier du har brukt.")}
               </p>
               <Button variant="secondary" className="mt-6" onClick={choose}>
-                Velg mappe
+                {t("Velg mappe")}
               </Button>
             </>
           )}
         </div>
         <p className="mt-4 text-xs leading-5 text-mist">
-          Koden din lastes ikke opp. Vi leser bare README, package.json og lignende filer i nettleseren din, og laster opp
-          skjermbildene du velger. node_modules, .git og byggmapper hoppes over.
+          {t("Koden din lastes ikke opp. Vi leser bare README, package.json og lignende filer i nettleseren din, og laster opp skjermbildene du velger. node_modules, .git og byggmapper hoppes over.")}
         </p>
-        {error && <p className="mt-3 text-sm text-danger">{error}</p>}
+        {error && <p className="mt-3 text-sm text-danger">{t(error)}</p>}
       </div>
     );
   }
@@ -263,38 +266,38 @@ export default function FolderImport({ maxImages }: { maxImages: number }) {
       <div className="flex items-center justify-between gap-4 rounded-[18px] glass-card py-2 pl-4 pr-2 text-sm">
         <span className="flex items-center gap-2 text-mist">
           <Check className="size-4 text-success" />
-          Leste {draft.fileCount.toLocaleString("nb-NO")} filer
-          {draft.description ? " · fant README" : " · fant ingen README"}
+          {t("Leste {n} filer", { n: draft.fileCount.toLocaleString(dateLocale(locale)) })}
+          {draft.description ? ` · ${t("fant README")}` : ` · ${t("fant ingen README")}`}
         </span>
         <Button variant="ghost" size="xs" onClick={() => setDraft(null)}>
-          Velg en annen mappe
+          {t("Velg en annen mappe")}
         </Button>
       </div>
 
       <div className="grid gap-5 md:grid-cols-2">
-        <Field label="Tittel" className="md:col-span-2">
+        <Field label={t("Tittel")} className="md:col-span-2">
           <input className={inputClass} value={draft.title} onChange={(e) => set("title", e.target.value)} maxLength={100} />
         </Field>
-        <Field label="Kort beskrivelse" className="md:col-span-2">
+        <Field label={t("Kort beskrivelse")} className="md:col-span-2">
           <input className={inputClass} value={draft.summary} onChange={(e) => set("summary", e.target.value)} maxLength={200} />
         </Field>
-        <Field label="Teknologier" hint="Skill med komma.">
+        <Field label={t("Teknologier")} hint={t("Skill med komma.")}>
           <input
             className={inputClass}
             value={draft.tags.join(", ")}
-            onChange={(e) => set("tags", e.target.value.split(",").map((t) => t.trimStart()))}
+            onChange={(e) => set("tags", e.target.value.split(",").map((tag) => tag.trimStart()))}
           />
         </Field>
-        <Field label="GitHub-lenke" optional>
+        <Field label={t("GitHub-lenke")} optional>
           <input className={inputClass} value={draft.repoUrl} onChange={(e) => set("repoUrl", e.target.value)} placeholder="https://github.com/…" />
         </Field>
-        <Field label="Nettside" optional hint="Har prosjektet ingen bilder, tar vi skjermbilder av nettsiden." className="md:col-span-2">
+        <Field label={t("Nettside")} optional hint={t("Har prosjektet ingen bilder, tar vi skjermbilder av nettsiden.")} className="md:col-span-2">
           <input className={inputClass} value={draft.demoUrl} onChange={(e) => set("demoUrl", e.target.value)} inputMode="url" placeholder="https://" />
         </Field>
       </div>
 
       <section
-        aria-label="Bilder"
+        aria-label={t("Bilder")}
         onDragOver={(e) => {
           e.preventDefault();
           setDragging(true);
@@ -320,16 +323,16 @@ export default function FolderImport({ maxImages }: { maxImages: number }) {
         />
         <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
           <p className="text-sm font-medium">
-            Bilder <span className="font-normal text-mist">· {selected.size + uploads.length} valgt</span>
+            {t("Bilder")} <span className="font-normal text-mist">· {t("{n} valgt", { n: selected.size + uploads.length })}</span>
           </p>
-          <p className="text-xs text-mist">Trykk på et bilde fra mappen for å velge det bort. Rediger med knappen i hjørnet.</p>
+          <p className="text-xs text-mist">{t("Trykk på et bilde fra mappen for å velge det bort. Rediger med knappen i hjørnet.")}</p>
         </div>
 
         {draft.images.length === 0 && uploads.length === 0 && preparing === 0 && (
           <p className="mb-3 rounded-[18px] bg-fill p-4 text-sm text-mist">
             {draft.demoUrl.trim()
-              ? "Fant ingen skjermbilder i mappen. Last opp egne bilder, eller la oss ta skjermbilder av nettsiden når prosjektet opprettes."
-              : "Fant ingen skjermbilder i mappen. Last opp egne bilder, eller legg inn lenken til nettsiden over, så tar vi bilder av den."}
+              ? t("Fant ingen skjermbilder i mappen. Last opp egne bilder, eller la oss ta skjermbilder av nettsiden når prosjektet opprettes.")
+              : t("Fant ingen skjermbilder i mappen. Last opp egne bilder, eller legg inn lenken til nettsiden over, så tar vi bilder av den.")}
           </p>
         )}
 
@@ -346,13 +349,13 @@ export default function FolderImport({ maxImages }: { maxImages: number }) {
                       const next = new Set(prev);
                       if (on) next.delete(img.path);
                       else if (room > 0) next.add(img.path);
-                      else toast.error(`Et prosjekt kan ha maks ${maxImages} bilder.`);
+                      else toast.error(t("Et prosjekt kan ha maks {n} bilder.", { n: maxImages }));
                       return next;
                     })
                   }
                   className="block w-full text-left"
                   aria-pressed={on}
-                  aria-label={`${on ? "Velg bort" : "Velg"} ${img.path}`}
+                  aria-label={on ? t("Velg bort {name}", { name: img.path }) : t("Velg {name}", { name: img.path })}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={preview} alt="" className="aspect-[16/10] w-full object-cover" />
@@ -368,8 +371,8 @@ export default function FolderImport({ maxImages }: { maxImages: number }) {
                 <button
                   type="button"
                   onClick={() => setEditing({ kind: "folder", key: img.path, url: preview })}
-                  aria-label={`Rediger ${img.path}`}
-                  title="Rediger"
+                  aria-label={t("Rediger {name}", { name: img.path })}
+                  title={t("Rediger")}
                   className="glass-dark absolute left-2 top-2 flex size-7 items-center justify-center rounded-full opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100"
                 >
                   <SlidersHorizontal className="size-3.5" />
@@ -380,17 +383,17 @@ export default function FolderImport({ maxImages }: { maxImages: number }) {
 
           {uploads.map((item) => (
             <div key={item.key} className="glass-card group relative overflow-hidden rounded-[18px]">
-              <button type="button" onClick={() => setEditing({ kind: "upload", key: item.key, url: item.url })} className="block w-full" aria-label="Rediger bildet">
+              <button type="button" onClick={() => setEditing({ kind: "upload", key: item.key, url: item.url })} className="block w-full" aria-label={t("Rediger bildet")}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={item.url} alt="" className="aspect-[16/10] w-full object-cover" />
-                <span className="block truncate px-3 py-2 text-left text-xs text-mist">Lastet opp</span>
+                <span className="block truncate px-3 py-2 text-left text-xs text-mist">{t("Lastet opp")}</span>
               </button>
               <div className="absolute right-2 top-2 flex gap-1">
                 <button
                   type="button"
                   onClick={() => setEditing({ kind: "upload", key: item.key, url: item.url })}
-                  aria-label="Rediger bildet"
-                  title="Rediger"
+                  aria-label={t("Rediger bildet")}
+                  title={t("Rediger")}
                   className="glass-dark flex size-7 items-center justify-center rounded-full transition active:scale-90"
                 >
                   <SlidersHorizontal className="size-3.5" />
@@ -398,8 +401,8 @@ export default function FolderImport({ maxImages }: { maxImages: number }) {
                 <button
                   type="button"
                   onClick={() => removeUpload(item.key)}
-                  aria-label="Fjern bildet"
-                  title="Fjern"
+                  aria-label={t("Fjern bildet")}
+                  title={t("Fjern")}
                   className="glass-dark flex size-7 items-center justify-center rounded-full transition hover:bg-danger active:scale-90"
                 >
                   <X className="size-3.5" />
@@ -419,8 +422,8 @@ export default function FolderImport({ maxImages }: { maxImages: number }) {
               className="glass-chip flex min-h-32 flex-col items-center justify-center rounded-[18px] px-3 text-mist transition hover:bg-fill-2 hover:text-fg"
             >
               <Plus className="size-6" />
-              <span className="mt-1.5 text-sm">Last opp bilder</span>
-              <span className="mt-0.5 text-xs text-mist">eller dra dem hit</span>
+              <span className="mt-1.5 text-sm">{t("Last opp bilder")}</span>
+              <span className="mt-0.5 text-xs text-mist">{t("eller dra dem hit")}</span>
             </button>
           )}
         </div>
@@ -437,20 +440,22 @@ export default function FolderImport({ maxImages }: { maxImages: number }) {
 
       {draft.description && (
         <details className="rounded-[18px] glass-card">
-          <summary className="cursor-pointer px-4 py-3 text-sm text-mist">README ({draft.description.length.toLocaleString("nb-NO")} tegn) blir beskrivelsen</summary>
+          <summary className="cursor-pointer px-4 py-3 text-sm text-mist">
+            {t("README ({n} tegn) blir beskrivelsen", { n: draft.description.length.toLocaleString(dateLocale(locale)) })}
+          </summary>
           <pre className="max-h-72 overflow-auto whitespace-pre-wrap border-t border-line px-4 py-3 font-mono text-xs leading-5 text-mist">
             {draft.description.slice(0, 3000)}
           </pre>
         </details>
       )}
 
-      {error && <p className="text-sm text-danger">{error}</p>}
+      {error && <p className="text-sm text-danger">{t(error)}</p>}
 
       <div className="flex flex-wrap items-center gap-4">
         <Button onClick={create} disabled={!draft.title.trim() || preparing > 0} loading={status !== null}>
-          {status ?? "Opprett prosjekt som utkast"}
+          {status ?? t("Opprett prosjekt som utkast")}
         </Button>
-        <p className="text-sm text-mist">Du kan se over og publisere det etterpå.</p>
+        <p className="text-sm text-mist">{t("Du kan se over og publisere det etterpå.")}</p>
       </div>
     </div>
   );

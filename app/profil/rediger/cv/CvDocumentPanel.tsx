@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { FileUp, ScanText, Trash2 } from "lucide-react";
 import { addCvPageAction, deleteCvDocumentAction, setCvVisibilityAction, uploadCvDocumentAction } from "@/app/actions/cv";
+import { useT } from "@/components/LocaleProvider";
 import { Button, Spinner } from "@/components/ui/button";
 import Switch from "@/components/ui/switch";
 import { toast } from "@/components/ui/toast";
@@ -31,6 +32,7 @@ export default function CvDocumentPanel({
   autofilling: boolean;
 }) {
   const router = useRouter();
+  const t = useT();
   const [doc, setDoc] = useState(initial);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -42,18 +44,18 @@ export default function CvDocumentPanel({
     setError(null);
     const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
     const isImage = file.type.startsWith("image/") || /\.hei[cf]$/i.test(file.name);
-    if (!isPdf && !isImage) return setError("Last opp en PDF eller et bilde (JPG, PNG, WebP).");
+    if (!isPdf && !isImage) return setError(t("Last opp en PDF eller et bilde (JPG, PNG, WebP)."));
     // Bilder krympes før opplasting, så grensen gjelder bare PDF-er.
-    if (isPdf && file.size > MAX_BYTES) return setError("PDF-en er større enn 4 MB. Prøv å eksportere den på nytt med lavere kvalitet.");
+    if (isPdf && file.size > MAX_BYTES) return setError(t("PDF-en er større enn 4 MB. Prøv å eksportere den på nytt med lavere kvalitet."));
 
     try {
       if (isPdf) {
-        setStatus("Leser PDF-en …");
+        setStatus(t("Leser PDF-en …"));
         const { pages, totalPages } = await renderPdfPages(file, {
-          onProgress: (i, total) => setStatus(`Lager bilde av side ${i} av ${total} …`),
+          onProgress: (i, total) => setStatus(t("Lager bilde av side {i} av {total} …", { i, total })),
         });
 
-        setStatus("Laster opp …");
+        setStatus(t("Laster opp …"));
         const fd = new FormData();
         fd.append("file", file);
         const uploaded = await uploadCvDocumentAction(fd);
@@ -61,7 +63,7 @@ export default function CvDocumentPanel({
 
         const stored: NonNullable<DocState>["pages"] = [];
         for (const [index, page] of pages.entries()) {
-          setStatus(`Laster opp side ${index + 1} av ${pages.length} …`);
+          setStatus(t("Laster opp side {i} av {total} …", { i: index + 1, total: pages.length }));
           const pageData = new FormData();
           pageData.append("page", new File([page.blob], `side-${index + 1}`, { type: page.blob.type }));
           pageData.append("index", String(index));
@@ -73,12 +75,12 @@ export default function CvDocumentPanel({
         }
 
         setDoc({ fileUrl: uploaded.data.url, fileName: file.name, mimeType: "application/pdf", pages: stored, isPublic: doc?.isPublic ?? true });
-        if (totalPages > pages.length) setError(`Vi viser de ${pages.length} første sidene av ${totalPages}.`);
+        if (totalPages > pages.length) setError(t("Vi viser de {n} første sidene av {total}.", { n: pages.length, total: totalPages }));
       } else {
-        setStatus("Gjør klar bildet …");
+        setStatus(t("Gjør klar bildet …"));
         const prepared = await prepareImage(file);
         const size = await imageDimensions(prepared);
-        setStatus("Laster opp …");
+        setStatus(t("Laster opp …"));
         const fd = new FormData();
         fd.append("file", prepared);
         fd.append("width", String(size.width));
@@ -90,7 +92,7 @@ export default function CvDocumentPanel({
       toast.success("CV-en er lastet opp", isPdf ? { description: "Trykk «Fyll ut feltene» for å hente ut innholdet." } : undefined);
       router.refresh();
     } catch (e) {
-      setError((e as Error).message || "Noe gikk galt med opplastingen.");
+      setError(t((e as Error).message || "Noe gikk galt med opplastingen."));
     } finally {
       setStatus(null);
     }
@@ -107,8 +109,8 @@ export default function CvDocumentPanel({
   }
 
   async function remove() {
-    if (!confirm("Fjerne CV-dokumentet fra profilen?")) return;
-    setStatus("Fjerner …");
+    if (!confirm(t("Fjerne CV-dokumentet fra profilen?"))) return;
+    setStatus(t("Fjerner …"));
     const result = await deleteCvDocumentAction();
     setStatus(null);
     if (!result.ok) return setError(result.error);
@@ -163,8 +165,8 @@ export default function CvDocumentPanel({
               <span className="flex size-12 items-center justify-center rounded-full glass-chip text-fg">
                 <FileUp className="size-5" />
               </span>
-              <span className="mt-4 text-lg font-semibold">Slipp CV-en her</span>
-              <span className="mt-1 text-sm text-mist">eller klikk for å velge · PDF (maks 4 MB) eller bilde</span>
+              <span className="mt-4 text-lg font-semibold">{t("Slipp CV-en her")}</span>
+              <span className="mt-1 text-sm text-mist">{t("eller klikk for å velge · PDF (maks 4 MB) eller bilde")}</span>
             </>
           )}
         </button>
@@ -182,11 +184,11 @@ export default function CvDocumentPanel({
           <img
             key={page.url}
             src={page.url}
-            alt={`Side ${i + 1}`}
+            alt={t("Side {n}", { n: i + 1 })}
             className="h-56 w-auto shrink-0 rounded-[3px] bg-white shadow-[0_20px_40px_-20px_rgb(0_0_0/0.8)] ring-1 ring-black/10"
           />
         ))}
-        {doc.pages.length === 0 && <p className="text-sm text-warn">Sidene ble ikke laget ferdig. Last opp filen på nytt.</p>}
+        {doc.pages.length === 0 && <p className="text-sm text-warn">{t("Sidene ble ikke laget ferdig. Last opp filen på nytt.")}</p>}
       </div>
 
       <p className="mt-4 truncate text-sm text-mist">{doc.fileName}</p>
@@ -195,8 +197,8 @@ export default function CvDocumentPanel({
         <Switch
           checked={doc.isPublic}
           onChange={toggleVisibility}
-          label={doc.isPublic ? "Synlig på profilen" : "Skjult for andre"}
-          description="Besøkende kan se og laste ned CV-dokumentet når det er synlig."
+          label={doc.isPublic ? t("Synlig på profilen") : t("Skjult for andre")}
+          description={t("Besøkende kan se og laste ned CV-dokumentet når det er synlig.")}
         />
       </div>
 
@@ -204,17 +206,17 @@ export default function CvDocumentPanel({
         {/* Tekst kan bare leses fra PDF-er; et bilde av CV-en vises bare på profilen. */}
         {doc.mimeType === "application/pdf" && (
           <Button size="sm" onClick={onAutofill} loading={autofilling}>
-            <ScanText className="size-4" /> {autofilling ? "Leser CV-en …" : "Fyll ut feltene fra CV-en"}
+            <ScanText className="size-4" /> {autofilling ? t("Leser CV-en …") : t("Fyll ut feltene fra CV-en")}
           </Button>
         )}
         <Button size="sm" variant="secondary" onClick={() => inputRef.current?.click()}>
-          Bytt fil
+          {t("Bytt fil")}
         </Button>
         <Button size="sm" variant="ghost" onClick={remove} className="hover:text-danger">
-          <Trash2 className="size-4" /> Fjern
+          <Trash2 className="size-4" /> {t("Fjern")}
         </Button>
       </div>
-      <p className="mt-4 text-xs leading-5 text-mist/70">Fjern gjerne telefonnummer og adresse fra CV-en hvis du ikke vil dele dem med alle.</p>
+      <p className="mt-4 text-xs leading-5 text-mist/70">{t("Fjern gjerne telefonnummer og adresse fra CV-en hvis du ikke vil dele dem med alle.")}</p>
       {error && <p className="mt-3 text-sm text-danger">{error}</p>}
     </div>
   );

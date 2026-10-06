@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { Plus, X } from "lucide-react";
+import { useT } from "@/components/LocaleProvider";
 import { MAX_TAGS_PER_PROJECT, normalizeTagNames, tagSlug } from "@/lib/tag-names";
 
 // Teknologier som merker. Enter eller komma legger til, og populære teknologier foreslås
@@ -17,6 +18,7 @@ export default function TagInput({
   suggestions?: string[];
   id?: string;
 }) {
+  const t = useT();
   const [tags, setTags] = useState<string[]>(defaultValue);
   const [draft, setDraft] = useState("");
   const [active, setActive] = useState(0);
@@ -32,7 +34,7 @@ export default function TagInput({
   }, [draft, tags, suggestions]);
 
   function add(raw: string) {
-    const next = normalizeTagNames([...tags, ...raw.split(",")]).map((t) => t.name).slice(0, MAX_TAGS_PER_PROJECT);
+    const next = normalizeTagNames([...tags, ...raw.split(",")]).map((tag) => tag.name).slice(0, MAX_TAGS_PER_PROJECT);
     setTags(next);
     setDraft("");
     setActive(0);
@@ -47,16 +49,16 @@ export default function TagInput({
         onClick={() => inputRef.current?.focus()}
         className="flex min-h-12 cursor-text flex-wrap items-center gap-1.5 rounded-xl bg-fill px-2 py-1.5 inset-ring inset-ring-line inset-shadow-[0_1px_2px_rgb(0_0_0/0.1)] transition focus-within:bg-fill-2 focus-within:ring-2 focus-within:ring-sea/50"
       >
-        {tags.map((t) => (
-          <span key={t} className="inline-flex items-center gap-1 rounded-full bg-surface py-1 pl-3 pr-1 text-[13px] font-medium shadow-[0_1px_2px_rgb(0_0_0/0.08)]">
-            {t}
+        {tags.map((tag) => (
+          <span key={tag} className="inline-flex items-center gap-1 rounded-full bg-surface py-1 pl-3 pr-1 text-[13px] font-medium shadow-[0_1px_2px_rgb(0_0_0/0.08)]">
+            {tag}
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                setTags(tags.filter((x) => x !== t));
+                setTags(tags.filter((x) => x !== tag));
               }}
-              aria-label={`Fjern ${t}`}
+              aria-label={t("Fjern {name}", { name: tag })}
               className="rounded-full p-0.5 text-mist hover:text-danger"
             >
               <X className="size-3" />
@@ -96,7 +98,7 @@ export default function TagInput({
             }
           }}
           placeholder={tags.length ? "" : "Figma, React, Blender …"}
-          aria-label="Legg til teknologi"
+          aria-label={t("Legg til teknologi")}
           aria-autocomplete="list"
           className="min-w-32 flex-1 bg-transparent px-1.5 py-1 text-[15px] text-fg outline-none placeholder:text-mist/60"
         />

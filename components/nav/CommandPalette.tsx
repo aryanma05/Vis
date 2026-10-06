@@ -2,19 +2,23 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { ArrowRight, Compass, FileText, Flame, Hash, Plus, Search, UserPen, Users } from "lucide-react";
+import { ArrowRight, Compass, FileText, Flame, Handshake, Hash, Plus, Search, Settings, UserPen, Users } from "lucide-react";
 import { quickSearchAction, type QuickResult } from "@/app/actions/search";
 import Avatar from "@/components/Avatar";
 import { OPEN_SEARCH_EVENT } from "@/components/nav/search-events";
+import { useT } from "@/components/LocaleProvider";
+import { openSettings } from "@/components/settings/settings-events";
 import { Kbd } from "@/components/ui/misc";
 
-type Item = { key: string; href: string; label: string; hint?: string; icon: React.ReactNode; group: string };
+// Et valg i paletten: en lenke (href) eller en handling (run).
+type Item = { key: string; href?: string; run?: () => void; label: string; hint?: string; icon: React.ReactNode; group: string };
 
 const EMPTY: QuickResult = { people: [], projects: [], tags: [] };
 
 // Søkepaletten (⌘K): hopp rett til en person, et prosjekt eller en teknologi.
 export default function CommandPalette({ loggedIn, username }: { loggedIn: boolean; username?: string | null }) {
   const router = useRouter();
+  const t = useT();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -81,19 +85,28 @@ export default function CommandPalette({ loggedIn, username }: { loggedIn: boole
     const q = query.trim();
     if (!q) {
       const base: Item[] = [
-        { key: "utforsk", href: "/sok", label: "Utforsk prosjekter", icon: <Compass className="size-4" />, group: "Snarveier" },
-        { key: "trender", href: "/sok?sort=trending", label: "Trender nå", icon: <Flame className="size-4" />, group: "Snarveier" },
-        { key: "folk", href: "/sok?type=personer", label: "Finn folk", icon: <Users className="size-4" />, group: "Snarveier" },
+        { key: "utforsk", href: "/sok", label: t("Utforsk prosjekter"), icon: <Compass className="size-4" />, group: t("Snarveier") },
+        { key: "trender", href: "/sok?sort=trending", label: t("Trender nå"), icon: <Flame className="size-4" />, group: t("Snarveier") },
+        { key: "folk", href: "/sok?type=personer", label: t("Finn folk"), icon: <Users className="size-4" />, group: t("Snarveier") },
+        { key: "partnere", href: "/partnere", label: t("Finn prosjektpartnere"), icon: <Handshake className="size-4" />, group: t("Snarveier") },
       ];
       if (loggedIn) {
         base.push(
-          { key: "ny", href: "/ny", label: "Del et prosjekt", icon: <Plus className="size-4" />, group: "Handlinger" },
-          { key: "rediger", href: "/profil/rediger", label: "Rediger profilen", icon: <UserPen className="size-4" />, group: "Handlinger" },
-          { key: "cv", href: username ? `/@${username}/cv` : "/profil/rediger/cv", label: "Se CV-en din", icon: <FileText className="size-4" />, group: "Handlinger" },
+          { key: "ny", href: "/ny", label: t("Del et prosjekt"), icon: <Plus className="size-4" />, group: t("Handlinger") },
+          { key: "rediger", href: "/profil/rediger", label: t("Rediger profilen"), icon: <UserPen className="size-4" />, group: t("Handlinger") },
+          { key: "cv", href: username ? `/@${username}/cv` : "/profil/rediger/cv", label: t("Se CV-en din"), icon: <FileText className="size-4" />, group: t("Handlinger") },
         );
       } else {
-        base.push({ key: "register", href: "/register", label: "Lag en profil", icon: <Plus className="size-4" />, group: "Handlinger" });
+        base.push({ key: "register", href: "/register", label: t("Lag en profil"), icon: <Plus className="size-4" />, group: t("Handlinger") });
       }
+      base.push({
+        key: "innstillinger",
+        run: openSettings,
+        label: t("Innstillinger"),
+        hint: t("Språk, tema og tilgjengelighet"),
+        icon: <Settings className="size-4" />,
+        group: t("Handlinger"),
+      });
       return base;
     }
     return [
@@ -103,7 +116,7 @@ export default function CommandPalette({ loggedIn, username }: { loggedIn: boole
         label: p.name,
         hint: p.headline ?? `@${p.username}`,
         icon: <Avatar name={p.name} image={p.image} size={22} />,
-        group: "Personer",
+        group: t("Personer"),
       })),
       ...results.projects.map((p) => ({
         key: `pr-${p.id}`,
@@ -116,29 +129,30 @@ export default function CommandPalette({ loggedIn, username }: { loggedIn: boole
         ) : (
           <span className="flex size-[22px] items-center justify-center rounded-md bg-fill text-[10px] font-semibold text-mist">{p.title[0]}</span>
         ),
-        group: "Prosjekter",
+        group: t("Prosjekter"),
       })),
-      ...results.tags.map((t) => ({
-        key: `t-${t.slug}`,
-        href: `/tag/${t.slug}`,
-        label: t.name,
+      ...results.tags.map((tag) => ({
+        key: `t-${tag.slug}`,
+        href: `/tag/${tag.slug}`,
+        label: tag.name,
         icon: <Hash className="size-4" />,
-        group: "Teknologier",
+        group: t("Teknologier"),
       })),
       {
         key: "alle",
         href: `/sok?q=${encodeURIComponent(q)}`,
-        label: `Søk etter «${q}» i alt`,
+        label: t("Søk etter «{q}» i alt", { q }),
         icon: <Search className="size-4" />,
-        group: "Mer",
+        group: t("Mer"),
       },
     ];
-  }, [query, results, loggedIn, username]);
+  }, [query, results, loggedIn, username, t]);
 
   const go = (item: Item | undefined) => {
     if (!item) return;
     setOpen(false);
-    router.push(item.href);
+    if (item.run) item.run();
+    else if (item.href) router.push(item.href);
   };
 
   useEffect(() => {
@@ -151,7 +165,7 @@ export default function CommandPalette({ loggedIn, username }: { loggedIn: boole
     <dialog
       ref={dialogRef}
       className="modal"
-      aria-label="Søk"
+      aria-label={t("Søk")}
       onClose={() => setOpen(false)}
       onCancel={(e) => {
         e.preventDefault();
@@ -178,8 +192,8 @@ export default function CommandPalette({ loggedIn, username }: { loggedIn: boole
                   go(items[active]);
                 }
               }}
-              placeholder="Søk etter folk, prosjekter eller teknologi…"
-              aria-label="Søk"
+              placeholder={t("Søk etter folk, prosjekter eller teknologi…")}
+              aria-label={t("Søk")}
               aria-activedescendant={items[active] ? `cmd-${items[active].key}` : undefined}
               aria-controls="cmd-list"
               role="combobox"
@@ -193,7 +207,7 @@ export default function CommandPalette({ loggedIn, username }: { loggedIn: boole
 
           <div ref={listRef} id="cmd-list" role="listbox" className="max-h-[52vh] overflow-y-auto px-2 pb-2">
             {items.length === 1 && query.trim() && !pending && (
-              <p className="px-3 pb-1 pt-3 text-sm text-mist">Ingen raske treff.</p>
+              <p className="px-3 pb-1 pt-3 text-sm text-mist">{t("Ingen raske treff.")}</p>
             )}
             {items.map((item, i) => {
               const header = item.group !== lastGroup ? item.group : null;
@@ -227,13 +241,13 @@ export default function CommandPalette({ loggedIn, username }: { loggedIn: boole
           <div className="hidden items-center gap-4 border-t border-line px-5 py-2.5 text-xs text-mist sm:flex">
             <span className="flex items-center gap-1.5">
               <Kbd>↑</Kbd>
-              <Kbd>↓</Kbd> naviger
+              <Kbd>↓</Kbd> {t("naviger")}
             </span>
             <span className="flex items-center gap-1.5">
-              <Kbd>↵</Kbd> åpne
+              <Kbd>↵</Kbd> {t("åpne")}
             </span>
             <span className="ml-auto">
-              Tips: trykk <Kbd>/</Kbd> hvor som helst
+              {t("Tips: trykk")} <Kbd>/</Kbd> {t("hvor som helst")}
             </span>
           </div>
         </div>

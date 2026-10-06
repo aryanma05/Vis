@@ -7,24 +7,27 @@ import { ButtonLink } from "@/components/ui/button";
 import { CONTACT_REASON_LABELS } from "@/lib/constants";
 import { getContactRequest } from "@/lib/contact";
 import { timeAgo } from "@/lib/format";
+import { getLocale, getT } from "@/lib/i18n/server";
 import { requireUser } from "@/lib/session";
 
-export const metadata: Metadata = { title: "Melding", robots: { index: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getT())("Melding"), robots: { index: false } };
+}
 
 export default async function ContactRequestPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
-  const { id } = await params;
+  const [{ id }, t, locale] = await Promise.all([params, getT(), getLocale()]);
   const request = await getContactRequest(user.id, id);
   if (!request) notFound();
 
-  const reason = CONTACT_REASON_LABELS[request.reason];
-  const subject = encodeURIComponent(`Svar fra Vis: ${reason}`);
+  const reason = t(CONTACT_REASON_LABELS[request.reason]);
+  const subject = encodeURIComponent(t("Svar fra Vis: {reason}", { reason }));
 
   return (
     <main className="px-5 pb-28 pt-10 md:pb-20 md:pl-28 md:pr-10 md:pt-14">
       <div className="mx-auto max-w-2xl">
         <Link href="/varsler" className="inline-flex items-center gap-2 text-sm text-mist hover:text-fg">
-          <ArrowLeft className="size-4" /> Varsler
+          <ArrowLeft className="size-4" /> {t("Varsler")}
         </Link>
         <article className="mt-6 rounded-[26px] glass-card p-6 md:p-8">
           <div className="flex items-center gap-4">
@@ -36,11 +39,11 @@ export default async function ContactRequestPage({ params }: { params: Promise<{
                     {request.sender.name}
                   </Link>
                 ) : (
-                  <>Til {request.recipient.name}</>
+                  <>{t("Til {name}", { name: request.recipient.name })}</>
                 )}
               </p>
               <p className="text-sm text-mist">
-                {reason} · <span suppressHydrationWarning>{timeAgo(request.createdAt)}</span>
+                {reason} · <span suppressHydrationWarning>{timeAgo(request.createdAt, locale)}</span>
               </p>
             </div>
           </div>
@@ -48,12 +51,12 @@ export default async function ContactRequestPage({ params }: { params: Promise<{
           {request.isRecipient && (
             <div className="mt-8 flex flex-wrap items-center gap-3 border-t border-line pt-6">
               <ButtonLink href={`mailto:${request.sender.email}?subject=${subject}`} size="sm">
-                <Mail className="size-4" /> Svar på e-post
+                <Mail className="size-4" /> {t("Svar på e-post")}
               </ButtonLink>
               <ButtonLink href={`/@${request.sender.username}`} size="sm" variant="secondary">
-                Se profilen
+                {t("Se profilen")}
               </ButtonLink>
-              <p className="w-full text-xs text-mist">E-postadressen din deles først når du svarer.</p>
+              <p className="w-full text-xs text-mist">{t("E-postadressen din deles først når du svarer.")}</p>
             </div>
           )}
         </article>

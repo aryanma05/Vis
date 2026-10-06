@@ -388,7 +388,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
 
             {tab === "prosjekter" &&
               (visibleProjects.length > 0 ? (
-                <ProjectGrid projects={visibleProjects} showOwner={false} columns={2} />
+                <ProjectGrid projects={visibleProjects} showOwner={false} columns={2} profileId={profile.id} />
               ) : (
                 <EmptyState
                   icon={<FolderPlus className="size-5" />}

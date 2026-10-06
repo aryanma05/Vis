@@ -3,14 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import { Bell, Compass, Home, LogIn, Palette, Plus, Search, UserPlus } from "lucide-react";
+import { Bell, Compass, Home, LogIn, Plus, Search, Settings, UserPlus } from "lucide-react";
 import Avatar from "@/components/Avatar";
 import { LogoBadge } from "@/components/Logo";
 import NavUserMenu, { type NavUser } from "@/components/nav/NavUserMenu";
-import ThemeSwitch from "@/components/nav/ThemeSwitch";
 import { openSearch } from "@/components/nav/search-events";
 import { useT } from "@/components/LocaleProvider";
-import { Menu } from "@/components/ui/menu";
+import { openSettings } from "@/components/settings/settings-events";
 
 const tabClass = "relative flex flex-1 flex-col items-center justify-center gap-0.5 rounded-full py-1.5 text-[10.5px] font-medium transition-colors";
 
@@ -26,7 +25,7 @@ function Bubble() {
   );
 }
 
-// Mobil: en tynn topplinje med logo og søk, og en flytende fanelinje i glass nederst.
+// Mobil: en tynn topplinje med logo, innstillinger og søk, og en flytende fanelinje i glass nederst.
 export default function MobileNav({ user = null }: { user?: NavUser }) {
   const pathname = usePathname();
   const t = useT();
@@ -69,28 +68,15 @@ export default function MobileNav({ user = null }: { user?: NavUser }) {
           <LogoBadge className="size-11 rounded-full shadow-[0_8px_20px_-8px_rgb(0_0_0/0.45)]" />
         </Link>
         <div className="flex items-center gap-2">
-          {!user && (
-            <Menu
-              label={t("Utseende")}
-              side="bottom"
-              align="end"
-              className="w-56 p-2"
-              trigger={({ open, toggle }) => (
-                <button
-                  type="button"
-                  onClick={toggle}
-                  aria-haspopup="menu"
-                  aria-expanded={open}
-                  aria-label={t("Utseende")}
-                  className="flex size-9 items-center justify-center rounded-full glass-chip text-fg transition active:scale-90"
-                >
-                  <Palette className="size-[18px]" />
-                </button>
-              )}
-            >
-              <ThemeSwitch />
-            </Menu>
-          )}
+          <button
+            type="button"
+            onClick={() => openSettings()}
+            aria-haspopup="dialog"
+            aria-label={t("Innstillinger")}
+            className="flex size-9 items-center justify-center rounded-full glass-chip text-fg transition active:scale-90"
+          >
+            <Settings className="size-[18px]" />
+          </button>
           <button
             type="button"
             onClick={() => openSearch()}

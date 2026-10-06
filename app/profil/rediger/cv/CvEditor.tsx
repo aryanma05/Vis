@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ArrowDown, ArrowUp, Briefcase, ChevronDown, GraduationCap, GripVertical, Plus, Trash2, Wrench, X } from "lucide-react";
+import { useLocale, useT } from "@/components/LocaleProvider";
 import { Button } from "@/components/ui/button";
 import { Field, inputClass, textareaClass } from "@/components/ui/field";
 import { formatPeriod } from "@/lib/format";
@@ -95,6 +96,7 @@ function EntryShell({
   faded: boolean;
   children: React.ReactNode;
 }) {
+  const t = useT();
   // Bare håndtaket starter dra-og-slipp, så man fortsatt kan markere tekst i feltene.
   const [armed, setArmed] = useState(false);
   return (
@@ -109,24 +111,24 @@ function EntryShell({
       className={`rounded-[20px] bg-surface ring-1 ring-inset transition ${highlight ? "ring-sea/70" : "ring-line"} ${faded ? "opacity-40" : ""}`}
     >
       <div className="flex items-center gap-2 px-3 py-3">
-        <span onPointerDown={() => setArmed(true)} className="cursor-grab touch-none p-1 text-mist/60 hover:text-fg active:cursor-grabbing" title="Dra for å flytte" aria-hidden="true">
+        <span onPointerDown={() => setArmed(true)} className="cursor-grab touch-none p-1 text-mist/60 hover:text-fg active:cursor-grabbing" title={t("Dra for å flytte")} aria-hidden="true">
           <GripVertical className="size-4" />
         </span>
         <button type="button" onClick={onToggle} className="min-w-0 flex-1 text-left" aria-expanded={open}>
-          <span className="block truncate font-medium">{summary || "Ny oppføring"}</span>
+          <span className="block truncate font-medium">{summary || t("Ny oppføring")}</span>
           {period && <span className="block text-xs text-mist">{period}</span>}
         </button>
         <div className="flex shrink-0 items-center text-mist">
-          <button type="button" onClick={onUp} aria-label="Flytt opp" className="rounded-lg p-1.5 hover:bg-surface-2 hover:text-fg">
+          <button type="button" onClick={onUp} aria-label={t("Flytt opp")} className="rounded-lg p-1.5 hover:bg-surface-2 hover:text-fg">
             <ArrowUp className="size-4" />
           </button>
-          <button type="button" onClick={onDown} aria-label="Flytt ned" className="rounded-lg p-1.5 hover:bg-surface-2 hover:text-fg">
+          <button type="button" onClick={onDown} aria-label={t("Flytt ned")} className="rounded-lg p-1.5 hover:bg-surface-2 hover:text-fg">
             <ArrowDown className="size-4" />
           </button>
-          <button type="button" onClick={onToggle} aria-label={open ? "Lukk" : "Rediger"} className="rounded-lg p-1.5 hover:bg-surface-2 hover:text-fg">
+          <button type="button" onClick={onToggle} aria-label={open ? t("Lukk") : t("Rediger")} className="rounded-lg p-1.5 hover:bg-surface-2 hover:text-fg">
             <ChevronDown className={`size-4 transition ${open ? "rotate-180" : ""}`} />
           </button>
-          <button type="button" onClick={onRemove} aria-label="Fjern" className="rounded-lg p-1.5 hover:bg-danger/10 hover:text-danger">
+          <button type="button" onClick={onRemove} aria-label={t("Fjern")} className="rounded-lg p-1.5 hover:bg-danger/10 hover:text-danger">
             <Trash2 className="size-4" />
           </button>
         </div>
@@ -149,15 +151,16 @@ function PeriodFields({
   onChange: (patch: { startDate?: string; endDate?: string; current?: boolean }) => void;
   currentLabel: string;
 }) {
+  const t = useT();
   return (
     <div className="flex flex-wrap items-end gap-x-6 gap-y-3 md:col-span-2">
       <div>
-        <span className="mb-2 block text-sm font-medium">Fra</span>
-        <MonthYear label="Fra" value={start} onChange={(v) => onChange({ startDate: v })} />
+        <span className="mb-2 block text-sm font-medium">{t("Fra")}</span>
+        <MonthYear label={t("Fra")} value={start} onChange={(v) => onChange({ startDate: v })} />
       </div>
       <div>
-        <span className="mb-2 block text-sm font-medium">Til</span>
-        <MonthYear label="Til" value={current ? "" : end} disabled={current} onChange={(v) => onChange({ endDate: v })} />
+        <span className="mb-2 block text-sm font-medium">{t("Til")}</span>
+        <MonthYear label={t("Til")} value={current ? "" : end} disabled={current} onChange={(v) => onChange({ endDate: v })} />
       </div>
       <label className="mb-3 inline-flex items-center gap-2 text-sm text-mist">
         <input
@@ -173,6 +176,7 @@ function PeriodFields({
 }
 
 function SkillsInput({ skills, onChange }: { skills: string[]; onChange: (skills: string[]) => void }) {
+  const t = useT();
   const [draft, setDraft] = useState("");
   const add = (raw: string) => {
     const names = raw.split(",").map((s) => s.trim()).filter(Boolean);
@@ -188,7 +192,7 @@ function SkillsInput({ skills, onChange }: { skills: string[]; onChange: (skills
         {skills.map((s) => (
           <li key={s} className="inline-flex items-center gap-1 rounded-lg border border-line bg-surface py-1 pl-2.5 pr-1 text-sm">
             {s}
-            <button type="button" onClick={() => onChange(skills.filter((x) => x !== s))} aria-label={`Fjern ${s}`} className="rounded-md p-0.5 text-mist hover:text-danger">
+            <button type="button" onClick={() => onChange(skills.filter((x) => x !== s))} aria-label={t("Fjern {name}", { name: s })} className="rounded-md p-0.5 text-mist hover:text-danger">
               <X className="size-3.5" />
             </button>
           </li>
@@ -205,8 +209,8 @@ function SkillsInput({ skills, onChange }: { skills: string[]; onChange: (skills
               if (e.key === "Backspace" && !draft && skills.length) onChange(skills.slice(0, -1));
             }}
             onBlur={() => draft.trim() && add(draft)}
-            placeholder={skills.length ? "Legg til …" : "F.eks. React, Figma, SQL – trykk Enter"}
-            aria-label="Legg til ferdighet"
+            placeholder={skills.length ? t("Legg til …") : t("F.eks. React, Figma, SQL – trykk Enter")}
+            aria-label={t("Legg til ferdighet")}
             className="w-full bg-transparent px-2 py-1 text-sm text-fg outline-none placeholder:text-mist/45"
           />
         </li>
@@ -216,6 +220,8 @@ function SkillsInput({ skills, onChange }: { skills: string[]; onChange: (skills
 }
 
 export default function CvEditor({ value, onChange }: { value: CvState; onChange: (next: CvState) => void }) {
+  const t = useT();
+  const locale = useLocale();
   const [open, setOpen] = useState<Set<string>>(new Set());
   const toggle = (key: string) =>
     setOpen((prev) => {
@@ -266,14 +272,14 @@ export default function CvEditor({ value, onChange }: { value: CvState; onChange
   return (
     <div className="space-y-12">
       <div>
-        {heading(Briefcase, "Erfaring", addExperience, "Legg til")}
-        {value.experience.length === 0 && <p className="rounded-2xl bg-fill px-4 py-6 text-center text-sm text-mist">Ingen erfaring lagt til ennå.</p>}
+        {heading(Briefcase, t("Erfaring"), addExperience, t("Legg til"))}
+        {value.experience.length === 0 && <p className="rounded-2xl bg-fill px-4 py-6 text-center text-sm text-mist">{t("Ingen erfaring lagt til ennå.")}</p>}
         <ul className="space-y-2.5">
           {value.experience.map((e, i) => (
             <EntryShell
               key={e.key}
               summary={[e.title, e.organization].filter(Boolean).join(" · ")}
-              period={formatPeriod(e.startDate || null, e.current ? null : e.endDate || null)}
+              period={formatPeriod(e.startDate || null, e.current ? null : e.endDate || null, locale)}
               open={open.has(e.key)}
               onToggle={() => toggle(e.key)}
               onUp={() => onChange({ ...value, experience: move(value.experience, i, i - 1) })}
@@ -284,18 +290,18 @@ export default function CvEditor({ value, onChange }: { value: CvState; onChange
               faded={expDrag.dragging === i}
             >
               <div className="grid gap-4 md:grid-cols-2">
-                <Field label="Rolle">
-                  <input className={inputClass} value={e.title} onChange={(ev) => setExp(i, { title: ev.target.value })} placeholder="Frontend-utvikler" />
+                <Field label={t("Rolle")}>
+                  <input className={inputClass} value={e.title} onChange={(ev) => setExp(i, { title: ev.target.value })} placeholder={t("Frontend-utvikler")} />
                 </Field>
-                <Field label="Arbeidsgiver">
+                <Field label={t("Arbeidsgiver")}>
                   <input className={inputClass} value={e.organization} onChange={(ev) => setExp(i, { organization: ev.target.value })} placeholder="Finn.no" />
                 </Field>
-                <Field label="Sted" optional>
+                <Field label={t("Sted")} optional>
                   <input className={inputClass} value={e.location} onChange={(ev) => setExp(i, { location: ev.target.value })} placeholder="Oslo" />
                 </Field>
                 <div className="hidden md:block" />
-                <PeriodFields start={e.startDate} end={e.endDate} current={e.current} currentLabel="Jobber her nå" onChange={(patch) => setExp(i, patch)} />
-                <Field label="Hva gjorde du?" optional hint="Én linje per punkt: ansvar, resultater, teknologier." className="md:col-span-2">
+                <PeriodFields start={e.startDate} end={e.endDate} current={e.current} currentLabel={t("Jobber her nå")} onChange={(patch) => setExp(i, patch)} />
+                <Field label={t("Hva gjorde du?")} optional hint={t("Én linje per punkt: ansvar, resultater, teknologier.")} className="md:col-span-2">
                   <textarea className={textareaClass} value={e.description} onChange={(ev) => setExp(i, { description: ev.target.value })} />
                 </Field>
               </div>
@@ -305,14 +311,14 @@ export default function CvEditor({ value, onChange }: { value: CvState; onChange
       </div>
 
       <div>
-        {heading(GraduationCap, "Utdanning", addEducation, "Legg til")}
-        {value.education.length === 0 && <p className="rounded-2xl bg-fill px-4 py-6 text-center text-sm text-mist">Ingen utdanning lagt til ennå.</p>}
+        {heading(GraduationCap, t("Utdanning"), addEducation, t("Legg til"))}
+        {value.education.length === 0 && <p className="rounded-2xl bg-fill px-4 py-6 text-center text-sm text-mist">{t("Ingen utdanning lagt til ennå.")}</p>}
         <ul className="space-y-2.5">
           {value.education.map((e, i) => (
             <EntryShell
               key={e.key}
               summary={[e.institution, e.degree].filter(Boolean).join(" · ")}
-              period={formatPeriod(e.startDate || null, e.current ? null : e.endDate || null)}
+              period={formatPeriod(e.startDate || null, e.current ? null : e.endDate || null, locale)}
               open={open.has(e.key)}
               onToggle={() => toggle(e.key)}
               onUp={() => onChange({ ...value, education: move(value.education, i, i - 1) })}
@@ -323,18 +329,28 @@ export default function CvEditor({ value, onChange }: { value: CvState; onChange
               faded={eduDrag.dragging === i}
             >
               <div className="grid gap-4 md:grid-cols-2">
-                <Field label="Skole" className="md:col-span-2">
-                  <input className={inputClass} value={e.institution} onChange={(ev) => setEdu(i, { institution: ev.target.value })} placeholder="Universitetet i Oslo" />
+                <Field label={t("Skole")} className="md:col-span-2">
+                  <input
+                    className={inputClass}
+                    value={e.institution}
+                    onChange={(ev) => setEdu(i, { institution: ev.target.value })}
+                    placeholder={t("Universitetet i Oslo")}
+                  />
                 </Field>
-                <Field label="Grad" optional>
+                <Field label={t("Grad")} optional>
                   <input className={inputClass} value={e.degree} onChange={(ev) => setEdu(i, { degree: ev.target.value })} placeholder="Bachelor" />
                 </Field>
-                <Field label="Fag" optional>
-                  <input className={inputClass} value={e.fieldOfStudy} onChange={(ev) => setEdu(i, { fieldOfStudy: ev.target.value })} placeholder="Informatikk" />
+                <Field label={t("Fag")} optional>
+                  <input className={inputClass} value={e.fieldOfStudy} onChange={(ev) => setEdu(i, { fieldOfStudy: ev.target.value })} placeholder={t("Informatikk")} />
                 </Field>
-                <PeriodFields start={e.startDate} end={e.endDate} current={e.current} currentLabel="Studerer her nå" onChange={(patch) => setEdu(i, patch)} />
-                <Field label="Beskrivelse" optional className="md:col-span-2">
-                  <textarea className={`${textareaClass} min-h-24`} value={e.description} onChange={(ev) => setEdu(i, { description: ev.target.value })} placeholder="Fordypning, oppgaver, verv." />
+                <PeriodFields start={e.startDate} end={e.endDate} current={e.current} currentLabel={t("Studerer her nå")} onChange={(patch) => setEdu(i, patch)} />
+                <Field label={t("Beskrivelse")} optional className="md:col-span-2">
+                  <textarea
+                    className={`${textareaClass} min-h-24`}
+                    value={e.description}
+                    onChange={(ev) => setEdu(i, { description: ev.target.value })}
+                    placeholder={t("Fordypning, oppgaver, verv.")}
+                  />
                 </Field>
               </div>
             </EntryShell>
@@ -343,7 +359,7 @@ export default function CvEditor({ value, onChange }: { value: CvState; onChange
       </div>
 
       <div>
-        {heading(Wrench, "Ferdigheter")}
+        {heading(Wrench, t("Ferdigheter"))}
         <SkillsInput skills={value.skills} onChange={(skills) => onChange({ ...value, skills })} />
       </div>
     </div>

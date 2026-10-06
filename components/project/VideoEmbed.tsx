@@ -1,4 +1,5 @@
 import { ArrowUpRight, PlayCircle } from "lucide-react";
+import { getT } from "@/lib/i18n/server";
 
 // Gjør en video- eller prototypelenke om til en innebygd spiller. Ukjente lenker
 // vises som et vanlig lenkekort.
@@ -32,7 +33,8 @@ export function embedUrl(url: string): { src: string; kind: "video" | "prototype
   return null;
 }
 
-export default function VideoEmbed({ url, title }: { url: string; title: string }) {
+export default async function VideoEmbed({ url, title }: { url: string; title: string }) {
+  const t = await getT();
   const embed = embedUrl(url);
   if (!embed) {
     return (
@@ -46,7 +48,7 @@ export default function VideoEmbed({ url, title }: { url: string; title: string 
           <PlayCircle className="size-5" />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block font-medium">Se video eller prototype</span>
+          <span className="block font-medium">{t("Se video eller prototype")}</span>
           <span className="block truncate text-sm text-mist">{url.replace(/^https?:\/\//, "")}</span>
         </span>
         <ArrowUpRight className="size-4 text-mist transition group-hover:text-ice" />
@@ -57,7 +59,7 @@ export default function VideoEmbed({ url, title }: { url: string; title: string 
     <div className="overflow-hidden rounded-2xl bg-black ring-1 ring-line md:rounded-3xl" style={{ aspectRatio: embed.ratio }}>
       <iframe
         src={embed.src}
-        title={`${embed.kind === "video" ? "Video" : "Prototype"}: ${title}`}
+        title={`${embed.kind === "video" ? t("Video") : t("Prototype")}: ${title}`}
         loading="lazy"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
         allowFullScreen

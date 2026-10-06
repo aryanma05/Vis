@@ -95,7 +95,7 @@ async function processImage(bytes: Uint8Array, type: ImageType): Promise<{ bytes
 export async function storeImage(file: File, folder: string, options: StoreOptions): Promise<StoredFile> {
   if (file.size === 0) throw new UserFacingError("Bildet er tomt.");
   if (file.size > MAX_IMAGE_BYTES) {
-    throw new UserFacingError(`Bildet er for stort (maks ${MAX_IMAGE_BYTES / 1024 / 1024} MB).`);
+    throw new UserFacingError("Bildet er for stort (maks {n} MB).", { n: MAX_IMAGE_BYTES / 1024 / 1024 });
   }
 
   const bytes = new Uint8Array(await file.arrayBuffer());

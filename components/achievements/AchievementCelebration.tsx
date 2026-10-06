@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { motion, useReducedMotion } from "framer-motion";
+import { motion } from "framer-motion";
+import { useReduceMotion } from "@/components/settings/display-prefs";
 import { markAchievementsSeenAction } from "@/app/actions/profile";
 import AchievementBadge from "@/components/achievements/AchievementBadge";
 import { useT } from "@/components/LocaleProvider";
@@ -22,7 +23,7 @@ const PIECES = Array.from({ length: 34 }, (_, i) => {
   const angle = (i / 34) * Math.PI * 2 + noise(i) * 0.4;
   const force = 120 + noise(i + 50) * 140;
   return {
-    x: Math.cos(angle) * force,
+    x: Math.cos(angle) * force, 
     y: Math.sin(angle) * force * 0.7 - 60,
     rotate: noise(i + 100) * 720 - 360,
     color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
@@ -53,7 +54,7 @@ function Confetti() {
 // Vises for eieren når profilen har merker som er låst opp siden sist.
 export default function AchievementCelebration({ achievements }: { achievements: AchievementState[] }) {
   const t = useT();
-  const reduce = useReducedMotion();
+  const reduce = useReduceMotion();
   const fresh = achievements.filter((s) => s.tier > 0 && !s.seen);
   const [open, setOpen] = useState(false);
 

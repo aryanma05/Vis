@@ -1,21 +1,33 @@
 "use client";
 
 import { usePathname, useSearchParams } from "next/navigation";
-import { useLocale } from "@/components/LocaleProvider";
+import { useChangeLocale } from "@/components/LocaleProvider";
+import type { Locale } from "@/lib/i18n";
 
-// «Norsk · English» i bunnteksten. Lenkene virker uten JavaScript.
+// «Norsk · English» i bunnteksten. Bytter mykt som i innstillingene, og lenkene virker
+// også før JavaScript er lastet (via /sprak).
 export default function LanguageSwitch() {
-  const locale = useLocale();
+  const { chosen, setLocale } = useChangeLocale();
   const path = usePathname();
   const query = useSearchParams().toString();
   const back = encodeURIComponent(`${path}${query ? `?${query}` : ""}`);
-  const link = (to: "nb" | "en", label: string) =>
-    locale === to ? (
-      <span aria-current="true" className="font-medium text-fg">
+  const link = (to: Locale, label: string) =>
+    chosen === to ? (
+      <span aria-current="true" lang={to} className="font-medium text-fg">
         {label}
       </span>
     ) : (
-      <a href={`/sprak?til=${to}&tilbake=${back}`} hrefLang={to} className="transition hover:text-fg">
+      <a
+        href={`/sprak?til=${to}&tilbake=${back}`}
+        hrefLang={to}
+        lang={to}
+        onClick={(event) => {
+          if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+          event.preventDefault();
+          setLocale(to);
+        }}
+        className="transition hover:text-fg"
+      >
         {label}
       </a>
     );

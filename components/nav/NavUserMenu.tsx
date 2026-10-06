@@ -1,16 +1,16 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { BarChart3, Bookmark, Building2, FileText, LogOut, Settings, Shield, Sparkles, UserRound, UserPen } from "lucide-react";
+import { BarChart3, Bookmark, Building2, FileText, LogOut, Settings, Shield, Sparkles, UserCog, UserRound, UserPen } from "lucide-react";
 import Avatar from "@/components/Avatar";
-import ThemeSwitch from "@/components/nav/ThemeSwitch";
 import { useT } from "@/components/LocaleProvider";
-import { Menu, MenuItem, MenuLabel, MenuSeparator } from "@/components/ui/menu";
+import { openSettings } from "@/components/settings/settings-events";
+import { Menu, MenuItem, MenuSeparator } from "@/components/ui/menu";
 import { authClient } from "@/lib/auth-client";
 
 export type NavUser = { username: string; name: string; image: string | null; unread?: number; isAdmin?: boolean } | null;
 
-// Profilmenyen: lenker til profil, innsikt og innstillinger, tema og utlogging.
+// Profilmenyen: lenker til profil, innsikt og konto, innstillingene og utlogging.
 export default function NavUserMenu({
   user,
   side = "right",
@@ -49,7 +49,7 @@ export default function NavUserMenu({
       <MenuItem href="/profil/rediger/cv" icon={<FileText className="size-4" />}>
         CV
       </MenuItem>
-      <MenuItem href="/profil/rediger/konto" icon={<Settings className="size-4" />}>
+      <MenuItem href="/profil/rediger/konto" icon={<UserCog className="size-4" />}>
         {t("Konto og varsler")}
       </MenuItem>
       <MenuItem href="/bedrifter" icon={<Building2 className="size-4" />}>
@@ -64,11 +64,9 @@ export default function NavUserMenu({
         </MenuItem>
       )}
       <MenuSeparator />
-      <MenuLabel>{t("Utseende")}</MenuLabel>
-      <div className="px-2 pb-2 pt-1">
-        <ThemeSwitch />
-      </div>
-      <MenuSeparator />
+      <MenuItem icon={<Settings className="size-4" />} onSelect={() => openSettings()}>
+        {t("Innstillinger")}
+      </MenuItem>
       <MenuItem
         icon={<LogOut className="size-4" />}
         onSelect={async () => {

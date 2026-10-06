@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { runAction } from "@/lib/action";
+import { invalidInput, runAction } from "@/lib/action";
 import {
   addProjectImages,
   addProjectScreenshots,
@@ -15,13 +15,13 @@ import {
   updateImageAlt,
   updateProject,
 } from "@/lib/projects";
-import { fail, UserFacingError, type ActionResult } from "@/lib/result";
+import { UserFacingError, type ActionResult } from "@/lib/result";
 import { leaveProject, notifyProjectMembers } from "@/lib/project-members";
 import { addProjectUpdate, deleteProjectUpdate } from "@/lib/project-updates";
 import { enforce } from "@/lib/rate-limit";
 import { capturePage, MAX_SCREENSHOTS } from "@/lib/screenshots";
 import { requireUserForAction } from "@/lib/session";
-import { fieldErrors, projectInput } from "@/lib/validation";
+import { projectInput } from "@/lib/validation";
 
 function readProjectForm(formData: FormData) {
   return projectInput.safeParse({
@@ -51,7 +51,7 @@ function revalidateProject(projectId: string, username: string) {
 // progress ("completed" | "in_progress"), members (kommaseparerte brukernavn), images (filer, valgfritt).
 export async function createProjectAction(formData: FormData): Promise<ActionResult<{ id: string }>> {
   const parsed = readProjectForm(formData);
-  if (!parsed.success) return fail("Sjekk feltene i skjemaet.", fieldErrors(parsed.error));
+  if (!parsed.success) return invalidInput(parsed.error);
 
   return runAction(async () => {
     const user = await requireUserForAction();
@@ -75,7 +75,7 @@ export async function createProjectAction(formData: FormData): Promise<ActionRes
 
 export async function updateProjectAction(projectId: string, formData: FormData): Promise<ActionResult<{ id: string }>> {
   const parsed = readProjectForm(formData);
-  if (!parsed.success) return fail("Sjekk feltene i skjemaet.", fieldErrors(parsed.error));
+  if (!parsed.success) return invalidInput(parsed.error);
 
   return runAction(async () => {
     const user = await requireUserForAction();

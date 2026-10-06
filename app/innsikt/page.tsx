@@ -8,6 +8,8 @@ import { EmptyState } from "@/components/ui/misc";
 import { Tabs } from "@/components/ui/tabs";
 import { isPro } from "@/lib/billing";
 import { timeAgo } from "@/lib/format";
+import { dateLocale, type T } from "@/lib/i18n";
+import { getLocale, getT } from "@/lib/i18n/server";
 import { getInsights } from "@/lib/insights";
 import { getProfileVisitors } from "@/lib/pro";
 import { requireUser } from "@/lib/session";
@@ -15,11 +17,13 @@ import { requireUser } from "@/lib/session";
 const PERIODS = { "30": 30, "90": 90, "365": 365 } as const;
 const PERIOD_LABEL: Record<number, string> = { 30: "30 dager", 90: "90 dager", 365: "12 måneder" };
 
-export const metadata: Metadata = { title: "Innsikt", robots: { index: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getT())("Innsikt"), robots: { index: false } };
+}
 
-function Delta({ current, previous, days }: { current: number; previous: number; days: number }) {
+function Delta({ current, previous, days, t, nf }: { current: number; previous: number; days: number; t: T; nf: string }) {
   const diff = current - previous;
-  if (previous === 0 && current === 0) return <span className="text-xs text-mist">Ingen endring</span>;
+  if (previous === 0 && current === 0) return <span className="text-xs text-mist">{t("Ingen endring")}</span>;
   // Prosent sier lite når forrige periode nesten var tom (+2700 %), da vises antallet.
   const pct = previous < 20 ? null : Math.round((diff / previous) * 100);
   const Icon = diff > 0 ? ArrowUpRight : diff < 0 ? ArrowDownRight : Minus;
@@ -28,19 +32,37 @@ function Delta({ current, previous, days }: { current: number; previous: number;
     <span className={`inline-flex flex-wrap items-center gap-x-1 text-xs font-medium ${tone}`}>
       <Icon className="size-3.5" aria-hidden="true" />
       {diff > 0 ? "+" : ""}
-      {pct === null ? diff.toLocaleString("nb-NO") : `${pct.toLocaleString("nb-NO")} %`}
-      <span className="font-normal text-mist">mot forrige {PERIOD_LABEL[days] ?? `${days} dager`}</span>
+      {pct === null ? diff.toLocaleString(nf) : `${pct.toLocaleString(nf)} %`}
+      <span className="font-normal text-mist">{t("mot forrige {period}", { period: t(PERIOD_LABEL[days] ?? "30 dager") })}</span>
     </span>
   );
 }
 
-function StatTile({ label, value, current, previous, hint, days }: { label: string; value: number; current: number; previous: number; hint?: string; days: number }) {
+function StatTile({
+  label,
+  value,
+  current,
+  previous,
+  hint,
+  days,
+  t,
+  nf,
+}: {
+  label: string;
+  value: number;
+  current: number;
+  previous: number;
+  hint?: string;
+  days: number;
+  t: T;
+  nf: string;
+}) {
   return (
     <div className="rounded-[22px] glass-card p-4 sm:p-5">
       <p className="text-sm text-mist">{label}</p>
-      <p className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">{value.toLocaleString("nb-NO")}</p>
+      <p className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">{value.toLocaleString(nf)}</p>
       <div className="mt-2">
-        <Delta current={current} previous={previous} days={days} />
+        <Delta current={current} previous={previous} days={days} t={t} nf={nf} />
       </div>
       {hint && <p className="mt-2 text-xs text-mist/70">{hint}</p>}
     </div>
@@ -49,7 +71,8 @@ function StatTile({ label, value, current, previous, hint, days }: { label: stri
 
 export default async function InsightsPage({ searchParams }: { searchParams: Promise<{ periode?: string }> }) {
   const user = await requireUser();
-  const { periode } = await searchParams;
+  const [{ periode }, t, locale] = await Promise.all([searchParams, getT(), getLocale()]);
+  const nf = dateLocale(locale);
   const pro = await isPro(user.id);
   const requested = PERIODS[periode as keyof typeof PERIODS] ?? 30;
   const days = pro ? requested : 30;
@@ -61,65 +84,78 @@ export default async function InsightsPage({ searchParams }: { searchParams: Pro
       <div className="mx-auto max-w-6xl">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="caption">Siste {PERIOD_LABEL[days]}</p>
-            <h1 className="mt-3 text-4xl font-bold tracking-tight md:text-5xl">Innsikt</h1>
+            <p className="caption">{t("Siste {period}", { period: t(PERIOD_LABEL[days]) })}</p>
+            <h1 className="mt-3 text-4xl font-bold tracking-tight md:text-5xl">{t("Innsikt")}</h1>
           </div>
           <ButtonLink href={`/@${user.username}`} variant="outline" size="sm">
-            Se profilen
+            {t("Se profilen")}
           </ButtonLink>
         </div>
 
         <div className="mt-8 flex flex-wrap items-center gap-3">
           <Tabs
-            label="Periode"
+            label={t("Periode")}
             active={String(days)}
             items={Object.keys(PERIODS).map((key) => ({
               key,
-              label: PERIOD_LABEL[PERIODS[key as keyof typeof PERIODS]],
+              label: t(PERIOD_LABEL[PERIODS[key as keyof typeof PERIODS]]),
               href: pro || key === "30" ? `/innsikt?periode=${key}` : "/priser",
             }))}
           />
           {!pro && (
             <span className="inline-flex items-center gap-1.5 text-sm text-mist">
-              <Lock className="size-3.5" /> Lengre perioder med <a href="/priser" className="text-ice hover:underline">Pro</a>
+              <Lock className="size-3.5" /> {t("Lengre perioder med")} <a href="/priser" className="text-ice hover:underline">Pro</a>
             </span>
           )}
         </div>
 
-        <section aria-label="Nøkkeltall" className="mt-8 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-          <StatTile days={days} label="Profilvisninger" value={data.profileViews.current} current={data.profileViews.current} previous={data.profileViews.previous} />
+        <section aria-label={t("Nøkkeltall")} className="mt-8 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+          <StatTile t={t} nf={nf} days={days} label={t("Profilvisninger")} value={data.profileViews.current} current={data.profileViews.current} previous={data.profileViews.previous} />
           <StatTile
+            t={t}
+            nf={nf}
             days={days}
-            label="Prosjektvisninger"
+            label={t("Prosjektvisninger")}
             value={data.projectViews.current}
             current={data.projectViews.current}
             previous={data.projectViews.previous}
-            hint={`${data.projectViewsTotal.toLocaleString("nb-NO")} totalt`}
+            hint={t("{n} totalt", { n: data.projectViewsTotal.toLocaleString(nf) })}
           />
-          <StatTile days={days} label="Nye følgere" value={data.followers.current} current={data.followers.current} previous={data.followers.previous} hint={`${data.followers.total} følgere totalt`} />
           <StatTile
+            t={t}
+            nf={nf}
             days={days}
-            label="Reaksjoner"
+            label={t("Nye følgere")}
+            value={data.followers.current}
+            current={data.followers.current}
+            previous={data.followers.previous}
+            hint={t("{n} følgere totalt", { n: data.followers.total })}
+          />
+          <StatTile
+            t={t}
+            nf={nf}
+            days={days}
+            label={t("Reaksjoner")}
             value={data.reactions.current}
             current={data.reactions.current}
             previous={data.reactions.previous}
-            hint={`${data.comments.current} nye kommentarer`}
+            hint={t("{n} nye kommentarer", { n: data.comments.current })}
           />
         </section>
 
         <section className="mt-6 grid gap-4 lg:grid-cols-2">
           <div className="rounded-[22px] glass-card p-6">
-            <h2 className="font-semibold tracking-tight">Profilvisninger per {days > 90 ? "uke" : "dag"}</h2>
-            <p className="mt-1 text-sm text-mist">Hvor mange som har åpnet profilen din.</p>
+            <h2 className="font-semibold tracking-tight">{days > 90 ? t("Profilvisninger per uke") : t("Profilvisninger per dag")}</h2>
+            <p className="mt-1 text-sm text-mist">{t("Hvor mange som har åpnet profilen din.")}</p>
             <div className="mt-8">
-              <DailyBars title={`Profilvisninger per ${days > 90 ? "uke" : "dag"}`} days={data.profileViews.days} />
+              <DailyBars title={days > 90 ? t("Profilvisninger per uke") : t("Profilvisninger per dag")} days={data.profileViews.days} />
             </div>
           </div>
           <div className="rounded-[22px] glass-card p-6">
-            <h2 className="font-semibold tracking-tight">Prosjektvisninger per {days > 90 ? "uke" : "dag"}</h2>
-            <p className="mt-1 text-sm text-mist">Alle prosjektene dine til sammen.</p>
+            <h2 className="font-semibold tracking-tight">{days > 90 ? t("Prosjektvisninger per uke") : t("Prosjektvisninger per dag")}</h2>
+            <p className="mt-1 text-sm text-mist">{t("Alle prosjektene dine til sammen.")}</p>
             <div className="mt-8">
-              <DailyBars title={`Prosjektvisninger per ${days > 90 ? "uke" : "dag"}`} days={data.projectViews.days} />
+              <DailyBars title={days > 90 ? t("Prosjektvisninger per uke") : t("Prosjektvisninger per dag")} days={data.projectViews.days} />
             </div>
           </div>
         </section>
@@ -128,17 +164,19 @@ export default async function InsightsPage({ searchParams }: { searchParams: Pro
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h2 id="besokende" className="flex items-center gap-2 font-semibold tracking-tight">
-                <Eye className="size-4 text-mist" /> Hvem har sett profilen din
+                <Eye className="size-4 text-mist" /> {t("Hvem har sett profilen din")}
               </h2>
               <p className="mt-1 text-sm text-mist">
-                {visitors.count} innloggede {visitors.count === 1 ? "person" : "personer"} de siste {PERIOD_LABEL[days]}.
+                {visitors.count === 1
+                  ? t("1 innlogget person de siste {period}.", { period: t(PERIOD_LABEL[days]) })
+                  : t("{n} innloggede personer de siste {period}.", { n: visitors.count, period: t(PERIOD_LABEL[days]) })}
               </p>
             </div>
             {visitors.pro && <span className="inline-flex items-center gap-1 rounded-full glass-chip px-2.5 py-1 text-xs font-medium"><Sparkles className="size-3.5 text-warn" /> Pro</span>}
           </div>
           {visitors.visitors ? (
             visitors.visitors.length === 0 ? (
-              <p className="mt-5 text-sm text-mist">Ingen ennå. Del profilen din, så kommer de.</p>
+              <p className="mt-5 text-sm text-mist">{t("Ingen ennå. Del profilen din, så kommer de.")}</p>
             ) : (
               <ul className="mt-5 divide-y divide-line">
                 {visitors.visitors.map((v) => (
@@ -151,8 +189,8 @@ export default async function InsightsPage({ searchParams }: { searchParams: Pro
                       {v.headline && <p className="truncate text-sm text-mist">{v.headline}</p>}
                     </div>
                     <p className="shrink-0 text-xs text-mist" suppressHydrationWarning>
-                      {timeAgo(v.lastSeenAt)}
-                      {v.visits > 1 ? ` · ${v.visits} besøk` : ""}
+                      {timeAgo(v.lastSeenAt, locale)}
+                      {v.visits > 1 ? ` · ${t("{n} besøk", { n: v.visits })}` : ""}
                     </p>
                   </li>
                 ))}
@@ -160,36 +198,36 @@ export default async function InsightsPage({ searchParams }: { searchParams: Pro
             )
           ) : visitors.hidden ? (
             <p className="mt-5 text-sm text-mist">
-              Du har skjult deg når du ser på andres profiler, og ser derfor heller ikke hvem som har sett din.{" "}
+              {t("Du har skjult deg når du ser på andres profiler, og ser derfor heller ikke hvem som har sett din.")}{" "}
               <Link href="/profil/rediger/konto#personvern" className="text-ice hover:underline">
-                Endre
+                {t("Endre")}
               </Link>
             </p>
           ) : (
             <div className="mt-5 flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-fill px-4 py-4">
-              <p className="text-sm text-mist">Med Pro ser du hvem de er, hva de jobber med og når de var innom.</p>
+              <p className="text-sm text-mist">{t("Med Pro ser du hvem de er, hva de jobber med og når de var innom.")}</p>
               <ButtonLink href="/priser" size="sm">
-                Se hvem
+                {t("Se hvem")}
               </ButtonLink>
             </div>
           )}
         </section>
 
         <section className="mt-6 rounded-[22px] glass-card p-6">
-          <h2 className="font-semibold tracking-tight">Prosjektene dine</h2>
-          <p className="mt-1 text-sm text-mist">Sortert etter visninger de siste {PERIOD_LABEL[days]}.</p>
+          <h2 className="font-semibold tracking-tight">{t("Prosjektene dine")}</h2>
+          <p className="mt-1 text-sm text-mist">{t("Sortert etter visninger de siste {period}.", { period: t(PERIOD_LABEL[days]) })}</p>
           {data.topProjects.length === 0 ? (
-            <EmptyState className="mt-6" title="Ingen prosjekter ennå" action={<ButtonLink href="/ny">Del et prosjekt</ButtonLink>} />
+            <EmptyState className="mt-6" title={t("Ingen prosjekter ennå")} action={<ButtonLink href="/ny">{t("Del et prosjekt")}</ButtonLink>} />
           ) : (
             <div className="mt-6 overflow-x-auto">
               <table className="w-full min-w-[560px] text-left text-sm">
                 <thead className="text-mist">
                   <tr>
-                    <th className="pb-3 font-medium">Prosjekt</th>
-                    <th className="w-[38%] pb-3 font-medium">Visninger ({days} d)</th>
-                    <th className="pb-3 text-right font-medium">Totalt</th>
-                    <th className="pb-3 text-right font-medium">Reaksjoner</th>
-                    <th className="pb-3 text-right font-medium">Kommentarer</th>
+                    <th className="pb-3 font-medium">{t("Prosjekt")}</th>
+                    <th className="w-[38%] pb-3 font-medium">{t("Visninger ({n} d)", { n: days })}</th>
+                    <th className="pb-3 text-right font-medium">{t("Totalt")}</th>
+                    <th className="pb-3 text-right font-medium">{t("Reaksjoner")}</th>
+                    <th className="pb-3 text-right font-medium">{t("Kommentarer")}</th>
                   </tr>
                 </thead>
                 <tbody className="tabular-nums">
@@ -199,7 +237,7 @@ export default async function InsightsPage({ searchParams }: { searchParams: Pro
                         <Link href={`/prosjekt/${p.id}`} className="font-medium text-fg hover:text-ice">
                           {p.title}
                         </Link>
-                        {p.status === "draft" && <span className="ml-2 rounded-full bg-warn/15 px-2 py-0.5 text-[11px] font-medium text-warn">Utkast</span>}
+                        {p.status === "draft" && <span className="ml-2 rounded-full bg-warn/15 px-2 py-0.5 text-[11px] font-medium text-warn">{t("Utkast")}</span>}
                       </td>
                       <td className="py-3 pr-4">
                         <div className="flex items-center gap-3">
@@ -222,7 +260,7 @@ export default async function InsightsPage({ searchParams }: { searchParams: Pro
 
         <p className="mt-8 flex items-center gap-2 text-sm text-mist">
           <ShieldCheck className="size-4 shrink-0 text-success" aria-hidden="true" />
-          Visningstallene er anonyme. Hvem som har sett profilen viser bare innloggede som ikke har skjult seg. Dine egne besøk telles ikke.
+          {t("Visningstallene er anonyme. Hvem som har sett profilen viser bare innloggede som ikke har skjult seg. Dine egne besøk telles ikke.")}
         </p>
       </div>
     </main>

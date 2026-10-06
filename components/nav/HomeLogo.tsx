@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useT } from "@/components/LocaleProvider";
 import { LogoBadge } from "@/components/Logo";
+import { prefersReducedMotion } from "@/lib/display-prefs";
 
 // Logoen (bare merket, uten ordet) øverst til venstre på desktop, midt over sidemenyen.
 // Den følger siden når man blar (står ikke fast), og tar deg til forsiden, eller til
@@ -19,7 +20,7 @@ export default function HomeLogo() {
       onClick={(event) => {
         if (pathname !== "/" || event.metaKey || event.ctrlKey || event.shiftKey) return;
         event.preventDefault();
-        const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const reduce = prefersReducedMotion();
         window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
       }}
       className="absolute left-[22px] top-6 z-40 hidden rounded-full transition hover:scale-105 active:scale-95 focus-visible:outline-offset-4 md:block print:!hidden"

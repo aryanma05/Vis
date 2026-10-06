@@ -14,10 +14,20 @@ const MIN = 20;
 const MAX = 2000;
 
 // «Kontakt meg» på profilen. Krever innlogging, så meldingen alltid har en avsender.
-export default function ContactButton({ recipientId, name, loggedIn }: { recipientId: string; name: string; loggedIn: boolean }) {
+export default function ContactButton({
+  recipientId,
+  name,
+  loggedIn,
+  defaultReason = "jobb",
+}: {
+  recipientId: string;
+  name: string;
+  loggedIn: boolean;
+  defaultReason?: ContactReason;
+}) {
   const t = useT();
   const [open, setOpen] = useState(false);
-  const [reason, setReason] = useState<ContactReason>("jobb");
+  const [reason, setReason] = useState<ContactReason>(defaultReason);
   const [message, setMessage] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();

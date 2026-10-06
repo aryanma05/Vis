@@ -13,23 +13,28 @@ import type { ProjectCard as Card } from "@/lib/projects";
 // Bildet er hovedsaken på kortet. Under står tittel, hvem som laget det og tall for
 // reaksjoner og kommentarer. Prosjekter uten bilder får et enkelt fargecover.
 // `fill`: bildet fyller høyden kortet får av rutenettet (ProjectMasonry) i stedet for et fast format.
+// `profileId`: kortet står på profilen til denne personen. Da vises de andre som var med
+// som små profilbilder, i stedet for eierens navn.
 export default function ProjectCard({
   project,
   showOwner = true,
   priority = false,
   size = "md",
   fill = false,
+  profileId,
 }: {
   project: Card;
   showOwner?: boolean;
   priority?: boolean;
   size?: "md" | "lg";
   fill?: boolean;
+  profileId?: string;
 }) {
   const locale = useLocale();
   const t = makeT(locale);
   const href = `/prosjekt/${project.id}`;
   const when = project.publishedAt ?? project.createdAt;
+  const team = profileId ? [project.owner, ...project.members].filter((p) => p.id !== profileId) : [];
 
   return (
     <article className={`group relative ${fill ? "flex h-full flex-col" : ""}`}>
@@ -72,7 +77,7 @@ export default function ProjectCard({
                 <span className="size-1.5 rounded-full bg-[#ff453a]" aria-hidden="true" /> {t("Fjernet")}
               </span>
             )}
-            {project.pinned && !showOwner && (
+            {project.pinned && !showOwner && project.owner.id === (profileId ?? project.owner.id) && (
               <span className="glass-dark inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold">
                 <Pin className="size-3" aria-hidden="true" /> {t("Festet")}
               </span>
@@ -122,6 +127,17 @@ export default function ProjectCard({
             )}
           </p>
         </div>
+        {team.length > 0 && (
+          <span
+            className="flex shrink-0 -space-x-1.5 pt-0.5"
+            title={t("Sammen med {names}", { names: team.map((p) => p.name).join(", ") })}
+            aria-label={t("Sammen med {names}", { names: team.map((p) => p.name).join(", ") })}
+          >
+            {team.slice(0, 3).map((p) => (
+              <Avatar key={p.id} name={p.name} image={p.image} size={20} className="ring-2 ring-ink" />
+            ))}
+          </span>
+        )}
         <div className="flex shrink-0 items-center gap-2.5 pt-0.5 text-xs text-mist" aria-label={t("Aktivitet")}>
           {project.reactionCount > 0 && (
             <span className="inline-flex items-center gap-1" title={t("{n} reaksjoner", { n: project.reactionCount })}>
@@ -151,15 +167,17 @@ export function ProjectGrid({
   projects,
   showOwner = true,
   columns = 3,
+  profileId,
 }: {
   projects: Card[];
   showOwner?: boolean;
   columns?: 2 | 3;
+  profileId?: string;
 }) {
   return (
     <div className={`grid grid-cols-1 gap-x-5 gap-y-9 sm:grid-cols-2 ${columns === 3 ? "xl:grid-cols-3" : ""}`}>
       {projects.map((p, i) => (
-        <ProjectCard key={p.id} project={p} showOwner={showOwner} priority={i < 3} />
+        <ProjectCard key={p.id} project={p} showOwner={showOwner} priority={i < 3} profileId={profileId} />
       ))}
     </div>
   );

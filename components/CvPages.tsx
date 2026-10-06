@@ -3,11 +3,13 @@
 import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
 import { DownloadIcon } from "@/components/icons";
+import { useT } from "@/components/LocaleProvider";
 
 type Page = { url: string; width: number; height: number };
 
 // CV-sidene som papirark. Klikk åpner en fullskjermvisning med zoom.
 export default function CvPages({ pages, fileUrl, name }: { pages: Page[]; fileUrl: string; name: string }) {
+  const t = useT();
   const [open, setOpen] = useState<number | null>(null);
   const [zoomed, setZoomed] = useState(false);
 
@@ -47,11 +49,11 @@ export default function CvPages({ pages, fileUrl, name }: { pages: Page[]; fileU
             type="button"
             onClick={() => setOpen(i)}
             className="group relative block w-full cursor-zoom-in overflow-hidden rounded-[3px] bg-white shadow-[0_40px_80px_-30px_rgba(0,0,0,0.7)] ring-1 ring-black/10 transition duration-500 hover:-translate-y-1"
-            aria-label={`Åpne side ${i + 1} av CV-en`}
+            aria-label={t("Åpne side {n} av CV-en", { n: i + 1 })}
           >
             <Image
               src={page.url}
-              alt={`CV-en til ${name}, side ${i + 1}`}
+              alt={t("CV-en til {name}, side {n}", { name, n: i + 1 })}
               width={page.width}
               height={page.height}
               sizes="(min-width: 1280px) 820px, (min-width: 1024px) 60vw, 100vw"
@@ -62,7 +64,7 @@ export default function CvPages({ pages, fileUrl, name }: { pages: Page[]; fileU
               className="h-auto w-full"
             />
             <span className="pointer-events-none absolute bottom-4 right-4 glass-dark rounded-full px-3 py-1 text-xs font-medium opacity-0 transition group-hover:opacity-100">
-              Klikk for å zoome
+              {t("Klikk for å zoome")}
             </span>
           </button>
         ))}
@@ -72,11 +74,11 @@ export default function CvPages({ pages, fileUrl, name }: { pages: Page[]; fileU
         <div role="dialog" aria-modal="true" aria-label="CV" className="fixed inset-0 z-50 flex flex-col bg-ink/95 backdrop-blur-sm">
           <div className="flex items-center justify-between gap-4 border-b border-line px-5 py-3 text-sm">
             <span className="text-xs tabular-nums text-mist">
-              Side {open + 1} av {pages.length}
+              {t("Side {n} av {total}", { n: open + 1, total: pages.length })}
             </span>
             <div className="flex items-center gap-2">
               <button type="button" onClick={() => setZoomed((z) => !z)} className="rounded-lg px-3 py-1.5 text-mist hover:bg-white/5 hover:text-fg">
-                {zoomed ? "Tilpass skjermen" : "Full størrelse"}
+                {zoomed ? t("Tilpass skjermen") : t("Full størrelse")}
               </button>
               <a
                 href={fileUrl}
@@ -85,12 +87,12 @@ export default function CvPages({ pages, fileUrl, name }: { pages: Page[]; fileU
                 rel="noreferrer"
                 className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-mist hover:bg-white/5 hover:text-fg"
               >
-                <DownloadIcon /> Last ned
+                <DownloadIcon /> {t("Last ned")}
               </a>
               <button
                 type="button"
                 onClick={close}
-                aria-label="Lukk"
+                aria-label={t("Lukk")}
                 className="ml-2 flex h-9 w-9 items-center justify-center rounded-lg text-xl text-mist hover:bg-white/5 hover:text-fg"
               >
                 ×
@@ -103,7 +105,7 @@ export default function CvPages({ pages, fileUrl, name }: { pages: Page[]; fileU
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={pages[open].url}
-              alt={`CV-en til ${name}, side ${open + 1}`}
+              alt={t("CV-en til {name}, side {n}", { name, n: open + 1 })}
               onClick={() => setZoomed((z) => !z)}
               className={
                 zoomed
@@ -120,7 +122,7 @@ export default function CvPages({ pages, fileUrl, name }: { pages: Page[]; fileU
                 type="button"
                 onClick={() => go(-1)}
                 disabled={open === 0}
-                aria-label="Forrige side"
+                aria-label={t("Forrige side")}
                 className="absolute left-4 top-1/2 flex h-12 w-12 items-center justify-center rounded-full bg-surface text-fg disabled:opacity-30"
               >
                 ←
@@ -129,7 +131,7 @@ export default function CvPages({ pages, fileUrl, name }: { pages: Page[]; fileU
                 type="button"
                 onClick={() => go(1)}
                 disabled={open === pages.length - 1}
-                aria-label="Neste side"
+                aria-label={t("Neste side")}
                 className="absolute right-4 top-1/2 flex h-12 w-12 items-center justify-center rounded-full bg-surface text-fg disabled:opacity-30"
               >
                 →

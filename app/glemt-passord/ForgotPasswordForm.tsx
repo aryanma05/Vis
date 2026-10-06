@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { KeyRound } from "lucide-react";
 import CodeSlots, { type CodeStatus } from "@/components/auth/CodeSlots";
+import { useT } from "@/components/LocaleProvider";
 import PasswordInput from "@/components/PasswordInput";
 import { Button } from "@/components/ui/button";
 import { inputClass, labelClass } from "@/components/ui/field";
@@ -25,6 +26,7 @@ function readRememberedEmail() {
 // Nytt passord i tre steg: e-post, sekssifret kode, nytt passord. Etterpå logges man inn.
 export default function ForgotPasswordForm({ devHint }: { devHint: boolean }) {
   const router = useRouter();
+  const t = useT();
   const [step, setStep] = useState<Step>("email");
   // E-posten man skrev på innloggingen (se app/logg-inn/LoginForm.tsx), til man skriver selv.
   const remembered = useSyncExternalStore(noSubscribe, readRememberedEmail, () => "");
@@ -41,8 +43,8 @@ export default function ForgotPasswordForm({ devHint }: { devHint: boolean }) {
 
   useEffect(() => {
     if (cooldown <= 0) return;
-    const t = setTimeout(() => setCooldown((c) => c - 1), 1000);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(timer);
   }, [cooldown]);
 
   useEffect(() => {
@@ -91,7 +93,7 @@ export default function ForgotPasswordForm({ devHint }: { devHint: boolean }) {
 
   async function savePassword(event: React.FormEvent) {
     event.preventDefault();
-    if (password.length < 8) return setError("Passordet må ha minst 8 tegn.");
+    if (password.length < 8) return setError(t("Passordet må ha minst 8 tegn."));
     setPending(true);
     setError(null);
     const { error } = await authClient.emailOtp.resetPassword({ email: email.trim(), otp: code, password });
@@ -114,7 +116,7 @@ export default function ForgotPasswordForm({ devHint }: { devHint: boolean }) {
       <form onSubmit={sendCode} noValidate className="space-y-5">
         <div>
           <label htmlFor="email" className={labelClass}>
-            E-posten du registrerte deg med
+            {t("E-posten du registrerte deg med")}
           </label>
           <input
             id="email"
@@ -123,15 +125,15 @@ export default function ForgotPasswordForm({ devHint }: { devHint: boolean }) {
             autoComplete="email"
             autoCapitalize="none"
             spellCheck={false}
-            placeholder="navn@eksempel.no"
+            placeholder={t("navn@eksempel.no")}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className={inputClass}
           />
         </div>
-        {error && <p role="alert" className="text-sm text-danger">{error}</p>}
+        {error && <p role="alert" className="text-sm text-danger">{t(error)}</p>}
         <Button type="submit" loading={pending} className="w-full" size="lg">
-          Send kode
+          {t("Send kode")}
         </Button>
       </form>
     );
@@ -141,7 +143,7 @@ export default function ForgotPasswordForm({ devHint }: { devHint: boolean }) {
     return (
       <div className="animate-[rise_300ms_var(--ease-out-expo)]">
         <p className="leading-7 text-mist">
-          Hvis <span className="font-medium text-fg">{email.trim()}</span> har en konto, har vi sendt en sekssifret kode dit.
+          {t("Hvis")} <span className="font-medium text-fg">{email.trim()}</span> {t("har en konto, har vi sendt en sekssifret kode dit.")}
         </p>
         <div ref={boxRef} className="mt-6">
           <CodeSlots
@@ -156,12 +158,12 @@ export default function ForgotPasswordForm({ devHint }: { devHint: boolean }) {
           />
         </div>
         <div className="mt-4 min-h-6 text-sm" aria-live="polite">
-          {pending && <p className="text-mist">Sjekker koden …</p>}
-          {error && !pending && <p className="text-danger">{error}</p>}
+          {pending && <p className="text-mist">{t("Sjekker koden …")}</p>}
+          {error && !pending && <p className="text-danger">{t(error)}</p>}
         </div>
         {devHint && (
           <p className="mt-2 rounded-xl bg-fill px-3.5 py-2.5 text-[13px] text-mist">
-            Utviklingsmodus: koden står i terminalen der <code className="font-mono">npm run dev</code> kjører.
+            {t("Utviklingsmodus: koden står i terminalen der")} <code className="font-mono">npm run dev</code> {t("kjører.")}
           </p>
         )}
         <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm">
@@ -171,10 +173,10 @@ export default function ForgotPasswordForm({ devHint }: { devHint: boolean }) {
             onClick={() => sendCode()}
             className="font-medium text-ice hover:underline disabled:cursor-not-allowed disabled:text-mist/60 disabled:no-underline"
           >
-            {cooldown > 0 ? `Send ny kode om ${cooldown} s` : "Send ny kode"}
+            {cooldown > 0 ? t("Send ny kode om {n} s", { n: cooldown }) : t("Send ny kode")}
           </button>
           <button type="button" onClick={() => setStep("email")} className="text-mist hover:text-fg">
-            Bruk en annen e-post
+            {t("Bruk en annen e-post")}
           </button>
         </div>
       </div>
@@ -185,27 +187,27 @@ export default function ForgotPasswordForm({ devHint }: { devHint: boolean }) {
     <form onSubmit={savePassword} noValidate className="animate-[rise_300ms_var(--ease-out-expo)] space-y-5">
       <div className="flex items-center gap-3 rounded-2xl border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
         <KeyRound className="size-4 shrink-0" aria-hidden="true" />
-        Koden stemmer. Velg et nytt passord.
+        {t("Koden stemmer. Velg et nytt passord.")}
       </div>
       <div>
         <label htmlFor="password" className={labelClass}>
-          Nytt passord
+          {t("Nytt passord")}
         </label>
         <PasswordInput
           id="password"
           autoComplete="new-password"
-          placeholder="Minst 8 tegn"
+          placeholder={t("Minst 8 tegn")}
           maxLength={128}
           value={password}
           autoFocus
           onChange={(e) => setPassword(e.target.value)}
         />
       </div>
-      {error && <p role="alert" className="text-sm text-danger">{error}</p>}
+      {error && <p role="alert" className="text-sm text-danger">{t(error)}</p>}
       <Button type="submit" loading={pending} className="w-full" size="lg">
-        Lagre og logg inn
+        {t("Lagre og logg inn")}
       </Button>
-      <p className="text-center text-[13px] text-mist">Du blir logget ut på alle andre enheter.</p>
+      <p className="text-center text-[13px] text-mist">{t("Du blir logget ut på alle andre enheter.")}</p>
     </form>
   );
 }

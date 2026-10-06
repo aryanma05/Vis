@@ -223,7 +223,7 @@ async function captureWithBrowser(url: string, executablePath: string | null, co
       );
     }
     if (response && response.status() >= 400) {
-      throw new UserFacingError(`Siden svarte med feil ${response.status()}. Sjekk at lenken virker.`);
+      throw new UserFacingError("Siden svarte med feil {status}. Sjekk at lenken virker.", { status: response.status() });
     }
     await page.waitForLoadState("networkidle", { timeout: 5_000 }).catch(() => {});
     await page.addStyleTag({ content: "html{scrollbar-width:none}::-webkit-scrollbar{display:none}" }).catch(() => {});

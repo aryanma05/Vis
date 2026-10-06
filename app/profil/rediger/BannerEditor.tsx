@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { Check, ImagePlus, MoveVertical } from "lucide-react";
 import { uploadBannerAction } from "@/app/actions/profile";
 import Avatar from "@/components/Avatar";
+import { useT } from "@/components/LocaleProvider";
 import Pet from "@/components/pet/Pet";
 import BannerArtSvg from "@/components/profile/banner-art";
 import ProfileBanner from "@/components/profile/ProfileBanner";
@@ -48,9 +49,10 @@ function Choice({ on, onClick, label, children }: { on: boolean; onClick: () => 
 }
 
 function Swatches({ value, onChange }: { value: string; onChange: (color: string) => void }) {
+  const t = useT();
   const custom = /^#[0-9a-f]{6}$/i.test(value) && !BANNER_COLORS.includes(value as (typeof BANNER_COLORS)[number]);
   return (
-    <div role="radiogroup" aria-label="Farge" className="flex flex-wrap items-center gap-2">
+    <div role="radiogroup" aria-label={t("Farge")} className="flex flex-wrap items-center gap-2">
       {BANNER_COLORS.map((color) => (
         <button
           key={color}
@@ -66,14 +68,14 @@ function Swatches({ value, onChange }: { value: string; onChange: (color: string
       <label
         className={`relative flex size-8 cursor-pointer items-center justify-center overflow-hidden rounded-full ring-1 ring-line transition hover:scale-110 ${custom ? "ring-2 ring-sea ring-offset-2 ring-offset-ink" : ""}`}
         style={{ background: custom ? value : "conic-gradient(#ff6b6b, #ffd43b, #51cf66, #4dabf7, #845ef7, #ff6b6b)" }}
-        title="Egen farge"
+        title={t("Egen farge")}
       >
         <input
           type="color"
           value={custom ? value : "#4b93ff"}
           onChange={(e) => onChange(e.target.value)}
           className="absolute inset-0 cursor-pointer opacity-0"
-          aria-label="Egen farge"
+          aria-label={t("Egen farge")}
         />
       </label>
     </div>
@@ -98,6 +100,7 @@ export default function BannerEditor({
   avatar: string | null;
   pet: PetConfig | null;
 }) {
+  const t = useT();
   const [kind, setKind] = useState<Kind>(kindOf(value));
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -122,7 +125,7 @@ export default function BannerEditor({
       setKind("eget");
       toast.success("Bannerbildet er lastet opp", { description: "Dra i bildet for å velge hvilken del som vises." });
     } catch (e) {
-      toast.error((e as Error).message || "Opplastingen feilet. Prøv igjen.");
+      toast.error((e as Error).message || t("Opplastingen feilet. Prøv igjen."));
     } finally {
       setUploading(false);
     }
@@ -152,7 +155,7 @@ export default function BannerEditor({
           <span className="glass-rim" />
           {image && (
             <span className="glass-dark pointer-events-none absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium">
-              <MoveVertical className="size-3.5" /> Dra for å flytte
+              <MoveVertical className="size-3.5" /> {t("Dra for å flytte")}
             </span>
           )}
         </div>
@@ -166,16 +169,16 @@ export default function BannerEditor({
 
       <div className="mt-6">
         <Tabs
-          label="Type banner"
+          label={t("Type banner")}
           size="sm"
           active={kind}
           onSelect={(k) => setKind(k as Kind)}
           items={[
-            { key: "standard", label: "Standard" },
-            { key: "farge", label: "Farge" },
-            { key: "monster", label: "Mønster" },
-            { key: "bilder", label: "Illustrasjoner" },
-            { key: "eget", label: "Eget bilde" },
+            { key: "standard", label: t("Standard") },
+            { key: "farge", label: t("Farge") },
+            { key: "monster", label: t("Mønster") },
+            { key: "bilder", label: t("Illustrasjoner") },
+            { key: "eget", label: t("Eget bilde") },
           ]}
         />
       </div>
@@ -184,11 +187,11 @@ export default function BannerEditor({
         {kind === "standard" && (
           <div className="flex flex-wrap items-center gap-4">
             <div className="w-56">
-              <Choice on={!value || value.type === "accent"} onClick={() => onChange({ type: "accent" })} label="Aksentfargen din">
+              <Choice on={!value || value.type === "accent"} onClick={() => onChange({ type: "accent" })} label={t("Aksentfargen din")}>
                 <ProfileBanner banner={null} accent={accent} uid="banner-std" />
               </Choice>
             </div>
-            <p className="max-w-xs text-sm text-mist">Lys og et rolig rutenett i aksentfargen du velger lenger ned.</p>
+            <p className="max-w-xs text-sm text-mist">{t("Lys og et rolig rutenett i aksentfargen du velger lenger ned.")}</p>
           </div>
         )}
 
@@ -200,14 +203,14 @@ export default function BannerEditor({
                   key={key}
                   on={value?.type === "gradient" && value.gradient === key}
                   onClick={() => onChange({ type: "gradient", gradient: key })}
-                  label={BANNER_GRADIENTS[key].label}
+                  label={t(BANNER_GRADIENTS[key].label)}
                 >
                   <ProfileBanner banner={{ type: "gradient", gradient: key }} accent={accent} />
                 </Choice>
               ))}
             </div>
             <div>
-              <p className="mb-2 text-sm font-medium text-fg">Ensfarget</p>
+              <p className="mb-2 text-sm font-medium text-fg">{t("Ensfarget")}</p>
               <Swatches value={value?.type === "color" ? value.color : ""} onChange={(c) => onChange({ type: "color", color: c })} />
             </div>
           </div>
@@ -221,14 +224,14 @@ export default function BannerEditor({
                   key={key}
                   on={value?.type === "pattern" && value.pattern === key}
                   onClick={() => onChange({ type: "pattern", pattern: key, color })}
-                  label={BANNER_PATTERNS[key]}
+                  label={t(BANNER_PATTERNS[key])}
                 >
                   <ProfileBanner banner={{ type: "pattern", pattern: key, color }} accent={accent} uid={`pat-${key}`} />
                 </Choice>
               ))}
             </div>
             <div>
-              <p className="mb-2 text-sm font-medium text-fg">Farge på mønsteret</p>
+              <p className="mb-2 text-sm font-medium text-fg">{t("Farge på mønsteret")}</p>
               <Swatches value={color} onChange={(c) => onChange({ type: "pattern", pattern, color: c })} />
             </div>
           </div>
@@ -237,7 +240,7 @@ export default function BannerEditor({
         {kind === "bilder" && (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {BANNER_ART_KEYS.map((key) => (
-              <Choice key={key} on={value?.type === "art" && value.art === key} onClick={() => onChange({ type: "art", art: key })} label={BANNER_ARTS[key]}>
+              <Choice key={key} on={value?.type === "art" && value.art === key} onClick={() => onChange({ type: "art", art: key })} label={t(BANNER_ARTS[key])}>
                 <BannerArtSvg art={key} uid={`art-${key}`} />
               </Choice>
             ))}
@@ -248,9 +251,9 @@ export default function BannerEditor({
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-3">
               <Button variant="secondary" size="sm" onClick={() => fileRef.current?.click()} loading={uploading}>
-                <ImagePlus className="size-4" /> {image ? "Bytt bilde" : "Last opp bilde"}
+                <ImagePlus className="size-4" /> {image ? t("Bytt bilde") : t("Last opp bilde")}
               </Button>
-              <p className="text-sm text-mist">Bredt bilde, gjerne 1600 × 400 piksler eller større.</p>
+              <p className="text-sm text-mist">{t("Bredt bilde, gjerne 1600 × 400 piksler eller større.")}</p>
               <input
                 ref={fileRef}
                 type="file"
@@ -266,8 +269,8 @@ export default function BannerEditor({
             {image && (
               <label className="block max-w-sm">
                 <span className="flex justify-between text-sm">
-                  <span className="font-medium text-fg">Utsnitt</span>
-                  <span className="text-mist">{image.y < 34 ? "Toppen" : image.y > 66 ? "Bunnen" : "Midten"}</span>
+                  <span className="font-medium text-fg">{t("Utsnitt")}</span>
+                  <span className="text-mist">{t(image.y < 34 ? "Toppen" : image.y > 66 ? "Bunnen" : "Midten")}</span>
                 </span>
                 <input
                   type="range"

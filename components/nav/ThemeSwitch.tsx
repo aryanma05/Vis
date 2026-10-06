@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { animate, motion, useMotionTemplate, useMotionValue, useReducedMotion, useTransform } from "framer-motion";
+import { animate, motion, useMotionTemplate, useMotionValue, useTransform } from "framer-motion";
+import { useReduceMotion } from "@/components/settings/display-prefs";
 import { Moon, MoonStar, Sun } from "lucide-react";
 import { useTheme, type Theme } from "@/components/ThemeProvider";
 import { useT } from "@/components/LocaleProvider";
@@ -19,11 +20,11 @@ const STEP = 100 / THEMES.length;
 const LEAD = { type: "spring", stiffness: 620, damping: 34, mass: 0.6 } as const;
 const TRAIL = { type: "spring", stiffness: 210, damping: 15, mass: 0.9 } as const;
 
-// Tema-velgeren: bare ikoner, med en markør som oppfører seg som gummi.
-export default function ThemeSwitch() {
+// Tema-velgeren: ikoner (med navn i innstillingene), og en markør som oppfører seg som gummi.
+export default function ThemeSwitch({ labels = false }: { labels?: boolean }) {
   const t = useT();
   const { theme, setTheme } = useTheme();
-  const reduce = useReducedMotion();
+  const reduce = useReduceMotion();
   const index = Math.max(0, THEMES.findIndex((t) => t.name === theme));
   const previous = useRef(index);
   const buttons = useRef<(HTMLButtonElement | null)[]>([]);
@@ -93,12 +94,12 @@ export default function ThemeSwitch() {
               type="button"
               role="radio"
               aria-checked={active}
-              aria-label={t(label)}
-              title={t(label)}
+              aria-label={labels ? undefined : t(label)}
+              title={labels ? undefined : t(label)}
               tabIndex={active ? 0 : -1}
               onClick={() => choose(i)}
               whileTap={reduce ? undefined : { scale: 0.86 }}
-              className={`relative z-10 flex h-8 items-center justify-center rounded-full transition-colors duration-300 ${
+              className={`relative z-10 flex items-center justify-center gap-1.5 rounded-full transition-colors duration-300 ${labels ? "h-9 px-3 text-[13px] font-medium" : "h-8"} ${
                 active ? "text-fg" : "text-mist hover:text-fg"
               }`}
             >
@@ -111,6 +112,7 @@ export default function ThemeSwitch() {
               >
                 <Icon className="size-[17px]" strokeWidth={active ? 2.2 : 1.8} aria-hidden="true" />
               </motion.span>
+              {labels && t(label)}
             </motion.button>
           );
         })}

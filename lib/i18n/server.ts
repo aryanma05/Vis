@@ -1,14 +1,13 @@
 import "server-only";
 
 import { cache } from "react";
-import { cookies, headers } from "next/headers";
-import { isLocale, LOCALE_COOKIE, localeFromAcceptLanguage, makeT, type Locale } from "@/lib/i18n";
+import { cookies } from "next/headers";
+import { DEFAULT_LOCALE, isLocale, LOCALE_COOKIE, makeT, type Locale } from "@/lib/i18n";
 
-// Språket for denne forespørselen: valgt i bunnteksten (informasjonskapsel), ellers nettleserens språk.
+// Språket for denne forespørselen: valgt i innstillingene (informasjonskapsel), ellers norsk.
 export const getLocale = cache(async (): Promise<Locale> => {
   const chosen = (await cookies()).get(LOCALE_COOKIE)?.value;
-  if (isLocale(chosen)) return chosen;
-  return localeFromAcceptLanguage((await headers()).get("accept-language"));
+  return isLocale(chosen) ? chosen : DEFAULT_LOCALE;
 });
 
 export async function getT() {

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { translate, type Locale, type Vars } from "@/lib/i18n";
 import { ACCENT_KEYS, MAX_PROJECT_MEMBERS, OPEN_TO, PROJECT_PROGRESS } from "@/lib/constants";
 import {
   BANNER_ART_KEYS,
@@ -11,13 +12,43 @@ import {
 } from "@/lib/profile-style";
 import { MAX_TAGS_PER_PROJECT } from "@/lib/tag-names";
 
+// Meldingen for felt uten egen melding i skjemaet, som norsk mal med variabler (som
+// t()). Zods egne standardmeldinger er engelske og tekniske («Too big: expected …»).
+function defaultIssue(issue: z.core.$ZodRawIssue): { text: string; vars?: Vars } {
+  switch (issue.code) {
+    case "too_big":
+      if (issue.origin === "string") return { text: "Maks {n} tegn.", vars: { n: Number(issue.maximum) } };
+      if (issue.origin === "array" || issue.origin === "set") return { text: "Maks {n} valg.", vars: { n: Number(issue.maximum) } };
+      return { text: "Verdien er for stor." };
+    case "too_small":
+      if (issue.origin === "string") {
+        return Number(issue.minimum) <= 1 ? { text: "Feltet må fylles ut." } : { text: "Minst {n} tegn.", vars: { n: Number(issue.minimum) } };
+      }
+      if (issue.origin === "array" || issue.origin === "set") return { text: "Velg minst {n}.", vars: { n: Number(issue.minimum) } };
+      return { text: "Verdien er for liten." };
+    case "invalid_format":
+      if (issue.format === "email") return { text: "Ugyldig e-postadresse." };
+      if (issue.format === "url") return { text: "Ugyldig lenke." };
+      return { text: "Ugyldig format." };
+    default:
+      return { text: "Ugyldig verdi." };
+  }
+}
+
+z.config({
+  localeError: (issue) => {
+    const { text, vars } = defaultIssue(issue);
+    return translate("nb", text, vars);
+  },
+});
+
 const emptyToNull = (v: string | null | undefined) => (v ? v : null);
 
 const optionalText = (max: number) =>
   z
     .string()
     .trim()
-    .max(max, `Maks ${max} tegn.`)
+    .max(max)
     .nullish()
     .transform(emptyToNull);
 
@@ -63,7 +94,7 @@ const tagList = z
       .map((t) => t.trim())
       .filter(Boolean),
   )
-  .refine((v) => v.length <= MAX_TAGS_PER_PROJECT, `Maks ${MAX_TAGS_PER_PROJECT} teknologier.`)
+  .refine((v) => v.length <= MAX_TAGS_PER_PROJECT, { message: "Maks {n} teknologier.", params: { n: MAX_TAGS_PER_PROJECT } })
   .refine((v) => v.every((t) => t.length <= 40), "En teknologi kan ha maks 40 tegn.");
 
 // Medlemmer som kommaseparerte brukernavn. Mangler feltet, røres ikke medlemmene
@@ -73,7 +104,7 @@ const memberList = z
   .max(2_000)
   .nullish()
   .transform((v) => (v == null ? undefined : [...new Set(v.split(",").map((u) => u.trim().toLowerCase()).filter(Boolean))]))
-  .refine((v) => !v || v.length <= MAX_PROJECT_MEMBERS, `Maks ${MAX_PROJECT_MEMBERS} medlemmer.`);
+  .refine((v) => !v || v.length <= MAX_PROJECT_MEMBERS, { message: "Maks {n} medlemmer.", params: { n: MAX_PROJECT_MEMBERS } });
 
 export const projectInput = z.object({
   title: z.string().trim().min(1, "Prosjektet må ha en tittel.").max(100, "Maks 100 tegn."),
@@ -128,7 +159,7 @@ export const petConfig = z.object({
   species: z.enum(PET_SPECIES_KEYS),
   color: z.enum(PET_COLOR_KEYS),
   accessory: z.enum(PET_ACCESSORY_KEYS).default("ingen"),
-  name: z.string().trim().max(PET_NAME_MAX, `Navnet kan ha maks ${PET_NAME_MAX} tegn.`).default(""),
+  name: z.string().trim().max(PET_NAME_MAX).default(""),
 });
 
 export const profileInput = z.object({
@@ -183,12 +214,18 @@ export const parsedCv = z.object({
 
 export type ParsedCv = z.infer<typeof parsedCv>;
 
-// Gjør zod-feil om til { felt: [meldinger] } for skjemaer.
-export function fieldErrors(error: z.ZodError): Record<string, string[]> {
+// Gjør zod-feil om til { felt: [meldinger] } for skjemaer, på brukerens språk.
+// Egne meldinger i skjemaene er norske maler; params på .refine() fyller inn {variabler}.
+export function fieldErrors(error: z.ZodError, locale: Locale = "nb"): Record<string, string[]> {
   const out: Record<string, string[]> = {};
   for (const issue of error.issues) {
     const key = issue.path.join(".") || "_";
-    (out[key] ??= []).push(issue.message);
+    const standard = defaultIssue(issue as z.core.$ZodRawIssue);
+    const message =
+      issue.message === translate("nb", standard.text, standard.vars)
+        ? translate(locale, standard.text, standard.vars)
+        : translate(locale, issue.message, issue.code === "custom" ? (issue.params as Vars | undefined) : undefined);
+    (out[key] ??= []).push(message);
   }
   return out;
 }

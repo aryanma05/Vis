@@ -4,17 +4,20 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Copy, KeyRound, Send, Trash2, Webhook } from "lucide-react";
 import { createApiKeyAction, createWebhookAction, deleteWebhookAction, revokeApiKeyAction, testWebhookAction } from "@/app/actions/developers";
+import { useLocale, useT } from "@/components/LocaleProvider";
 import { Button } from "@/components/ui/button";
 import { inputClass } from "@/components/ui/field";
 import { toast } from "@/components/ui/toast";
+import { dateLocale } from "@/lib/i18n";
 
 function Secret({ label, value, note }: { label: string; value: string; note: string }) {
+  const t = useT();
   return (
     <div className="rounded-2xl bg-success/10 p-4">
       <p className="text-sm font-medium">{label}</p>
       <div className="mt-2 flex items-center gap-2">
         <code className="min-w-0 flex-1 break-all rounded-lg bg-ink-2 px-3 py-2 font-mono text-xs">{value}</code>
-        <Button size="xs" variant="secondary" onClick={() => navigator.clipboard.writeText(value).then(() => toast.success("Kopiert"))} aria-label="Kopier">
+        <Button size="xs" variant="secondary" onClick={() => navigator.clipboard.writeText(value).then(() => toast.success("Kopiert"))} aria-label={t("Kopier")}>
           <Copy className="size-3.5" />
         </Button>
       </div>
@@ -27,6 +30,8 @@ type Key = { id: string; name: string; prefix: string; lastUsedAt: Date | null; 
 
 export function ApiKeys({ keys }: { keys: Key[] }) {
   const router = useRouter();
+  const t = useT();
+  const locale = useLocale();
   const [name, setName] = useState("");
   const [created, setCreated] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -34,9 +39,15 @@ export function ApiKeys({ keys }: { keys: Key[] }) {
   return (
     <div className="max-w-xl space-y-4">
       <p className="text-sm text-mist">
-        Med en nøkkel får du høyere grense i <a href="/utviklere" className="text-ice hover:underline">API-et</a> (1 200 kall i minuttet i stedet for 120). Nøkkelen vises bare én gang.
+        {t("Med en nøkkel får du høyere grense i")}{" "}
+        <a href="/utviklere" className="text-ice hover:underline">
+          {t("API-et")}
+        </a>{" "}
+        {t("(1 200 kall i minuttet i stedet for 120). Nøkkelen vises bare én gang.")}
       </p>
-      {created && <Secret label="Den nye nøkkelen din" value={created} note="Kopier den nå. Vi lagrer bare en hash, så den kan ikke vises igjen." />}
+      {created && (
+        <Secret label={t("Den nye nøkkelen din")} value={created} note={t("Kopier den nå. Vi lagrer bare en hash, så den kan ikke vises igjen.")} />
+      )}
       <form
         className="flex gap-2"
         onSubmit={(e) => {
@@ -53,9 +64,9 @@ export function ApiKeys({ keys }: { keys: Key[] }) {
           });
         }}
       >
-        <input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} placeholder="Navn, f.eks. «Porteføljesiden min»" maxLength={60} aria-label="Navn på nøkkelen" />
+        <input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} placeholder={t("Navn, f.eks. «Porteføljesiden min»")} maxLength={60} aria-label={t("Navn på nøkkelen")} />
         <Button type="submit" size="sm" loading={pending}>
-          <KeyRound className="size-4" /> Lag nøkkel
+          <KeyRound className="size-4" /> {t("Lag nøkkel")}
         </Button>
       </form>
       {keys.length > 0 && (
@@ -65,7 +76,8 @@ export function ApiKeys({ keys }: { keys: Key[] }) {
               <div className="min-w-0 flex-1">
                 <p className="font-medium">{k.name}</p>
                 <p className="font-mono text-xs text-mist">
-                  {k.prefix}… · {k.lastUsedAt ? `sist brukt ${new Date(k.lastUsedAt).toLocaleDateString("nb-NO")}` : "ikke brukt"}
+                  {k.prefix}… ·{" "}
+                  {k.lastUsedAt ? t("sist brukt {date}", { date: new Date(k.lastUsedAt).toLocaleDateString(dateLocale(locale)) }) : t("ikke brukt")}
                 </p>
               </div>
               <Button
@@ -74,7 +86,7 @@ export function ApiKeys({ keys }: { keys: Key[] }) {
                 className="hover:text-danger"
                 onClick={() =>
                   start(async () => {
-                    if (!window.confirm("Slette nøkkelen? Det som bruker den slutter å virke.")) return;
+                    if (!window.confirm(t("Slette nøkkelen? Det som bruker den slutter å virke."))) return;
                     const result = await revokeApiKeyAction(k.id);
                     if (!result.ok) {
                       toast.error(result.error);
@@ -83,7 +95,7 @@ export function ApiKeys({ keys }: { keys: Key[] }) {
                     router.refresh();
                   })
                 }
-                aria-label="Slett nøkkelen"
+                aria-label={t("Slett nøkkelen")}
               >
                 <Trash2 className="size-3.5" />
               </Button>
@@ -99,6 +111,7 @@ type Hook = { id: string; url: string; events: string[]; lastStatus: number | nu
 
 export function Webhooks({ companyId, hooks, events, canManage }: { companyId: string; hooks: Hook[]; events: Record<string, string>; canManage: boolean }) {
   const router = useRouter();
+  const t = useT();
   const [url, setUrl] = useState("");
   const [chosen, setChosen] = useState<string[]>(Object.keys(events));
   const [secret, setSecret] = useState<string | null>(null);
@@ -106,7 +119,9 @@ export function Webhooks({ companyId, hooks, events, canManage }: { companyId: s
 
   return (
     <div className="max-w-2xl space-y-5">
-      {secret && <Secret label="Signeringshemmeligheten" value={secret} note="Bruk den til å sjekke Vis-Signature på hver levering. Den vises bare nå." />}
+      {secret && (
+        <Secret label={t("Signeringshemmeligheten")} value={secret} note={t("Bruk den til å sjekke Vis-Signature på hver levering. Den vises bare nå.")} />
+      )}
       {canManage && (
         <form
           className="space-y-3 rounded-[22px] glass-card p-5"
@@ -125,9 +140,9 @@ export function Webhooks({ companyId, hooks, events, canManage }: { companyId: s
           }}
         >
           <p className="flex items-center gap-2 font-medium">
-            <Webhook className="size-4 text-mist" /> Ny webhook
+            <Webhook className="size-4 text-mist" /> {t("Ny webhook")}
           </p>
-          <input className={inputClass} value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://dittsystem.no/vis-webhook" aria-label="Adresse" />
+          <input className={inputClass} value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://dittsystem.no/vis-webhook" aria-label={t("Adresse")} />
           <div className="flex flex-wrap gap-x-5 gap-y-2">
             {Object.entries(events).map(([key, label]) => (
               <label key={key} className="flex items-center gap-2 text-sm">
@@ -137,17 +152,17 @@ export function Webhooks({ companyId, hooks, events, canManage }: { companyId: s
                   onChange={(e) => setChosen((c) => (e.target.checked ? [...c, key] : c.filter((x) => x !== key)))}
                   className="size-4 accent-[var(--sea)]"
                 />
-                {label} <code className="font-mono text-xs text-mist">{key}</code>
+                {t(label)} <code className="font-mono text-xs text-mist">{key}</code>
               </label>
             ))}
           </div>
           <Button type="submit" size="sm" loading={pending} disabled={!url.trim() || chosen.length === 0}>
-            Legg til
+            {t("Legg til")}
           </Button>
         </form>
       )}
       {hooks.length === 0 ? (
-        <p className="text-sm text-mist">Ingen webhooks ennå.</p>
+        <p className="text-sm text-mist">{t("Ingen webhooks ennå.")}</p>
       ) : (
         <ul className="divide-y divide-line overflow-hidden rounded-[22px] glass-card">
           {hooks.map((h) => (
@@ -157,9 +172,11 @@ export function Webhooks({ companyId, hooks, events, canManage }: { companyId: s
                 <p className="mt-0.5 text-xs text-mist">
                   {h.events.join(", ")} ·{" "}
                   {h.lastDeliveryAt ? (
-                    <span className={h.lastStatus && h.lastStatus < 300 ? "text-success" : "text-danger"}>sist {h.lastStatus || "feilet"}</span>
+                    <span className={h.lastStatus && h.lastStatus < 300 ? "text-success" : "text-danger"}>
+                      {h.lastStatus ? t("sist {status}", { status: h.lastStatus }) : t("sist feilet")}
+                    </span>
                   ) : (
-                    "ingen leveringer ennå"
+                    t("ingen leveringer ennå")
                   )}
                 </p>
               </div>
@@ -176,8 +193,11 @@ export function Webhooks({ companyId, hooks, events, canManage }: { companyId: s
                           toast.error(result.error);
                           return;
                         }
-                        if (result.data.ok) toast.success(`Mottatt (${result.data.status})`);
-                        else toast.error(result.data.status ? `Mottakeren svarte ${result.data.status}` : "Fikk ikke kontakt med adressen");
+                        if (result.data.ok) toast.success(t("Mottatt ({status})", { status: result.data.status ?? "" }));
+                        else
+                          toast.error(
+                            result.data.status ? t("Mottakeren svarte {status}", { status: result.data.status }) : t("Fikk ikke kontakt med adressen"),
+                          );
                         router.refresh();
                       })
                     }
@@ -190,7 +210,7 @@ export function Webhooks({ companyId, hooks, events, canManage }: { companyId: s
                     className="hover:text-danger"
                     onClick={() =>
                       start(async () => {
-                        if (!window.confirm("Slette webhooken?")) return;
+                        if (!window.confirm(t("Slette webhooken?"))) return;
                         const result = await deleteWebhookAction(h.id);
                         if (!result.ok) {
                           toast.error(result.error);
@@ -199,7 +219,7 @@ export function Webhooks({ companyId, hooks, events, canManage }: { companyId: s
                         router.refresh();
                       })
                     }
-                    aria-label="Slett"
+                    aria-label={t("Slett")}
                   >
                     <Trash2 className="size-3.5" />
                   </Button>

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import CodeSlots, { type CodeStatus } from "@/components/auth/CodeSlots";
+import { useT } from "@/components/LocaleProvider";
 import { Button } from "@/components/ui/button";
 import { inputClass, labelClass } from "@/components/ui/field";
 import { authClient } from "@/lib/auth-client";
@@ -13,6 +14,7 @@ import { safeInternalPath } from "@/lib/safe-path";
 // Andre steg i innloggingen når to-trinns er slått på: kode fra appen, eller en reservekode.
 export default function TwoFactorForm() {
   const router = useRouter();
+  const t = useT();
   const next = useSearchParams().get("neste");
   const safeNext = safeInternalPath(next);
   const [mode, setMode] = useState<"app" | "backup">("app");
@@ -38,7 +40,7 @@ export default function TwoFactorForm() {
     setPending(false);
     if (result.error) {
       setStatus("error");
-      setError(authError(result.error as { code?: string; message?: string }, "login").message || "Feil kode. Prøv igjen.");
+      setError(authError(result.error as { code?: string; message?: string }, "login").message || t("Feil kode. Prøv igjen."));
       return;
     }
     setStatus("success");
@@ -74,14 +76,14 @@ export default function TwoFactorForm() {
             radius={Math.round(slot * 0.27)}
             onChange={() => status === "error" && setStatus("idle")}
             onComplete={verifyApp}
-            ariaLabel="Sekssifret kode fra appen"
+            ariaLabel={t("Sekssifret kode fra appen")}
           />
         </div>
       ) : (
         <form onSubmit={verifyBackup} className="space-y-4">
           <div>
             <label htmlFor="reservekode" className={labelClass}>
-              Reservekode
+              {t("Reservekode")}
             </label>
             <input
               id="reservekode"
@@ -95,24 +97,24 @@ export default function TwoFactorForm() {
             />
           </div>
           <Button type="submit" loading={pending} className="w-full">
-            Logg inn
+            {t("Logg inn")}
           </Button>
         </form>
       )}
 
       <label className="flex items-center gap-2 text-sm text-mist">
         <input type="checkbox" checked={trust} onChange={(e) => setTrust(e.target.checked)} className="size-4 accent-[var(--sea)]" />
-        Husk denne enheten i 30 dager
+        {t("Husk denne enheten i 30 dager")}
       </label>
 
-      {error && <p className="text-sm text-danger">{error}</p>}
+      {error && <p className="text-sm text-danger">{t(error)}</p>}
 
       <div className="flex flex-wrap justify-between gap-3 text-sm">
         <button type="button" className="text-mist hover:text-fg" onClick={() => setMode(mode === "app" ? "backup" : "app")}>
-          {mode === "app" ? "Har du ikke telefonen? Bruk en reservekode" : "Bruk koden fra appen"}
+          {mode === "app" ? t("Har du ikke telefonen? Bruk en reservekode") : t("Bruk koden fra appen")}
         </button>
         <Link href="/logg-inn" className="text-mist hover:text-fg">
-          Avbryt
+          {t("Avbryt")}
         </Link>
       </div>
     </div>

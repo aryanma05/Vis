@@ -67,7 +67,7 @@ async function uniqueSlug(base: string) {
 export async function createCompany(userId: string, input: CompanyInput) {
   const fields = cleanInput(input);
   const [{ n }] = await db.select({ n: count() }).from(companyMember).where(and(eq(companyMember.userId, userId), eq(companyMember.role, "owner")));
-  if (n >= MAX_COMPANIES_PER_USER) throw new UserFacingError(`Du kan eie opptil ${MAX_COMPANIES_PER_USER} bedrifter.`);
+  if (n >= MAX_COMPANIES_PER_USER) throw new UserFacingError("Du kan eie opptil {n} bedrifter.", { n: MAX_COMPANIES_PER_USER });
   const slug = await uniqueSlug(input.slug || fields.name);
   return db.transaction(async (tx) => {
     const [row] = await tx.insert(company).values({ ...fields, slug, createdById: userId }).returning({ id: company.id, slug: company.slug });
@@ -206,7 +206,7 @@ export async function addCompanyMember(actorId: string, companyId: string, usern
     .limit(1);
   if (!target || target.banned) throw new UserFacingError("Fant ingen med det brukernavnet.");
   const [{ n }] = await db.select({ n: count() }).from(companyMember).where(eq(companyMember.companyId, companyId));
-  if (n >= MAX_MEMBERS) throw new UserFacingError(`En bedrift kan ha opptil ${MAX_MEMBERS} medlemmer.`);
+  if (n >= MAX_MEMBERS) throw new UserFacingError("En bedrift kan ha opptil {n} medlemmer.", { n: MAX_MEMBERS });
   const inserted = await db.insert(companyMember).values({ companyId, userId: target.id, role }).onConflictDoNothing().returning();
   if (inserted.length === 0) throw new UserFacingError("Personen er allerede med.");
   log.info("company.member-add", { actorId, companyId, userId: target.id, role });

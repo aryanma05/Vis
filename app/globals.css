@@ -523,6 +523,84 @@ dialog.modal[open] > * {
   }
 }
 
+/* De samme tre valgene slått på i innstillingene (components/settings), for de som
+   vil ha det her uten å endre hele maskinen. Attributtene settes av lib/display-prefs.ts. */
+:root[data-motion="reduce"] *,
+:root[data-motion="reduce"] *::before,
+:root[data-motion="reduce"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+:root[data-transparency="reduce"] {
+  --card: var(--surface);
+  --card-hover: var(--surface-2);
+  --glass: var(--surface);
+  --glass-strong: var(--surface);
+  --sheen: transparent;
+}
+:root[data-transparency="reduce"] :is(.glass, .glass-strong, .glass-dark),
+:root[data-transparency="reduce"] dialog.modal::backdrop {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+:root[data-transparency="reduce"] body::before {
+  opacity: 0.4;
+}
+
+:root[data-contrast="more"] {
+  --mist: color-mix(in srgb, var(--fg) 82%, var(--ink));
+  --line: color-mix(in srgb, var(--fg) 30%, transparent);
+  --rim: color-mix(in srgb, var(--fg) 34%, transparent);
+  --card: color-mix(in srgb, var(--surface) 92%, transparent);
+  --glass: color-mix(in srgb, var(--surface) 94%, transparent);
+  --glass-strong: var(--surface);
+}
+
+/* Språkbytte (components/LocaleProvider.tsx): det gamle språket toner raskt ut og det
+   nye inn, med et snev av uskarphet så teksten ikke ser ut til å hoppe mellom språkene. */
+::view-transition-old(.sprakbytte) {
+  animation: language-out 140ms ease-in both;
+}
+::view-transition-new(.sprakbytte) {
+  animation: language-in 320ms var(--ease-out-expo) 60ms both;
+}
+::view-transition-group(.sprakbytte) {
+  animation-duration: 380ms;
+  animation-timing-function: var(--ease-out-expo);
+}
+
+@keyframes language-out {
+  to {
+    opacity: 0;
+    filter: blur(4px);
+  }
+}
+
+@keyframes language-in {
+  from {
+    opacity: 0;
+    filter: blur(4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+  }
+}
+:root[data-motion="reduce"]::view-transition-group(*),
+:root[data-motion="reduce"]::view-transition-old(*),
+:root[data-motion="reduce"]::view-transition-new(*) {
+  animation-duration: 0s !important;
+  animation-delay: 0s !important;
+}
+
 /* Windows høykontrast: glass og kort trenger synlige kanter. */
 @media (forced-colors: active) {
   .glass,

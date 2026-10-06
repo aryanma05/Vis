@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FlipHorizontal2, RotateCcw, RotateCcwSquare, RotateCwSquare } from "lucide-react";
+import { useT } from "@/components/LocaleProvider";
 import { Button } from "@/components/ui/button";
 import Dialog from "@/components/ui/dialog";
 import { Segmented } from "@/components/ui/tabs";
@@ -101,6 +102,7 @@ export default function ImageEditor({
   onCancel: () => void;
   onSave: (file: File) => void;
 }) {
+  const t = useT();
   const [image, setImage] = useState<HTMLImageElement | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [mode, setMode] = useState<"crop" | "adjust">("crop");
@@ -277,10 +279,10 @@ export default function ImageEditor({
   }
 
   return (
-    <Dialog open onClose={onCancel} title="Rediger bildet" size="lg">
+    <Dialog open onClose={onCancel} title={t("Rediger bildet")} size="lg">
       <div className="flex min-h-48 items-center justify-center overflow-hidden rounded-[20px] bg-black/85 p-3">
         {error ? (
-          <p className="max-w-sm px-4 py-10 text-center text-sm text-white/80">{error}</p>
+          <p className="max-w-sm px-4 py-10 text-center text-sm text-white/80">{t(error)}</p>
         ) : !base ? (
           <div className="skeleton h-64 w-full rounded-xl" />
         ) : (
@@ -296,8 +298,8 @@ export default function ImageEditor({
               <div
                 role="group"
                 tabIndex={0}
-                aria-roledescription="beskjæringsramme"
-                aria-label="Beskjæring. Piltastene flytter rammen, Shift og piltastene endrer størrelsen."
+                aria-roledescription={t("beskjæringsramme")}
+                aria-label={t("Beskjæring. Piltastene flytter rammen, Shift og piltastene endrer størrelsen.")}
                 aria-describedby="beskjaering-tips"
                 onKeyDown={onCropKey}
                 onPointerDown={(e) => startDrag(e, "move")}
@@ -345,24 +347,24 @@ export default function ImageEditor({
       </div>
       {mode === "crop" && base && !error && (
         <p id="beskjaering-tips" className="mt-2 hidden text-xs text-mist md:block">
-          Dra i rammen eller hjørnene. Med tastatur: velg rammen, bruk piltastene for å flytte og Shift + piltastene for å endre størrelsen.
+          {t("Dra i rammen eller hjørnene. Med tastatur: velg rammen, bruk piltastene for å flytte og Shift + piltastene for å endre størrelsen.")}
         </p>
       )}
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
         <Segmented
-          label="Verktøy"
+          label={t("Verktøy")}
           size="sm"
           value={mode}
           onChange={setMode}
           options={[
-            { value: "crop", label: "Beskjær og roter" },
-            { value: "adjust", label: "Juster" },
+            { value: "crop", label: t("Beskjær og roter") },
+            { value: "adjust", label: t("Juster") },
           ]}
         />
         {changed && (
           <Button variant="ghost" size="sm" onClick={reset}>
-            <RotateCcw className="size-4" /> Tilbakestill
+            <RotateCcw className="size-4" /> {t("Tilbakestill")}
           </Button>
         )}
       </div>
@@ -370,20 +372,20 @@ export default function ImageEditor({
       {mode === "crop" ? (
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <Segmented
-            label="Format"
+            label={t("Format")}
             size="sm"
             value={aspect}
             onChange={(next) => chooseAspect(next)}
-            options={(Object.keys(ASPECTS) as Aspect[]).map((key) => ({ value: key, label: key === "fri" ? "Fritt" : key }))}
+            options={(Object.keys(ASPECTS) as Aspect[]).map((key) => ({ value: key, label: key === "fri" ? t("Fritt") : key }))}
           />
           <div className="ml-auto flex gap-1.5">
-            <Button variant="secondary" size="icon-sm" aria-label="Roter mot venstre" title="Roter mot venstre" onClick={() => rotate(-90)} disabled={!base}>
+            <Button variant="secondary" size="icon-sm" aria-label={t("Roter mot venstre")} title={t("Roter mot venstre")} onClick={() => rotate(-90)} disabled={!base}>
               <RotateCcwSquare className="size-4" />
             </Button>
-            <Button variant="secondary" size="icon-sm" aria-label="Roter mot høyre" title="Roter mot høyre" onClick={() => rotate(90)} disabled={!base}>
+            <Button variant="secondary" size="icon-sm" aria-label={t("Roter mot høyre")} title={t("Roter mot høyre")} onClick={() => rotate(90)} disabled={!base}>
               <RotateCwSquare className="size-4" />
             </Button>
-            <Button variant="secondary" size="icon-sm" aria-label="Speilvend" title="Speilvend" aria-pressed={flip} onClick={() => setFlip((f) => !f)} disabled={!base}>
+            <Button variant="secondary" size="icon-sm" aria-label={t("Speilvend")} title={t("Speilvend")} aria-pressed={flip} onClick={() => setFlip((f) => !f)} disabled={!base}>
               <FlipHorizontal2 className="size-4" />
             </Button>
           </div>
@@ -393,7 +395,7 @@ export default function ImageEditor({
           {SLIDERS.map(({ key, label }) => (
             <label key={key} className="block">
               <span className="flex items-baseline justify-between text-sm">
-                <span className="font-medium text-fg">{label}</span>
+                <span className="font-medium text-fg">{t(label)}</span>
                 <span className="tabular-nums text-mist">{adjust[key] > 0 ? `+${adjust[key]}` : adjust[key]}</span>
               </span>
               <input
@@ -413,10 +415,10 @@ export default function ImageEditor({
 
       <div className="mt-6 flex justify-end gap-2">
         <Button variant="ghost" onClick={onCancel}>
-          Avbryt
+          {t("Avbryt")}
         </Button>
         <Button onClick={save} loading={saving} disabled={!base || Boolean(error)}>
-          Bruk
+          {t("Bruk")}
         </Button>
       </div>
     </Dialog>
