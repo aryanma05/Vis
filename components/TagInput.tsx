@@ -6,17 +6,25 @@ import { useT } from "@/components/LocaleProvider";
 import { MAX_TAGS_PER_PROJECT, normalizeTagNames, tagSlug } from "@/lib/tag-names";
 
 // Teknologier som merker. Enter eller komma legger til, og populære teknologier foreslås
-// mens man skriver. Verdien sendes som kommaseparert tekst i et skjult felt.
+// mens man skriver. Verdien sendes som kommaseparert tekst i et skjult felt. Brukes også
+// til andre lister med merker (f.eks. «Hva trenger du hjelp med?» under Samarbeid).
 export default function TagInput({
   name,
   defaultValue = [],
   suggestions = [],
   id,
+  max = MAX_TAGS_PER_PROJECT,
+  placeholder = "Figma, React, Blender …",
+  label,
 }: {
   name: string;
   defaultValue?: string[];
   suggestions?: string[];
   id?: string;
+  max?: number;
+  placeholder?: string;
+  // Skjermleserteksten for feltet. Standard er «Legg til teknologi».
+  label?: string;
 }) {
   const t = useT();
   const [tags, setTags] = useState<string[]>(defaultValue);
@@ -34,13 +42,13 @@ export default function TagInput({
   }, [draft, tags, suggestions]);
 
   function add(raw: string) {
-    const next = normalizeTagNames([...tags, ...raw.split(",")]).map((tag) => tag.name).slice(0, MAX_TAGS_PER_PROJECT);
+    const next = normalizeTagNames([...tags, ...raw.split(",")]).map((tag) => tag.name).slice(0, max);
     setTags(next);
     setDraft("");
     setActive(0);
   }
 
-  const open = focused && matches.length > 0 && tags.length < MAX_TAGS_PER_PROJECT;
+  const open = focused && matches.length > 0 && tags.length < max;
 
   return (
     <div className="relative">
@@ -97,8 +105,8 @@ export default function TagInput({
               setTags(tags.slice(0, -1));
             }
           }}
-          placeholder={tags.length ? "" : "Figma, React, Blender …"}
-          aria-label={t("Legg til teknologi")}
+          placeholder={tags.length ? "" : placeholder}
+          aria-label={label ?? t("Legg til teknologi")}
           aria-autocomplete="list"
           className="min-w-32 flex-1 bg-transparent px-1.5 py-1 text-[15px] text-fg outline-none placeholder:text-mist/60"
         />

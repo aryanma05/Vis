@@ -10,6 +10,7 @@ import CvView from "@/components/cv/CvView";
 import CvPages from "@/components/CvPages";
 import Markdown from "@/components/Markdown";
 import OnboardingChecklist from "@/components/OnboardingChecklist";
+import HelpWantedCard from "@/components/partners/HelpWantedCard";
 import ActivityHeatmap from "@/components/profile/ActivityHeatmap";
 import { hostLabel, linkIcon } from "@/components/profile/LinkIcon";
 import ProfileActions from "@/components/profile/ProfileActions";
@@ -28,6 +29,7 @@ import { isPro } from "@/lib/billing";
 import { buildCvViewData, effectiveTemplate } from "@/lib/cv-view";
 import { showsBranding } from "@/lib/pro";
 import { formatPeriod } from "@/lib/format";
+import { listOpenPostsByOwner } from "@/lib/partner-posts";
 import { getOnboarding, getProfileBase, getProfileByUsername } from "@/lib/profiles";
 import { getCurrentUser } from "@/lib/session";
 import { siteUrl } from "@/lib/site";
@@ -67,7 +69,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
   const tab = fane === "prosjekter" || fane === "cv" || fane === "samlinger" ? fane : "oversikt";
   const base = `/@${profile.username}`;
   const accent = ACCENTS[profile.accentColor ?? "is"];
-  const [activity, steps, collectionCount, collections, ownerPro, showBrand, achievements] = await Promise.all([
+  const [activity, steps, collectionCount, collections, ownerPro, showBrand, achievements, helpWanted] = await Promise.all([
     tab === "oversikt" ? getActivityByDay(profile.id) : null,
     profile.isOwner ? getOnboarding(profile.id, profile.username) : [],
     countPublicCollections(profile.id),
@@ -75,6 +77,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
     isPro(profile.id),
     tab === "cv" ? showsBranding(profile.id) : true,
     syncAchievements(profile.id, { withProgress: profile.isOwner }),
+    listOpenPostsByOwner(profile.id, viewer?.id),
   ]);
 
   const visibleProjects = profile.projects;
@@ -170,6 +173,8 @@ export default async function ProfilePage({ params, searchParams }: Props) {
               <p className="mt-1.5 text-sm text-fg">{profile.openTo.map((o) => t(OPEN_TO_LABELS[o])).join(" · ")}</p>
             </div>
           )}
+
+          <HelpWantedCard posts={helpWanted} isOwner={profile.isOwner} loggedIn={Boolean(viewer)} t={t} />
 
           <div className="mt-6">
             <ProfileActions

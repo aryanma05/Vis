@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AtSign, Bell, Bookmark, Briefcase, Building2, CalendarCheck, CalendarX, Crown, Heart, KeyRound, Lightbulb, LogOut, Mail, MessageCircle, Reply, Settings, Sparkles, Star, Trophy, UserCheck, UserMinus, UserPlus, Users, UserX } from "lucide-react";
+import { AtSign, Bell, Bookmark, Briefcase, Building2, CalendarCheck, CalendarX, Crown, HandHeart, Handshake, Heart, KeyRound, Lightbulb, LogOut, Mail, MessageCircle, Reply, Settings, Sparkles, Star, Trophy, UserCheck, UserMinus, UserPlus, Users, UserX } from "lucide-react";
 import Avatar from "@/components/Avatar";
 import PendingInvites from "@/components/company/PendingInvites";
 import { EmptyState } from "@/components/ui/misc";
@@ -128,6 +128,18 @@ function describe(n: NotificationItem, t: T, locale: Locale) {
     }
     case "talent":
       return { Icon: Bookmark, tone: "text-ice", text: <>{t("lagret profilen din i en kandidatliste")}</> };
+    case "partner_request":
+      return { Icon: HandHeart, tone: "text-warn", text: <>{t("vil hjelpe med")} <b className="font-semibold text-fg">{n.partnerPost?.title ?? t("et prosjekt")}</b></> };
+    case "partner_accepted":
+      return {
+        Icon: Handshake,
+        tone: "text-success",
+        text: (
+          <>
+            {t("sa ja til at du blir med på")} <b className="font-semibold text-fg">{n.partnerPost?.title ?? t("et prosjekt")}</b>
+          </>
+        ),
+      };
     case "reaction": {
       const Icon = n.reaction === "Nyttig" ? Lightbulb : n.reaction === "Inspirerende" ? Star : Heart;
       return {
@@ -155,6 +167,8 @@ function href(n: NotificationItem) {
   if (n.type === "interview") return n.data.event === "company_cancelled" ? "/soknader" : `/bedrift/${n.data.companySlug}/admin/soker/${n.data.applicationId}`;
   if (n.type === "talent") return "/profil/rediger/konto/bedrifter";
   if (n.type === "challenge") return `/utfordringer/${n.data.challengeId}`;
+  if (n.type === "partner_request" && n.partnerPost) return `/partnere/${n.partnerPost.id}#foresporsler`;
+  if (n.type === "partner_accepted" && n.partnerPost) return `/partnere/${n.partnerPost.id}`;
   if (n.type === "follow" || !n.project) return `/@${n.actor.username}`;
   if (n.commentId) return `/prosjekt/${n.project.id}#kommentar-${n.commentId}`;
   return `/prosjekt/${n.project.id}`;
@@ -230,7 +244,7 @@ export default async function NotificationsPage({ searchParams }: { searchParams
 
         {notifications.length === 0 ? (
           <EmptyState className="mt-10" icon={<Bell className="size-5" />} title={unreadOnly ? t("Ingen uleste varsler") : t("Ingen varsler ennå")}>
-            {t("Når noen kommenterer, reagerer, nevner deg, følger deg, vil komme i kontakt eller svarer på en søknad, dukker det opp her.")}
+            {t("Når noen kommenterer, reagerer, nevner deg, følger deg, vil komme i kontakt, svarer på en søknad eller vil hjelpe med et prosjekt, dukker det opp her.")}
           </EmptyState>
         ) : (
           groups.map((group) => (

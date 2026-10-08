@@ -34,10 +34,20 @@ prosjektene dine på én lenke (`/@brukernavn`), pluss en feed der man oppdager 
   commits og bidragsytere, og eieren kan hente README-en på nytt.
 - **Oppdag**: nyeste, populære (trending) og «Følger»-feed, søk etter prosjekter og
   personer, tag-sider på `/tag/<navn>`.
-- **Prosjektpartnere** (`/partnere`): folk som har krysset av for «Samarbeid» under «Åpen for»,
-  med hva de vil lage («Hva ser du etter?»), ferdigheter og hva de jobber med nå. Søk på
-  ferdighet, idé, sted og fagfelt, og ta kontakt med «Kontakt»-knappen. Du kan vise eller skjule
-  deg rett fra siden (`lib/partners.ts`).
+- **Samarbeid** (`/partnere`), med to faner:
+  - **Prosjekter som trenger hjelp** (`lib/partner-posts.ts`): legg ut en idé eller et påbegynt
+    prosjekt (eventuelt knyttet til et av prosjektene dine på Vis), hva du trenger hjelp med
+    («Design», «Backend» …) og hva slags hjelp som passer: fra start til slutt, en del av det, eller
+    bare for gøy. Andre sender en forespørsel med hvor mye de vil bidra og en melding. Eieren får
+    varsel og e-post (svar går rett til avsenderen), og sier ja eller nei på `/partnere/<id>`. Ved ja
+    får avsenderen varsel og eierens e-post, så de kan komme i gang. Lukk utlysningen når du har
+    funnet folk (maks fem åpne). Åpne utlysninger vises som «Trenger hjelp med» i visittkortet på
+    profilen og på prosjektsiden, og eieren av et prosjekt under arbeid får en snarvei til å finne folk.
+  - **Folk**: de som har krysset av for «Samarbeid» under «Åpen for», med hva de vil lage («Hva ser
+    du etter?»), ferdigheter og hva de jobber med nå. Ta kontakt med «Kontakt»-knappen, og vis eller
+    skjul deg rett fra siden (`lib/partners.ts`).
+
+  Søk på idé, rolle, ferdighet, sted og fagfelt i begge.
 - **Team på prosjekter**: legg til folk du har laget prosjektet med. De får et varsel, vises
   på prosjektet, og prosjektet vises også på profilene deres. Ukjente brukernavn gir en feil i
   stedet for å forsvinne.

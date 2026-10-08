@@ -85,6 +85,13 @@
       "when": 1791405744696,
       "tag": "0011_bedrift_tilgang",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1791476582105,
+      "tag": "0012_samarbeid",
+      "breakpoints": true
     }
   ]
 }

@@ -292,6 +292,68 @@ export function contactEmail({
   return { ...email, replyTo: { email: senderEmail, name: senderName } };
 }
 
+// Samarbeid: noen vil hjelpe med et prosjekt du har lagt ut. Svar går rett til dem.
+export function partnerRequestEmail({
+  to,
+  senderName,
+  senderEmail,
+  senderUsername,
+  postTitle,
+  commitment,
+  message,
+  path,
+}: {
+  to: string;
+  senderName: string;
+  senderEmail: string;
+  senderUsername: string;
+  postTitle: string;
+  commitment: string;
+  message: string;
+  path: string;
+}): Email {
+  const base = siteUrl();
+  const email = buttonEmail({
+    to,
+    subject: `${senderName} vil hjelpe med «${postTitle}»`,
+    heading: `${senderName} vil hjelpe med «${postTitle}»`,
+    intro: `${senderName} (@${senderUsername}) vil være med på prosjektet ditt på Vis (${commitment}). Si ja eller nei på Vis, eller svar på denne e-posten for å prate først.`,
+    quote: message.length > 1500 ? `${message.slice(0, 1497)}…` : message,
+    button: "Se forespørselen",
+    url: `${base}${path}`,
+    outro: "Vis deler ikke e-postadressen din før du svarer eller sier ja.",
+    footer: `Du får denne e-posten fordi du har lagt ut et prosjekt under Samarbeid på Vis. Skru av e-postene under Konto → Varsler: ${base}/profil/rediger/konto#varsler`,
+  });
+  return { ...email, replyTo: { email: senderEmail, name: senderName } };
+}
+
+// Samarbeid: eieren sa ja. Nå kan de ta kontakt; svar går rett til eieren.
+export function partnerAcceptedEmail({
+  to,
+  ownerName,
+  ownerEmail,
+  postTitle,
+  path,
+}: {
+  to: string;
+  ownerName: string;
+  ownerEmail: string;
+  postTitle: string;
+  path: string;
+}): Email {
+  const base = siteUrl();
+  const email = buttonEmail({
+    to,
+    subject: `${ownerName} sa ja – bli med på «${postTitle}»`,
+    heading: `${ownerName} vil gjerne ha hjelp fra deg`,
+    intro: `${ownerName} sa ja til forespørselen din om å være med på «${postTitle}». Svar på denne e-posten for å avtale hvordan dere kommer i gang, eller skriv til ${ownerEmail}.`,
+    button: "Se prosjektet",
+    url: `${base}${path}`,
+    footer: `Du får denne e-posten fordi du sendte en forespørsel under Samarbeid på Vis. Skru av e-postene under Konto → Varsler: ${base}/profil/rediger/konto#varsler`,
+  });
+  return { ...email, replyTo: { email: ownerEmail, name: ownerName } };
+}
+
 export type DigestContent = {
   name: string;
   profileViews: number;

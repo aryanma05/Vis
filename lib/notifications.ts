@@ -10,7 +10,7 @@ import { log } from "@/lib/log";
 import { emailProviderConfigured, notificationEmail, sendEmailInBackground } from "@/lib/mailer";
 import { profilePath, projectPath } from "@/lib/site";
 
-const { comment, contactRequest, notification, profile, project, user } = schema;
+const { comment, contactRequest, notification, partnerPost, partnerRequest, profile, project, user } = schema;
 
 export type NotificationKind = (typeof schema.notificationType.enumValues)[number];
 
@@ -21,6 +21,7 @@ export const DEFAULT_NOTIFICATION_PREFS: Required<NotificationPrefs> = {
   follow: false,
   digest: true,
   contact: true,
+  partner: true,
   companyDigest: true,
 };
 
@@ -34,6 +35,7 @@ type NotifyInput = {
   type: NotificationKind;
   projectId?: string | null;
   commentId?: string | null;
+  partnerRequestId?: string | null;
   data?: NotificationData | null;
 };
 
@@ -65,18 +67,31 @@ export async function notify(input: NotifyInput, tx: Tx | typeof db = db) {
     type: input.type,
     projectId: input.projectId ?? null,
     commentId: input.commentId ?? null,
+    partnerRequestId: input.partnerRequestId ?? null,
     data: input.data ?? null,
   });
 }
 
 // Varseltyper som ikke får den generelle e-posten under.
-const NO_GENERIC_EMAIL = ["reaction", "contact", "application", "employee", "challenge", "company_invite", "company_access", "interview", "talent"] as const satisfies readonly NotificationKind[];
+const NO_GENERIC_EMAIL = [
+  "reaction",
+  "contact",
+  "application",
+  "employee",
+  "challenge",
+  "company_invite",
+  "company_access",
+  "interview",
+  "talent",
+  "partner_request",
+  "partner_accepted",
+] as const satisfies readonly NotificationKind[];
 
 // E-post om et nytt varsel, hvis mottakeren har slått det på. Kalles etter at
 // transaksjonen er ferdig, så en treg e-posttjeneste ikke holder på databasen.
 export async function emailNotification(input: NotifyInput & { excerpt?: string | null }) {
   // Reaksjoner sendes ikke på e-post. Kontaktforespørsler, søknader, team, utfordringer,
-  // invitasjoner, tilgang, intervjuer og kandidatlister har sine egne e-poster (eller ingen).
+  // invitasjoner, tilgang, intervjuer, kandidatlister og samarbeid har sine egne e-poster (eller ingen).
   if (input.userId === input.actorId || (NO_GENERIC_EMAIL as readonly NotificationKind[]).includes(input.type)) return;
   if (!emailProviderConfigured && process.env.NODE_ENV === "production") return;
 
@@ -168,12 +183,17 @@ export async function listNotifications(userId: string, { limit = 60, unreadOnly
       commentBody: comment.body,
       contactMessage: contactRequest.message,
       contactReason: contactRequest.reason,
+      partnerPostId: partnerPost.id,
+      partnerPostTitle: partnerPost.title,
+      partnerMessage: partnerRequest.message,
     })
     .from(notification)
     .innerJoin(actor, eq(actor.id, notification.actorId))
     .leftJoin(project, eq(project.id, notification.projectId))
     .leftJoin(comment, eq(comment.id, notification.commentId))
     .leftJoin(contactRequest, sql`${contactRequest.id}::text = ${notification.data}->>'contactId'`)
+    .leftJoin(partnerRequest, eq(partnerRequest.id, notification.partnerRequestId))
+    .leftJoin(partnerPost, eq(partnerPost.id, partnerRequest.postId))
     .where(and(eq(notification.userId, userId), unreadOnly ? isNull(notification.readAt) : undefined))
     .orderBy(desc(notification.createdAt))
     .limit(limit);
@@ -188,7 +208,9 @@ export async function listNotifications(userId: string, { limit = 60, unreadOnly
     commentId: r.commentId,
     contactId: r.data?.contactId ?? null,
     contactReason: r.contactReason,
-    excerpt: (r.commentBody ?? r.contactMessage)?.slice(0, 180) ?? null,
+    partnerPost: r.partnerPostId ? { id: r.partnerPostId, title: r.partnerPostTitle! } : null,
+    // Meldingen vises for eieren som får forespørselen, ikke i ja-varselet tilbake.
+    excerpt: (r.commentBody ?? r.contactMessage ?? (r.type === "partner_request" ? r.partnerMessage : null))?.slice(0, 180) ?? null,
     reaction: r.data?.reaction ? REACTION_LABELS[r.data.reaction] : null,
     data: r.data ?? {},
   }));

@@ -1,41 +1,48 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { FolderOpen, Hammer, Handshake, Lightbulb, MapPin, Search, UserRound, Users } from "lucide-react";
+import { FolderOpen, Hammer, Handshake, Lightbulb, MapPin, Plus, Search, Send, UserRound, Users } from "lucide-react";
 import Avatar from "@/components/Avatar";
 import PartnerOptIn from "@/components/partners/PartnerOptIn";
+import PartnerPostTile from "@/components/partners/PartnerPostTile";
 import ContactButton from "@/components/profile/ContactButton";
 import FollowButton from "@/components/social/FollowButton";
 import { ButtonLink } from "@/components/ui/button";
 import { inputClass } from "@/components/ui/field";
 import { EmptyState, Tag } from "@/components/ui/misc";
+import { Tabs } from "@/components/ui/tabs";
 import { FIELD_KEYS, FIELDS, type FieldKey } from "@/lib/constants";
 import { getT } from "@/lib/i18n/server";
 import type { T } from "@/lib/i18n";
+import { listMyPosts, listMySentRequests, listPartnerPosts } from "@/lib/partner-posts";
 import { findPartners, getPartnerStatus, type PartnerCard } from "@/lib/partners";
 import { getCurrentUser } from "@/lib/session";
 
-type Params = { q?: string; sted?: string; fag?: string };
+type Params = { q?: string; sted?: string; fag?: string; vis?: string };
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getT();
   return {
     title: t("Finn prosjektpartnere"),
-    description: t("Finn utviklere, designere og andre på Vis som vil lage noe sammen med deg."),
+    description: t("Legg ut en idé eller et påbegynt prosjekt og få hjelp, eller bli med på noe andre lager på Vis."),
   };
 }
 
 function readState(params: Params) {
   return {
+    vis: params.vis === "folk" ? ("folk" as const) : ("prosjekter" as const),
     q: (params.q ?? "").trim().slice(0, 100),
     sted: params.sted?.trim().slice(0, 60) || "",
     fag: FIELD_KEYS.includes(params.fag as FieldKey) ? (params.fag as FieldKey) : null,
   };
 }
 
+type State = ReturnType<typeof readState>;
+
 // Lenke som beholder de andre filtrene.
-function href(state: ReturnType<typeof readState>, patch: Partial<ReturnType<typeof readState>>) {
+function href(state: State, patch: Partial<State>) {
   const next = { ...state, ...patch };
   const query = new URLSearchParams();
+  if (next.vis === "folk") query.set("vis", "folk");
   if (next.q) query.set("q", next.q);
   if (next.sted) query.set("sted", next.sted);
   if (next.fag) query.set("fag", next.fag);
@@ -112,33 +119,122 @@ function PartnerTile({ person, t, loggedIn }: { person: PartnerCard; t: T; logge
   );
 }
 
-// Finn noen å lage noe med: folk som har krysset av for «Samarbeid» på profilen.
+const STATUS_TONE = { pending: "text-mist", accepted: "text-success", declined: "text-mist/70" } as const;
+const STATUS_LABEL = { pending: "Venter på svar", accepted: "Du er med", declined: "Ikke denne gangen" } as const;
+
+// Sidekolonnen for innlogget bruker: egne utlysninger (med ubesvarte forespørsler) og
+// forespørslene man har sendt.
+async function MySide({ userId, t }: { userId: string; t: T }) {
+  const [posts, sent, status] = await Promise.all([listMyPosts(userId), listMySentRequests(userId), getPartnerStatus(userId)]);
+  return (
+    <div className="space-y-4">
+      <section className="rounded-[22px] glass-card p-5" aria-labelledby="mine-prosjekter">
+        <h2 id="mine-prosjekter" className="flex items-center gap-2 font-semibold">
+          <Lightbulb className="size-4 text-warn" aria-hidden="true" /> {t("Dine prosjekter")}
+        </h2>
+        {posts.length === 0 ? (
+          <p className="mt-2 text-sm text-mist">{t("Har du en idé eller et prosjekt som trenger folk? Legg det ut, så kan andre tilby seg å hjelpe.")}</p>
+        ) : (
+          <ul className="mt-3 divide-y divide-line">
+            {posts.map((p) => (
+              <li key={p.id}>
+                <Link href={`/partnere/${p.id}`} className="flex items-center justify-between gap-3 py-2.5 text-sm hover:text-ice">
+                  <span className={`min-w-0 truncate ${p.closed ? "text-mist" : "font-medium"}`}>{p.title}</span>
+                  {p.closed ? (
+                    <span className="shrink-0 text-xs text-mist">{t("Lukket")}</span>
+                  ) : p.pending > 0 ? (
+                    <span className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-on-primary" title={t("Ubesvarte forespørsler")}>
+                      {p.pending}
+                    </span>
+                  ) : null}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+        <ButtonLink href="/partnere/ny" size="sm" className="mt-4 w-full">
+          <Plus className="size-4" /> {t("Legg ut et prosjekt")}
+        </ButtonLink>
+      </section>
+
+      {sent.length > 0 && (
+        <section className="rounded-[22px] glass-card p-5" aria-labelledby="mine-foresporsler">
+          <h2 id="mine-foresporsler" className="flex items-center gap-2 font-semibold">
+            <Send className="size-4 text-ice" aria-hidden="true" /> {t("Dine forespørsler")}
+          </h2>
+          <ul className="mt-3 divide-y divide-line">
+            {sent.map((r) => (
+              <li key={r.id}>
+                <Link href={`/partnere/${r.postId}`} className="block py-2.5 text-sm hover:text-ice">
+                  <span className="block truncate font-medium">{r.postTitle}</span>
+                  <span className={`block text-xs ${STATUS_TONE[r.status]}`}>
+                    {r.ownerName} · {t(STATUS_LABEL[r.status])}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      <PartnerOptIn listed={status.listed} lookingFor={status.lookingFor} />
+    </div>
+  );
+}
+
+// Samarbeid: prosjekter som trenger hjelp, og folk som vil lage noe sammen med andre.
 export default async function PartnersPage({ searchParams }: { searchParams: Promise<Params> }) {
   const state = readState(await searchParams);
   const [viewer, t] = await Promise.all([getCurrentUser(), getT()]);
-  const [partners, status] = await Promise.all([
-    findPartners({ query: state.q, location: state.sted, field: state.fag, viewerId: viewer?.id }),
-    viewer ? getPartnerStatus(viewer.id) : null,
+  const filters = { query: state.q, location: state.sted, field: state.fag, viewerId: viewer?.id };
+  const [posts, partners] = await Promise.all([
+    state.vis === "prosjekter" ? listPartnerPosts(filters) : null,
+    state.vis === "folk" ? findPartners(filters) : null,
   ]);
   const filtered = Boolean(state.q || state.sted || state.fag);
+  const newHref = viewer ? "/partnere/ny" : `/logg-inn?neste=${encodeURIComponent("/partnere/ny")}`;
 
   return (
     <main className="px-5 pb-28 pt-10 md:pb-20 md:pl-28 md:pr-10 md:pt-14">
       <div className="mx-auto max-w-6xl">
-        <p className="caption inline-flex items-center gap-1.5">
-          <Handshake className="size-3.5" aria-hidden="true" /> {t("Samarbeid")}
-        </p>
-        <h1 className="mt-2 display text-[clamp(2.25rem,5vw,3.5rem)]">{t("Finn noen å lage noe med")}</h1>
-        <p className="mt-3 max-w-2xl text-lg text-mist">{t("Folk på Vis som vil bygge prosjekter sammen med andre.")}</p>
+        <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
+          <div>
+            <p className="caption inline-flex items-center gap-1.5">
+              <Handshake className="size-3.5" aria-hidden="true" /> {t("Samarbeid")}
+            </p>
+            <h1 className="mt-2 display text-[clamp(2.25rem,5vw,3.5rem)]">{t("Finn noen å lage noe med")}</h1>
+            <p className="mt-3 max-w-2xl text-lg text-mist">
+              {t("Legg ut en idé eller et påbegynt prosjekt og si hva du trenger hjelp med, eller bli med på noe andre lager.")}
+            </p>
+          </div>
+          <ButtonLink href={newHref}>
+            <Plus className="size-4" /> {t("Legg ut et prosjekt")}
+          </ButtonLink>
+        </div>
 
         <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
           <div className="min-w-0">
-            <form action="/partnere" className="flex flex-wrap gap-2">
+            <Tabs
+              label={t("Prosjekter eller folk")}
+              active={state.vis}
+              items={[
+                { key: "prosjekter", label: t("Prosjekter som trenger hjelp"), href: href(state, { vis: "prosjekter" }) },
+                { key: "folk", label: t("Folk"), href: href(state, { vis: "folk" }) },
+              ]}
+            />
+
+            <form action="/partnere" className="mt-5 flex flex-wrap gap-2">
+              {state.vis === "folk" && <input type="hidden" name="vis" value="folk" />}
               {state.fag && <input type="hidden" name="fag" value={state.fag} />}
               <label className="relative min-w-56 flex-[2]">
                 <span className="sr-only">{t("Søk")}</span>
                 <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-mist" aria-hidden="true" />
-                <input name="q" defaultValue={state.q} placeholder={t("Ferdighet, idé eller navn")} className={`${inputClass} pl-10`} />
+                <input
+                  name="q"
+                  defaultValue={state.q}
+                  placeholder={state.vis === "folk" ? t("Ferdighet, idé eller navn") : t("Idé, rolle eller teknologi")}
+                  className={`${inputClass} pl-10`}
+                />
               </label>
               <label className="relative min-w-40 flex-1">
                 <span className="sr-only">{t("Sted")}</span>
@@ -161,39 +257,68 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
               ))}
             </nav>
 
-            {partners.length === 0 ? (
-              <EmptyState
-                className="mt-8"
-                icon={<Users className="size-5" />}
-                title={filtered ? t("Ingen treff") : t("Ingen her ennå")}
-                action={
-                  filtered ? (
-                    <ButtonLink href="/partnere" variant="secondary">
-                      {t("Nullstill")}
-                    </ButtonLink>
-                  ) : undefined
-                }
-              >
-                {filtered ? t("Prøv et annet søk eller fagfelt.") : t("Bli den første: fortell hva du vil lage.")}
-              </EmptyState>
-            ) : (
-              <ul className="mt-8 grid gap-4 sm:grid-cols-2">
-                {partners.map((person) => (
-                  <PartnerTile key={person.id} person={person} t={t} loggedIn={Boolean(viewer)} />
-                ))}
-              </ul>
-            )}
+            {posts &&
+              (posts.length === 0 ? (
+                <EmptyState
+                  className="mt-8"
+                  icon={<Lightbulb className="size-5" />}
+                  title={filtered ? t("Ingen treff") : t("Ingen prosjekter her ennå")}
+                  action={
+                    filtered ? (
+                      <ButtonLink href={href(state, { q: "", sted: "", fag: null })} variant="secondary">
+                        {t("Nullstill")}
+                      </ButtonLink>
+                    ) : (
+                      <ButtonLink href={newHref}>
+                        <Plus className="size-4" /> {t("Legg ut et prosjekt")}
+                      </ButtonLink>
+                    )
+                  }
+                >
+                  {filtered ? t("Prøv et annet søk eller fagfelt.") : t("Bli den første: legg ut en idé eller noe du har begynt på, og si hva du trenger hjelp med.")}
+                </EmptyState>
+              ) : (
+                <ul className="mt-8 grid gap-4 sm:grid-cols-2">
+                  {posts.map((post) => (
+                    <PartnerPostTile key={post.id} post={post} t={t} viewerId={viewer?.id} />
+                  ))}
+                </ul>
+              ))}
+
+            {partners &&
+              (partners.length === 0 ? (
+                <EmptyState
+                  className="mt-8"
+                  icon={<Users className="size-5" />}
+                  title={filtered ? t("Ingen treff") : t("Ingen her ennå")}
+                  action={
+                    filtered ? (
+                      <ButtonLink href={href(state, { q: "", sted: "", fag: null })} variant="secondary">
+                        {t("Nullstill")}
+                      </ButtonLink>
+                    ) : undefined
+                  }
+                >
+                  {filtered ? t("Prøv et annet søk eller fagfelt.") : t("Bli den første: fortell hva du vil lage.")}
+                </EmptyState>
+              ) : (
+                <ul className="mt-8 grid gap-4 sm:grid-cols-2">
+                  {partners.map((person) => (
+                    <PartnerTile key={person.id} person={person} t={t} loggedIn={Boolean(viewer)} />
+                  ))}
+                </ul>
+              ))}
           </div>
 
           <aside className="lg:sticky lg:top-8">
-            {status ? (
-              <PartnerOptIn listed={status.listed} lookingFor={status.lookingFor} />
+            {viewer ? (
+              <MySide userId={viewer.id} t={t} />
             ) : (
               <section className="rounded-[22px] glass-card p-5">
                 <h2 className="flex items-center gap-2 font-semibold">
-                  <Handshake className="size-4 text-ice" aria-hidden="true" /> {t("Vil du bli funnet?")}
+                  <Handshake className="size-4 text-ice" aria-hidden="true" /> {t("Trenger du folk, eller vil du bli med?")}
                 </h2>
-                <p className="mt-2 text-sm text-mist">{t("Lag en profil og fortell hva du vil lage.")}</p>
+                <p className="mt-2 text-sm text-mist">{t("Lag en profil for å legge ut prosjekter, tilby hjelp og bli funnet av andre.")}</p>
                 <div className="mt-4 flex gap-2">
                   <ButtonLink href="/register" size="sm">
                     {t("Lag profil")}

@@ -20,8 +20,11 @@ import {
 } from "drizzle-orm/pg-core";
 // Relativ sti: drizzle-kit leser denne filen uten Next sine stialiaser.
 import {
+  type Commitment,
+  COMMITMENTS,
   CONTACT_REASONS,
   type CvTemplate,
+  PARTNER_STAGES,
   PROJECT_PROGRESS,
   type OpenTo,
   REACTION_TYPES,
@@ -182,6 +185,8 @@ export type NotificationPrefs = {
   digest?: boolean;
   // E-post når noen bruker «Kontakt meg» (standard på).
   contact?: boolean;
+  // E-post når noen vil hjelpe med et prosjekt man har lagt ut, eller sier ja til en (standard på).
+  partner?: boolean;
   // Bedrift: daglig e-post om søkere som har ventet over 7 dager (standard på).
   companyDigest?: boolean;
 };
@@ -545,6 +550,9 @@ export const notificationType = pgEnum("notification_type", [
   "interview",
   // En bedrift lagret profilen i en kandidatliste.
   "talent",
+  // Noen vil hjelpe med et prosjekt du har lagt ut på /partnere, og når du får ja.
+  "partner_request",
+  "partner_accepted",
 ]);
 
 export const notification = pgTable(
@@ -561,6 +569,8 @@ export const notification = pgTable(
     type: notificationType("type").notNull(),
     projectId: uuid("project_id").references(() => project.id, { onDelete: "cascade" }),
     commentId: uuid("comment_id").references(() => comment.id, { onDelete: "cascade" }),
+    // Forespørselen om å hjelpe (partner_request / partner_accepted). Forsvinner med den.
+    partnerRequestId: uuid("partner_request_id").references((): AnyPgColumn => partnerRequest.id, { onDelete: "cascade" }),
     // Ekstra detaljer, f.eks. hvilken reaksjon det gjelder.
     data: jsonb("data").$type<NotificationData>(),
     readAt: timestamp("read_at", { withTimezone: true }),
@@ -824,6 +834,67 @@ export const projectUpdate = pgTable(
     createdAt: createdAt(),
   },
   (t) => [index("project_update_project_idx").on(t.projectId, t.createdAt.desc())],
+);
+
+/* -------------------------------------------------------------------------- */
+/*  Samarbeid: prosjekter som trenger hjelp                                   */
+/* -------------------------------------------------------------------------- */
+
+export const partnerStage = pgEnum("partner_stage", PARTNER_STAGES);
+export const partnerCommitment = pgEnum("partner_commitment", COMMITMENTS);
+export const partnerRequestStatus = pgEnum("partner_request_status", ["pending", "accepted", "declined"]);
+
+// En idé eller et påbegynt prosjekt som trenger folk (/partnere). Vises også på profilen.
+export const partnerPost = pgTable(
+  "partner_post",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    ownerId: text("owner_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    // Et prosjekt eieren allerede har delt på Vis, om det er påbegynt.
+    projectId: uuid("project_id").references(() => project.id, { onDelete: "set null" }),
+    title: text("title").notNull(),
+    description: text("description").notNull().default(""),
+    stage: partnerStage("stage").notNull().default("ide"),
+    // Hva de trenger hjelp med, f.eks. «Design» og «Backend».
+    needs: jsonb("needs").$type<string[]>().notNull().default([]),
+    // Hvor mye hjelp som passer: fra start til slutt, en del av det, bare for gøy.
+    commitments: jsonb("commitments").$type<Commitment[]>().notNull().default([]),
+    // Satt når eieren har funnet folk eller lagt bort prosjektet. Null = åpen.
+    closedAt: timestamp("closed_at", { withTimezone: true }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    index("partner_post_owner_idx").on(t.ownerId, t.createdAt.desc()),
+    index("partner_post_list_idx").on(t.closedAt, t.createdAt.desc()),
+    index("partner_post_project_idx").on(t.projectId),
+  ],
+);
+
+// «Jeg vil hjelpe»: én per person og utlysning. Eieren sier ja eller nei; ved ja får de
+// hverandres e-postadresser.
+export const partnerRequest = pgTable(
+  "partner_request",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    postId: uuid("post_id")
+      .notNull()
+      .references(() => partnerPost.id, { onDelete: "cascade" }),
+    senderId: text("sender_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    commitment: partnerCommitment("commitment").notNull(),
+    message: text("message").notNull(),
+    status: partnerRequestStatus("status").notNull().default("pending"),
+    respondedAt: timestamp("responded_at", { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex("partner_request_post_sender_uniq").on(t.postId, t.senderId),
+    index("partner_request_sender_idx").on(t.senderId, t.createdAt.desc()),
+  ],
 );
 
 /* -------------------------------------------------------------------------- */
