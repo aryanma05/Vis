@@ -44,8 +44,8 @@ prosjektene dine på én lenke (`/@brukernavn`), pluss en feed der man oppdager 
     funnet folk (maks fem åpne). Åpne utlysninger vises som «Trenger hjelp med» i visittkortet på
     profilen og på prosjektsiden, og eieren av et prosjekt under arbeid får en snarvei til å finne folk.
   - **Folk**: de som har krysset av for «Samarbeid» under «Åpen for», med hva de vil lage («Hva ser
-    du etter?»), ferdigheter og hva de jobber med nå. Ta kontakt med «Kontakt»-knappen, og vis eller
-    skjul deg rett fra siden (`lib/partners.ts`).
+    du etter?»), ferdigheter og hva de jobber med nå. Ta kontakt med «Kontakt»-knappen. Man kommer
+    med ved å krysse av for «Samarbeid» under «Åpen for» på profilen (`lib/partners.ts`).
 
   Søk på idé, rolle, ferdighet, sted og fagfelt i begge.
 - **Team på prosjekter**: legg til folk du har laget prosjektet med. De får et varsel, vises

@@ -2,13 +2,13 @@ import "server-only";
 
 import { and, desc, eq, ilike, ne, or, sql, type SQL } from "drizzle-orm";
 import { db, schema } from "@/db";
-import { FIELDS, type FieldKey, type OpenTo } from "@/lib/constants";
+import { FIELDS, type FieldKey } from "@/lib/constants";
 import { outer } from "@/lib/sql";
 import { personColumns, withFollowState, type PersonCard } from "@/lib/social";
 
 const { cvSkill, profile, project, projectTag, tag, user } = schema;
 
-// Partnersiden (/partnere): folk som har krysset av for «Samarbeid» under «Åpen for».
+// «Folk»-fanen på /partnere: de som har krysset av for «Samarbeid» under «Åpen for» på profilen.
 // «Hva ser du etter?» på profilen er det viktigste her, så de som har skrevet noe står først.
 
 export type PartnerCard = PersonCard & {
@@ -92,30 +92,4 @@ export async function findPartners({
     .limit(limit);
 
   return withFollowState(rows.map((r) => ({ ...r, skills: r.skills ?? [] })), viewerId);
-}
-
-// Om innlogget bruker selv står på partnersiden, og hva de har skrevet.
-export async function getPartnerStatus(userId: string) {
-  const [row] = await db
-    .select({ openTo: profile.openTo, lookingFor: profile.lookingFor })
-    .from(profile)
-    .where(eq(profile.userId, userId))
-    .limit(1);
-  const openTo = (row?.openTo ?? []) as OpenTo[];
-  return { listed: openTo.includes("samarbeid"), lookingFor: row?.lookingFor ?? "" };
-}
-
-// Slår «Samarbeid» av eller på, og lagrer hva personen vil lage. Rører ikke de andre
-// valgene under «Åpen for». Teksten beholdes når man skjuler seg, til neste gang.
-export async function setPartnerStatus(userId: string, listed: boolean, lookingFor?: string) {
-  const [row] = await db.select({ openTo: profile.openTo }).from(profile).where(eq(profile.userId, userId)).limit(1);
-  const others = ((row?.openTo ?? []) as OpenTo[]).filter((o) => o !== "samarbeid");
-  const fields = {
-    openTo: (listed ? [...others, "samarbeid"] : others) as OpenTo[],
-    ...(lookingFor !== undefined ? { lookingFor: lookingFor.trim().slice(0, 400) || null } : {}),
-  };
-  await db
-    .insert(profile)
-    .values({ userId, ...fields })
-    .onConflictDoUpdate({ target: profile.userId, set: fields });
 }

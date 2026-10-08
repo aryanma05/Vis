@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { FolderOpen, Hammer, Handshake, Lightbulb, MapPin, Plus, Search, Send, UserRound, Users } from "lucide-react";
 import Avatar from "@/components/Avatar";
-import PartnerOptIn from "@/components/partners/PartnerOptIn";
 import PartnerPostTile from "@/components/partners/PartnerPostTile";
 import ContactButton from "@/components/profile/ContactButton";
 import FollowButton from "@/components/social/FollowButton";
@@ -14,7 +13,7 @@ import { FIELD_KEYS, FIELDS, type FieldKey } from "@/lib/constants";
 import { getT } from "@/lib/i18n/server";
 import type { T } from "@/lib/i18n";
 import { listMyPosts, listMySentRequests, listPartnerPosts } from "@/lib/partner-posts";
-import { findPartners, getPartnerStatus, type PartnerCard } from "@/lib/partners";
+import { findPartners, type PartnerCard } from "@/lib/partners";
 import { getCurrentUser } from "@/lib/session";
 
 type Params = { q?: string; sted?: string; fag?: string; vis?: string };
@@ -122,20 +121,25 @@ function PartnerTile({ person, t, loggedIn }: { person: PartnerCard; t: T; logge
 const STATUS_TONE = { pending: "text-mist", accepted: "text-success", declined: "text-mist/70" } as const;
 const STATUS_LABEL = { pending: "Venter på svar", accepted: "Du er med", declined: "Ikke denne gangen" } as const;
 
-// Sidekolonnen for innlogget bruker: egne utlysninger (med ubesvarte forespørsler) og
-// forespørslene man har sendt.
-async function MySide({ userId, t }: { userId: string; t: T }) {
-  const [posts, sent, status] = await Promise.all([listMyPosts(userId), listMySentRequests(userId), getPartnerStatus(userId)]);
+// Det innlogget bruker har på gang: egne utlysninger (med ubesvarte forespørsler) og
+// forespørslene man har sendt. Vises bare når det er noe der.
+function MySide({
+  posts,
+  sent,
+  t,
+}: {
+  posts: Awaited<ReturnType<typeof listMyPosts>>;
+  sent: Awaited<ReturnType<typeof listMySentRequests>>;
+  t: T;
+}) {
   return (
-    <div className="space-y-4">
-      <section className="rounded-[22px] glass-card p-5" aria-labelledby="mine-prosjekter">
-        <h2 id="mine-prosjekter" className="flex items-center gap-2 font-semibold">
-          <Lightbulb className="size-4 text-warn" aria-hidden="true" /> {t("Dine prosjekter")}
-        </h2>
-        {posts.length === 0 ? (
-          <p className="mt-2 text-sm text-mist">{t("Har du en idé eller et prosjekt som trenger folk? Legg det ut, så kan andre tilby seg å hjelpe.")}</p>
-        ) : (
-          <ul className="mt-3 divide-y divide-line">
+    <section className="rounded-[22px] glass-card p-5">
+      {posts.length > 0 && (
+        <div>
+          <h2 className="flex items-center gap-2 font-semibold">
+            <Lightbulb className="size-4 text-warn" aria-hidden="true" /> {t("Dine prosjekter")}
+          </h2>
+          <ul className="mt-2 divide-y divide-line">
             {posts.map((p) => (
               <li key={p.id}>
                 <Link href={`/partnere/${p.id}`} className="flex items-center justify-between gap-3 py-2.5 text-sm hover:text-ice">
@@ -151,18 +155,15 @@ async function MySide({ userId, t }: { userId: string; t: T }) {
               </li>
             ))}
           </ul>
-        )}
-        <ButtonLink href="/partnere/ny" size="sm" className="mt-4 w-full">
-          <Plus className="size-4" /> {t("Legg ut et prosjekt")}
-        </ButtonLink>
-      </section>
+        </div>
+      )}
 
       {sent.length > 0 && (
-        <section className="rounded-[22px] glass-card p-5" aria-labelledby="mine-foresporsler">
-          <h2 id="mine-foresporsler" className="flex items-center gap-2 font-semibold">
+        <div className={posts.length > 0 ? "mt-4 border-t border-line pt-4" : ""}>
+          <h2 className="flex items-center gap-2 font-semibold">
             <Send className="size-4 text-ice" aria-hidden="true" /> {t("Dine forespørsler")}
           </h2>
-          <ul className="mt-3 divide-y divide-line">
+          <ul className="mt-2 divide-y divide-line">
             {sent.map((r) => (
               <li key={r.id}>
                 <Link href={`/partnere/${r.postId}`} className="block py-2.5 text-sm hover:text-ice">
@@ -174,11 +175,9 @@ async function MySide({ userId, t }: { userId: string; t: T }) {
               </li>
             ))}
           </ul>
-        </section>
+        </div>
       )}
-
-      <PartnerOptIn listed={status.listed} lookingFor={status.lookingFor} />
-    </div>
+    </section>
   );
 }
 
@@ -187,12 +186,17 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
   const state = readState(await searchParams);
   const [viewer, t] = await Promise.all([getCurrentUser(), getT()]);
   const filters = { query: state.q, location: state.sted, field: state.fag, viewerId: viewer?.id };
-  const [posts, partners] = await Promise.all([
+  const [posts, partners, myPosts, mySent] = await Promise.all([
     state.vis === "prosjekter" ? listPartnerPosts(filters) : null,
     state.vis === "folk" ? findPartners(filters) : null,
+    viewer ? listMyPosts(viewer.id) : [],
+    viewer ? listMySentRequests(viewer.id) : [],
   ]);
   const filtered = Boolean(state.q || state.sted || state.fag);
   const newHref = viewer ? "/partnere/ny" : `/logg-inn?neste=${encodeURIComponent("/partnere/ny")}`;
+  // Uten noe å følge med på får listen hele bredden.
+  const hasSide = myPosts.length > 0 || mySent.length > 0;
+  const listClass = `mt-8 grid gap-4 sm:grid-cols-2 ${hasSide ? "" : "lg:grid-cols-3"}`;
 
   return (
     <main className="px-5 pb-28 pt-10 md:pb-20 md:pl-28 md:pr-10 md:pt-14">
@@ -212,7 +216,7 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
           </ButtonLink>
         </div>
 
-        <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
+        <div className={`mt-8 grid gap-6 lg:items-start ${hasSide ? "lg:grid-cols-[minmax(0,1fr)_320px]" : ""}`}>
           <div className="min-w-0">
             <Tabs
               label={t("Prosjekter eller folk")}
@@ -268,17 +272,13 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
                       <ButtonLink href={href(state, { q: "", sted: "", fag: null })} variant="secondary">
                         {t("Nullstill")}
                       </ButtonLink>
-                    ) : (
-                      <ButtonLink href={newHref}>
-                        <Plus className="size-4" /> {t("Legg ut et prosjekt")}
-                      </ButtonLink>
-                    )
+                    ) : undefined
                   }
                 >
                   {filtered ? t("Prøv et annet søk eller fagfelt.") : t("Bli den første: legg ut en idé eller noe du har begynt på, og si hva du trenger hjelp med.")}
                 </EmptyState>
               ) : (
-                <ul className="mt-8 grid gap-4 sm:grid-cols-2">
+                <ul className={listClass}>
                   {posts.map((post) => (
                     <PartnerPostTile key={post.id} post={post} t={t} viewerId={viewer?.id} />
                   ))}
@@ -299,10 +299,10 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
                     ) : undefined
                   }
                 >
-                  {filtered ? t("Prøv et annet søk eller fagfelt.") : t("Bli den første: fortell hva du vil lage.")}
+                  {filtered ? t("Prøv et annet søk eller fagfelt.") : t("Kryss av for «Samarbeid» under «Åpen for» på profilen din, så vises du her.")}
                 </EmptyState>
               ) : (
-                <ul className="mt-8 grid gap-4 sm:grid-cols-2">
+                <ul className={listClass}>
                   {partners.map((person) => (
                     <PartnerTile key={person.id} person={person} t={t} loggedIn={Boolean(viewer)} />
                   ))}
@@ -310,26 +310,11 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
               ))}
           </div>
 
-          <aside className="lg:sticky lg:top-8">
-            {viewer ? (
-              <MySide userId={viewer.id} t={t} />
-            ) : (
-              <section className="rounded-[22px] glass-card p-5">
-                <h2 className="flex items-center gap-2 font-semibold">
-                  <Handshake className="size-4 text-ice" aria-hidden="true" /> {t("Trenger du folk, eller vil du bli med?")}
-                </h2>
-                <p className="mt-2 text-sm text-mist">{t("Lag en profil for å legge ut prosjekter, tilby hjelp og bli funnet av andre.")}</p>
-                <div className="mt-4 flex gap-2">
-                  <ButtonLink href="/register" size="sm">
-                    {t("Lag profil")}
-                  </ButtonLink>
-                  <ButtonLink href="/logg-inn?neste=%2Fpartnere" size="sm" variant="secondary">
-                    {t("Logg inn")}
-                  </ButtonLink>
-                </div>
-              </section>
-            )}
-          </aside>
+          {hasSide && (
+            <aside className="lg:sticky lg:top-8">
+              <MySide posts={myPosts} sent={mySent} t={t} />
+            </aside>
+          )}
         </div>
       </div>
     </main>
