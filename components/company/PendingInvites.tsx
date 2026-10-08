@@ -82,7 +82,7 @@ export function InviteCard({ invite, t, children, footer }: { invite: InviteCard
           {t(INVITE_KIND_LABELS[invite.kind])}
         </span>
         {role && <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${ROLE_TONE[role]}`}>{t(ROLE_LABEL[role])}</span>}
-        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${days < 2 ? "bg-warn/15 text-warn" : "bg-fill text-mist"}`}>
+        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${days < 2 ? "tone tone-warn" : "bg-fill text-mist"}`}>
           <Clock className="size-3" aria-hidden="true" /> {days < 1 ? t("Utløper i dag") : t("Utløper om {n} d", { n: days })}
         </span>
       </div>

@@ -121,11 +121,6 @@ export default async function MedlemmerTab({ ctx }: { ctx: AdminCtx }) {
 
       {/* Toppen: tall, plasser og roller */}
       <section className="fade-up relative overflow-hidden rounded-[22px] glass-card p-6 md:p-7">
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -right-24 -top-24 size-64 rounded-full opacity-25 blur-3xl"
-          style={{ background: "radial-gradient(circle, var(--sea), transparent 70%)" }}
-        />
         <div className="relative flex flex-wrap items-start justify-between gap-5">
           <div className="min-w-0">
             <p className="caption">{t("Team og tilgang")}</p>
@@ -427,7 +422,7 @@ export default async function MedlemmerTab({ ctx }: { ctx: AdminCtx }) {
                   {ROLE_ACCESS[r].map((item) => (
                     <li key={item.label} className={`flex items-start gap-2 ${item.ok ? "text-fg" : "text-mist"}`}>
                       <span
-                        className={`mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${item.ok ? "bg-success/15 text-success" : "bg-fill text-mist"}`}
+                        className={`mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${item.ok ? "tone tone-success" : "bg-fill text-mist"}`}
                         aria-hidden="true"
                       >
                         {item.ok ? "✓" : "–"}

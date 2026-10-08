@@ -19,7 +19,7 @@ export default function AdminHero({
   return (
     <div className="mt-4 flex flex-wrap items-end justify-between gap-4">
       <h1 className="text-4xl font-bold tracking-tight">{t("Administrer")}</h1>
-      <span className={`rounded-full px-3 py-1 text-xs font-semibold ${business ? "bg-success/15 text-success" : "bg-fill text-mist"}`}>
+      <span className={`rounded-full px-3 py-1 text-xs font-semibold ${business ? "tone tone-success" : "bg-fill text-mist"}`}>
         {business ? t("Bedrift") : t("Gratis")}
       </span>
     </div>

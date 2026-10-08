@@ -29,7 +29,7 @@ export default async function UtviklereTab({ ctx }: { ctx: AdminCtx }) {
       {hooks.length > 0 && (
         <div className="flex flex-wrap gap-2 text-xs">
           <span className="rounded-full bg-fill px-2.5 py-1 font-medium text-mist">{t("{n} av {total} aktive", { n: active, total: hooks.length })}</span>
-          <span className={`rounded-full px-2.5 py-1 font-medium ${personal ? "bg-warn/15 text-warn" : "bg-success/15 text-success"}`}>
+          <span className={`rounded-full px-2.5 py-1 font-medium ${personal ? "tone tone-warn" : "tone tone-success"}`}>
             {personal ? t("{n} sender persondata", { n: personal }) : t("Ingen sender persondata")}
           </span>
         </div>

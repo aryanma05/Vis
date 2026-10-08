@@ -59,13 +59,13 @@ export function TermsCard({
       className={`rounded-[22px] glass-card p-5 ${upToDate ? "" : "ring-1 ring-warn/40"}`}
     >
       <div className="flex flex-wrap items-start gap-4">
-        <span className={`flex size-11 shrink-0 items-center justify-center rounded-[14px] ${upToDate ? "bg-success/15 text-success" : "bg-warn/15 text-warn"}`}>
+        <span className={`flex size-11 shrink-0 items-center justify-center rounded-[14px] ${upToDate ? "tone tone-success" : "tone tone-warn"}`}>
           <FileSignature className="size-5" />
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <p className="font-semibold">{t("Databehandleravtale")}</p>
-            <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${upToDate ? "bg-success/15 text-success" : "bg-warn/15 text-warn"}`}>
+            <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${upToDate ? "tone tone-success" : "tone tone-warn"}`}>
               {upToDate ? t("Godtatt") : acceptedAt ? t("Ny versjon") : t("Mangler")}
             </span>
           </div>
@@ -191,7 +191,7 @@ export function TermsRequired({ base, canAccept }: { base: string; canAccept: bo
   const { t } = useRun();
   return (
     <div className="mx-auto max-w-xl rounded-[22px] glass-card p-6 text-center md:p-8">
-      <span className="mx-auto flex size-12 items-center justify-center rounded-full bg-warn/15 text-warn">
+      <span className="mx-auto flex size-12 items-center justify-center rounded-full tone tone-warn">
         <FileSignature className="size-5" />
       </span>
       <h2 className="mt-4 text-lg font-semibold">{t("Godta databehandleravtalen først")}</h2>

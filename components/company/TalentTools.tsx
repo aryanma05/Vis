@@ -69,7 +69,7 @@ export function SavedSearchChip({ id, name, href, fresh, notify, active }: { id:
       <Link href={href} className="font-medium">
         {name}
       </Link>
-      {fresh > 0 && <span className={`rounded-full px-1.5 text-xs font-semibold ${active ? "bg-on-primary/20" : "bg-success/15 text-success"}`}>{t("{n} nye", { n: fresh })}</span>}
+      {fresh > 0 && <span className={`rounded-full px-1.5 text-xs font-semibold ${active ? "bg-on-primary/20" : "tone tone-success"}`}>{t("{n} nye", { n: fresh })}</span>}
       <button
         type="button"
         disabled={pending}

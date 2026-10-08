@@ -56,11 +56,11 @@ function metaChips(meta: AuditMeta, t: T) {
   else if (to) chips.push({ key: "to", ...to });
   if (typeof meta.rows === "number") chips.push({ key: "rows", text: t("{n} rader", { n: meta.rows }), tone: "bg-fill text-mist" });
   if (typeof meta.n === "number") chips.push({ key: "n", text: t("{n} stk", { n: meta.n }), tone: "bg-fill text-mist" });
-  if (typeof meta.retentionMonths === "number") chips.push({ key: "ret", text: t("{n} mnd", { n: meta.retentionMonths }), tone: "bg-sea/15 text-sea" });
-  if (meta.notes === true) chips.push({ key: "notes", text: t("med notater"), tone: "bg-warn/15 text-warn" });
-  if (typeof meta.personal === "boolean") chips.push({ key: "personal", text: meta.personal ? t("med persondata") : t("uten persondata"), tone: meta.personal ? "bg-warn/15 text-warn" : "bg-fill text-mist" });
-  if (typeof meta.active === "boolean") chips.push({ key: "active", text: meta.active ? t("slått på") : t("slått av"), tone: meta.active ? "bg-success/15 text-success" : "bg-fill text-mist" });
-  if (meta.ok === false) chips.push({ key: "ok", text: t("feilet"), tone: "bg-danger/10 text-danger" });
+  if (typeof meta.retentionMonths === "number") chips.push({ key: "ret", text: t("{n} mnd", { n: meta.retentionMonths }), tone: "tone tone-sea" });
+  if (meta.notes === true) chips.push({ key: "notes", text: t("med notater"), tone: "tone tone-warn" });
+  if (typeof meta.personal === "boolean") chips.push({ key: "personal", text: meta.personal ? t("med persondata") : t("uten persondata"), tone: meta.personal ? "tone tone-warn" : "bg-fill text-mist" });
+  if (typeof meta.active === "boolean") chips.push({ key: "active", text: meta.active ? t("slått på") : t("slått av"), tone: meta.active ? "tone tone-success" : "bg-fill text-mist" });
+  if (meta.ok === false) chips.push({ key: "ok", text: t("feilet"), tone: "tone tone-danger" });
   if (typeof meta.version === "string") chips.push({ key: "version", text: t("versjon {v}", { v: meta.version }), tone: "bg-fill text-mist" });
   return chips;
 }

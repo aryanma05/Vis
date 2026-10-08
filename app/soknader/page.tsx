@@ -16,8 +16,8 @@ export async function generateMetadata(): Promise<Metadata> {
 
 const TONE = {
   ny: "bg-fill text-mist",
-  intervju: "bg-sea/15 text-ice",
-  tilbud: "bg-success/15 text-success",
+  intervju: "tone tone-ice",
+  tilbud: "tone tone-success",
   avslag: "bg-fill text-mist",
   trukket: "bg-fill text-mist/70",
 } as const;

@@ -49,9 +49,9 @@ export default function CompanyRelations({ relations }: { relations: Relation[] 
       <ul className="space-y-3">
         {relations.map((r, i) => {
           const chips = ([
-            r.saved && { key: "saved", icon: <Bookmark className="size-3" />, text: r.saved.lists > 1 ? t("Lagret i {n} lister", { n: r.saved.lists }) : t("Lagret i en liste"), tone: "bg-sea/15 text-sea" },
-            r.contacted && { key: "contacted", icon: <Mail className="size-3" />, text: t("Kontaktet deg {date}", { date: date(r.contacted.at) }), tone: "bg-warn/15 text-warn" },
-            r.applied && { key: "applied", icon: <FileText className="size-3" />, text: t("Søknad {date}", { date: date(r.applied.at) }), tone: "bg-success/15 text-success" },
+            r.saved && { key: "saved", icon: <Bookmark className="size-3" />, text: r.saved.lists > 1 ? t("Lagret i {n} lister", { n: r.saved.lists }) : t("Lagret i en liste"), tone: "tone tone-sea" },
+            r.contacted && { key: "contacted", icon: <Mail className="size-3" />, text: t("Kontaktet deg {date}", { date: date(r.contacted.at) }), tone: "tone tone-warn" },
+            r.applied && { key: "applied", icon: <FileText className="size-3" />, text: t("Søknad {date}", { date: date(r.applied.at) }), tone: "tone tone-success" },
             r.viewedAt && { key: "viewed", icon: <Eye className="size-3" />, text: t("Åpnet søknaden {date}", { date: date(r.viewedAt) }), tone: "bg-fill text-mist" },
           ] as (Chip | null | "")[]).filter((c): c is Chip => Boolean(c));
           return (

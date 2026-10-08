@@ -159,7 +159,6 @@ export default async function OversiktTab({ ctx }: { ctx: AdminCtx }) {
         </div>
 
         <section className="fade-up relative overflow-hidden rounded-[22px] glass-card p-6" style={{ animationDelay: "420ms" }}>
-          <div aria-hidden="true" className="pointer-events-none absolute -right-16 -top-16 size-56 rounded-full opacity-25 blur-3xl" style={{ background: "radial-gradient(circle, var(--success), transparent 70%)" }} />
           <h2 className="flex items-center gap-2 font-semibold">
             <PiggyBank className="size-4 text-success" /> {t("Spart med Vis")}
           </h2>

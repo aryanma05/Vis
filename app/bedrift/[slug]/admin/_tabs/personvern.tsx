@@ -33,7 +33,7 @@ export default async function PersonvernTab({ ctx }: { ctx: AdminCtx }) {
       label: t("Databehandleravtale"),
       value: terms.upToDate ? t("Godtatt") : t("Mangler"),
       hint: terms.upToDate ? t("Versjon {version}", { version: terms.current }) : t("Kreves for publisering og kandidatsøk"),
-      tone: terms.upToDate ? "bg-success/15 text-success" : "bg-warn/15 text-warn",
+      tone: terms.upToDate ? "tone tone-success" : "tone tone-warn",
       valueTone: terms.upToDate ? "text-success" : "text-warn",
     },
     {
@@ -41,7 +41,7 @@ export default async function PersonvernTab({ ctx }: { ctx: AdminCtx }) {
       label: t("Lagringstid"),
       value: t("{n} mnd", { n: retention.effective }),
       hint: t("etter at stillingen er lukket"),
-      tone: "bg-sea/15 text-sea",
+      tone: "tone tone-sea",
       valueTone: "",
     },
     {
