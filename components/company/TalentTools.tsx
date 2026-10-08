@@ -56,6 +56,7 @@ export function SavedSearchChip({ id, name, href, fresh, notify, active }: { id:
   const t = useT();
   const router = useRouter();
   const [pending, start] = useTransition();
+  const [confirm, setConfirm] = useState(false);
   const run = (fn: () => Promise<{ ok: boolean; error?: string }>, done?: string) =>
     start(async () => {
       const result = await fn();
@@ -82,12 +83,30 @@ export function SavedSearchChip({ id, name, href, fresh, notify, active }: { id:
       <button
         type="button"
         disabled={pending}
-        onClick={() => window.confirm(t("Slette «{name}»?", { name })) && run(() => deleteSavedSearchAction(id), t("Søket er slettet"))}
+        onClick={() => setConfirm(true)}
         aria-label={t("Slett {name}", { name })}
         className="flex size-7 items-center justify-center rounded-full opacity-70 hover:opacity-100"
       >
         <X className="size-3.5" />
       </button>
+      <Dialog open={confirm} onClose={() => setConfirm(false)} size="sm" title={t("Slette «{name}»?", { name })} description={t("Dere får ikke lenger e-post om nye kandidater som passer søket.")}>
+        <div className="mt-5 flex justify-end gap-2">
+          <Button variant="ghost" size="sm" onClick={() => setConfirm(false)}>
+            {t("Avbryt")}
+          </Button>
+          <Button
+            variant="danger"
+            size="sm"
+            loading={pending}
+            onClick={() => {
+              setConfirm(false);
+              run(() => deleteSavedSearchAction(id), t("Søket er slettet"));
+            }}
+          >
+            {t("Slett")}
+          </Button>
+        </div>
+      </Dialog>
     </li>
   );
 }

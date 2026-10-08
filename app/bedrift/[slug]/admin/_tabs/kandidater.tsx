@@ -1,19 +1,27 @@
 import Link from "next/link";
+import { ShieldCheck } from "lucide-react";
 import Avatar from "@/components/Avatar";
 import { UsedTech } from "@/components/company/Applicants";
 import { ContactCandidate } from "@/components/company/ContactCandidate";
 import { AddToList } from "@/components/company/ListTools";
+import { TermsRequired } from "@/components/company/PrivacyPanel";
 import { CompareProvider, CompareToggle, SavedSearchChip, SaveSearchButton } from "@/components/company/TalentTools";
 import Upsell from "@/components/company/Upsell";
 import { EmptyState } from "@/components/ui/misc";
+import { getCompanyGate } from "@/lib/company-access";
+import { can } from "@/lib/company-permissions";
 import { FIELD_KEYS, FIELDS, OPEN_TO, OPEN_TO_LABELS, type FieldKey, type OpenTo } from "@/lib/constants";
 import { describeFilters, listSavedSearches, markSavedSearchSeen, searchHref } from "@/lib/saved-searches";
 import { listMembershipsFor, listTalentLists, searchCandidates } from "@/lib/talent";
 import type { AdminCtx } from "./context";
 
+// Kandidatsøket (Bedrift). Bare folk som selv har sagt ja, og aldri dem som har blokkert
+// bedriften (lib/talent.ts). Krever godtatt databehandleravtale.
 export default async function KandidaterTab({ ctx }: { ctx: AdminCtx }) {
-  const { user, company, business, base, monthly, canBuy, t, query } = ctx;
+  const { user, company, role, business, base, monthly, canBuy, t, query } = ctx;
   if (!business) return <Upsell companyId={company.id} price={monthly} canBuy={canBuy} t={t} />;
+  const gate = await getCompanyGate(user.id, company.id);
+  if (!gate?.termsAccepted) return <TermsRequired base={base} canAccept={can(role, "company.privacy")} />;
 
   const filters = {
     q: query.q?.slice(0, 100) ?? "",
@@ -90,15 +98,21 @@ export default async function KandidaterTab({ ctx }: { ctx: AdminCtx }) {
           {t("for å samle kandidater.")}
         </p>
       )}
+      {candidates.length > 0 && (
+        <p className="mt-6 text-sm text-mist">
+          <span className="font-semibold tabular-nums text-fg">{candidates.length}</span> {candidates.length === 1 ? t("kandidat") : t("kandidater")}
+          {hasFilters ? ` · ${describeFilters(filters, t)}` : ""}
+        </p>
+      )}
       {candidates.length === 0 ? (
         <EmptyState className="mt-8" title={t("Ingen treff")}>
           {t("Bare folk som selv har slått på «Synlig for bedrifter» vises her.")}
         </EmptyState>
       ) : (
         <CompareProvider base={base}>
-          <ul className="mt-6 divide-y divide-line overflow-hidden rounded-[22px] glass-card">
-            {candidates.map((c) => (
-              <li key={c.id} className="flex flex-wrap items-start gap-4 px-5 py-4">
+          <ul className="mt-3 divide-y divide-line overflow-hidden rounded-[22px] glass-card">
+            {candidates.map((c, i) => (
+              <li key={c.id} className="fade-up flex flex-wrap items-start gap-4 px-5 py-4 transition-colors hover:bg-fill/50" style={{ animationDelay: `${Math.min(i, 10) * 40}ms` }}>
                 <Avatar name={c.name} image={c.image} size={44} />
                 <div className="min-w-0 flex-1">
                   <Link href={`/@${c.username}`} className="font-semibold hover:text-ice">
@@ -148,6 +162,9 @@ export default async function KandidaterTab({ ctx }: { ctx: AdminCtx }) {
           </ul>
         </CompareProvider>
       )}
+      <p className="mt-6 flex items-center gap-2 text-xs text-mist">
+        <ShieldCheck className="size-3.5 shrink-0 text-success" /> {t("Bare kandidater som har sagt ja vises. Alle eksporter logges.")}
+      </p>
     </section>
   );
 }

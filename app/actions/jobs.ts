@@ -25,6 +25,7 @@ const jobInput = (v: Partial<JobInput> | undefined): JobInput => ({
   deadline: v?.deadline ? String(v.deadline) : null,
   tags: Array.isArray(v?.tags) ? v.tags.map(String) : [],
   applyMode: v?.applyMode === "vis" ? "vis" : "ekstern",
+  replacedPaidAd: v?.replacedPaidAd === true,
 });
 
 export async function createJobAction(companyId: string, values: Partial<JobInput>, publish: boolean) {
@@ -49,8 +50,9 @@ export async function updateJobAction(jobId: string, values: Partial<JobInput>) 
 export async function setJobStatusAction(jobId: string, status: "draft" | "published" | "closed") {
   return runAction(async () => {
     const user = await requireUserForAction();
-    if (!["draft", "published", "closed"].includes(status)) throw new UserFacingError("Ukjent status.");
-    const companyId = await setJobStatus(user.id, String(jobId), status);
+    const next = String(status);
+    if (next !== "draft" && next !== "published" && next !== "closed") throw new UserFacingError("Ukjent status.");
+    const companyId = await setJobStatus(user.id, String(jobId), next);
     revalidatePath("/stillinger");
     revalidatePath(`/stillinger/${jobId}`);
     revalidatePath(await companyPath(companyId));

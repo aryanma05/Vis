@@ -5,16 +5,21 @@ import { alias } from "drizzle-orm/pg-core";
 import { db, schema } from "@/db";
 import { cancelAllSubscriptions } from "@/lib/billing";
 import { releaseCompaniesOf } from "@/lib/companies";
+import { AUDIT_ACTION_LABELS, type AuditAction } from "@/lib/company-labels";
 import { getCv } from "@/lib/cv";
 import { deleteStoredFiles, storageKeyFromUrl } from "@/lib/storage";
 
 const {
   account,
   apiKey,
+  applicationNote,
+  applicationReview,
   collection,
   collectionItem,
   comment,
   company,
+  companyAudit,
+  companyBlock,
   companyMember,
   contactRequest,
   cvDocument,
@@ -29,6 +34,8 @@ const {
   reaction,
   subscription,
   tag,
+  talentList,
+  talentListMember,
   user,
   userAchievement,
 } = schema;
@@ -201,15 +208,17 @@ export async function exportUserData(userId: string) {
   const visited = alias(user, "visited");
   const [contactsSent, contactsReceived, collections, collectionItems, updates, subscriptions, grants, companies, apiKeys, visits] = await Promise.all([
     db
-      .select({ to: recipient.username, reason: contactRequest.reason, message: contactRequest.message, createdAt: contactRequest.createdAt })
+      .select({ to: recipient.username, company: company.name, reason: contactRequest.reason, message: contactRequest.message, createdAt: contactRequest.createdAt })
       .from(contactRequest)
       .innerJoin(recipient, eq(recipient.id, contactRequest.recipientId))
+      .leftJoin(company, eq(company.id, contactRequest.companyId))
       .where(eq(contactRequest.senderId, userId))
       .orderBy(asc(contactRequest.createdAt)),
     db
-      .select({ from: sender.username, reason: contactRequest.reason, message: contactRequest.message, createdAt: contactRequest.createdAt })
+      .select({ from: sender.username, company: company.name, reason: contactRequest.reason, message: contactRequest.message, createdAt: contactRequest.createdAt })
       .from(contactRequest)
       .innerJoin(sender, eq(sender.id, contactRequest.senderId))
+      .leftJoin(company, eq(company.id, contactRequest.companyId))
       .where(eq(contactRequest.recipientId, userId))
       .orderBy(asc(contactRequest.createdAt)),
     db
@@ -251,6 +260,54 @@ export async function exportUserData(userId: string) {
       .orderBy(desc(profileVisit.lastSeenAt)),
   ]);
 
+  // Det bedrifter har lagret om deg: lister med notater, hva de har gjort med dataene dine
+  // (aktivitetsloggen, uten hvem i bedriften), notater og vurderinger på søknadene dine, og
+  // bedriftene du har blokkert. Hvem i bedriften som skrev, er kollegaenes opplysninger og tas ikke med.
+  const { job, jobApplication } = schema;
+  const [lists, companyLog, notes, reviews, blocks] = await Promise.all([
+    db
+      .select({ company: company.name, list: talentList.name, addedAt: talentListMember.addedAt, expiresAt: talentListMember.expiresAt, note: talentListMember.note })
+      .from(talentListMember)
+      .innerJoin(talentList, eq(talentList.id, talentListMember.listId))
+      .innerJoin(company, eq(company.id, talentList.companyId))
+      .where(eq(talentListMember.userId, userId))
+      .orderBy(asc(talentListMember.addedAt)),
+    db
+      .select({ company: company.name, action: companyAudit.action, createdAt: companyAudit.createdAt })
+      .from(companyAudit)
+      .innerJoin(company, eq(company.id, companyAudit.companyId))
+      .where(eq(companyAudit.subjectUserId, userId))
+      .orderBy(asc(companyAudit.createdAt)),
+    db
+      .select({ company: company.name, job: job.title, body: applicationNote.body, createdAt: applicationNote.createdAt, editedAt: applicationNote.editedAt })
+      .from(applicationNote)
+      .innerJoin(jobApplication, eq(jobApplication.id, applicationNote.applicationId))
+      .innerJoin(job, eq(job.id, jobApplication.jobId))
+      .innerJoin(company, eq(company.id, job.companyId))
+      .where(eq(jobApplication.userId, userId))
+      .orderBy(asc(applicationNote.createdAt)),
+    db
+      .select({
+        company: company.name,
+        job: job.title,
+        scores: applicationReview.scores,
+        recommendation: applicationReview.recommendation,
+        comment: applicationReview.comment,
+        submittedAt: applicationReview.submittedAt,
+      })
+      .from(applicationReview)
+      .innerJoin(jobApplication, eq(jobApplication.id, applicationReview.applicationId))
+      .innerJoin(job, eq(job.id, jobApplication.jobId))
+      .innerJoin(company, eq(company.id, job.companyId))
+      .where(eq(jobApplication.userId, userId))
+      .orderBy(asc(applicationReview.submittedAt)),
+    db
+      .select({ company: company.name, since: companyBlock.createdAt })
+      .from(companyBlock)
+      .innerJoin(company, eq(company.id, companyBlock.companyId))
+      .where(eq(companyBlock.userId, userId)),
+  ]);
+
   return {
     exportedAt: new Date().toISOString(),
     account: { ...owner, loginMethods: accounts.map((a) => (a.provider === "credential" ? "e-post og passord" : a.provider)) },
@@ -279,7 +336,7 @@ export async function exportUserData(userId: string) {
       .select({ key: userAchievement.key, tier: userAchievement.tier, unlockedAt: userAchievement.unlockedAt })
       .from(userAchievement)
       .where(eq(userAchievement.userId, userId)),
-    // Søknader med Vis-profilen. Bedriftens interne notat er deres og tas ikke med.
+    // Søknader med Vis-profilen.
     applications: await db
       .select({
         job: schema.job.title,
@@ -304,5 +361,12 @@ export async function exportUserData(userId: string) {
       .from(schema.companyEmployee)
       .innerJoin(company, eq(company.id, schema.companyEmployee.companyId))
       .where(eq(schema.companyEmployee.userId, userId)),
+    companiesAndYou: {
+      talentLists: lists,
+      activity: companyLog.map((r) => ({ company: r.company, action: r.action, description: AUDIT_ACTION_LABELS[r.action as AuditAction] ?? r.action, createdAt: r.createdAt })),
+      applicationNotes: notes,
+      applicationReviews: reviews,
+      blocked: blocks,
+    },
   };
 }

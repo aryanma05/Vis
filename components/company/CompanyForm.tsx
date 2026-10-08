@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useRef, useState, useTransition } from "react";
 import { Building2, ImagePlus } from "lucide-react";
 import { createCompanyAction, deleteCompanyAction, updateCompanyAction, uploadCompanyLogoAction } from "@/app/actions/companies";
@@ -32,6 +33,7 @@ export default function CompanyForm({
   const [logo, setLogo] = useState(logoUrl);
   const [pending, start] = useTransition();
   const [uploading, setUploading] = useState(false);
+  const [acceptTerms, setAcceptTerms] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const set = (key: keyof CompanyValues, value: string) => setValues((v) => ({ ...v, [key]: value }));
 
@@ -47,7 +49,7 @@ export default function CompanyForm({
         toast.success("Lagret");
         router.refresh();
       } else {
-        const result = await createCompanyAction(values);
+        const result = await createCompanyAction({ ...values, acceptTerms });
         if (!result.ok) {
           toast.error(result.error);
           return;
@@ -138,6 +140,22 @@ export default function CompanyForm({
       <Field label={t("Om bedriften")} optional hint={t("Hva dere lager, hvordan dere jobber og hva slags folk dere ser etter.")} htmlFor="bedrift-om">
         <MarkdownEditor id="bedrift-om" value={values.about} onChange={(v) => set("about", v)} maxLength={5000} placeholder={t("Skriv om bedriften …")} />
       </Field>
+      {!companyId && (
+        <label className="flex max-w-xl cursor-pointer items-start gap-3 rounded-[18px] glass-card p-4 text-sm">
+          <input type="checkbox" required checked={acceptTerms} onChange={(e) => setAcceptTerms(e.target.checked)} className="mt-0.5 accent-[var(--sea)]" />
+          <span className="text-mist">
+            {t("Jeg har rett til å representere bedriften og godtar")}{" "}
+            <Link href="/vilkar#bedrifter" target="_blank" className="text-ice hover:underline">
+              {t("reglene for bedrifter")}
+            </Link>{" "}
+            {t("og")}{" "}
+            <Link href="/vilkar/databehandleravtale" target="_blank" className="text-ice hover:underline">
+              {t("databehandleravtalen")}
+            </Link>
+            .
+          </span>
+        </label>
+      )}
       <div className="flex flex-wrap items-center gap-3">
         <Button type="submit" loading={pending}>
           {companyId ? t("Lagre") : t("Lag bedriftsside")}

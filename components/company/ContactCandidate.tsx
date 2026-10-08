@@ -43,6 +43,10 @@ export function ContactCandidate({ companyId, userId, name }: { companyId: strin
             ))}
           </div>
           <textarea className={`${textareaClass} mt-4 min-h-32`} value={message} onChange={(e) => setMessage(e.target.value)} maxLength={2000} placeholder={t("Hei {name}! …", { name: first })} aria-label={t("Melding")} />
+          <div className="mt-2 flex items-start justify-between gap-4 text-xs text-mist">
+            <p>{t("Én melding per kandidat per 30 dager for hele bedriften. Kandidaten ser navnet ditt og bedriftens navn, og kan blokkere bedriften.")}</p>
+            <span className={`shrink-0 tabular-nums ${message.trim().length < 20 ? "" : "text-success"}`}>{message.length}/2000</span>
+          </div>
           <div className="mt-4 flex justify-end">
             <Button
               size="sm"

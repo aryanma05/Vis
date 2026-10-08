@@ -1,18 +1,27 @@
 import "server-only";
 
 import { and, asc, count, desc, eq, gt, ilike, inArray, isNotNull, or, sql, type SQL } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { db, schema } from "@/db";
-import { requireBusiness, requireCompanyRole } from "@/lib/companies";
+import { audit } from "@/lib/audit";
+import { requireBusiness } from "@/lib/companies";
+import { getCompanyGate, requireCompanyPermission } from "@/lib/company-access";
+import { can } from "@/lib/company-permissions";
+import { notBlockedSql } from "@/lib/company-privacy";
 import { FIELDS, OPEN_TO, type FieldKey, type OpenTo } from "@/lib/constants";
+import { log } from "@/lib/log";
+import { notify } from "@/lib/notifications";
 import { isUuid } from "@/lib/projects";
+import { check, enforce } from "@/lib/rate-limit";
 import { UserFacingError } from "@/lib/result";
 import { profilePath, siteUrl } from "@/lib/site";
 import { outer } from "@/lib/sql";
 
-const { cvSkill, profile, project, projectImage, projectTag, tag, talentList, talentListMember, user } = schema;
+const { company, cvSkill, profile, project, projectImage, projectTag, tag, talentList, talentListMember, user } = schema;
 
 // Kandidatsøk for bedrifter med Bedrift-abonnement. Bare folk som selv har slått på
 // «Synlig for bedrifter» kommer med, og bare det som allerede står offentlig på profilen.
+// Den som har blokkert bedriften, finnes aldri: ikke i søk, lister, varsler eller kontakt.
 
 // `student`: har studieretning eller ferdig-år på profilen, eller er åpen for sommerjobb/internship.
 export type CandidateFilters = { q?: string; location?: string | null; openTo?: OpenTo | null; field?: FieldKey | null; student?: boolean };
@@ -64,9 +73,11 @@ export async function loadShowcase(userIds: string[], perUser = 3) {
   return map;
 }
 
-// Vilkårene for et kandidatsøk. Deles med lagrede søk (lib/saved-searches.ts).
-export function candidateConditions(filters: CandidateFilters): SQL[] {
+// Vilkårene for et kandidatsøk. Deles med lagrede søk (lib/saved-searches.ts). Med
+// companyId tas de som har blokkert bedriften bort.
+export function candidateConditions(filters: CandidateFilters, companyId?: string | null): SQL[] {
   const conditions: SQL[] = [eq(profile.visibleToCompanies, true), sql`coalesce(${user.banned}, false) = false`];
+  if (companyId) conditions.push(notBlockedSql(companyId));
   const q = filters.q?.trim();
   if (q) {
     const like = `%${q.replace(/[%_]/g, "")}%`;
@@ -102,27 +113,29 @@ export function candidateConditions(filters: CandidateFilters): SQL[] {
 }
 
 export async function searchCandidates(viewerId: string, companyId: string, filters: CandidateFilters, limit = 50) {
-  await requireCompanyRole(viewerId, companyId);
+  await requireCompanyPermission(viewerId, companyId, "candidates.search");
   await requireBusiness(companyId);
+  await enforce("candidateSearch", companyId);
 
   const rows = await db
     .select(candidateColumns)
     .from(user)
     .innerJoin(profile, eq(profile.userId, user.id))
-    .where(and(...candidateConditions(filters)))
+    .where(and(...candidateConditions(filters, companyId)))
     .orderBy(desc(candidateColumns.projects), asc(user.name))
     .limit(Math.min(limit, 100));
   const showcase = await loadShowcase(rows.map((r) => r.id));
   return rows.map((r) => ({ ...r, showcase: showcase.get(r.id) ?? [] }));
 }
 
-// Kandidater som passer et søk og ble synlige etter `since` (nye siden sist).
-export async function newCandidatesSince(filters: CandidateFilters, since: Date, limit = 20) {
+// Kandidater som passer et søk og ble synlige etter `since` (nye siden sist), uten dem som
+// har blokkert bedriften.
+export async function newCandidatesSince(companyId: string, filters: CandidateFilters, since: Date, limit = 20) {
   return db
     .select({ id: user.id, name: user.name, username: user.username, headline: profile.headline, location: profile.location })
     .from(user)
     .innerJoin(profile, eq(profile.userId, user.id))
-    .where(and(...candidateConditions(filters), gt(profile.visibleSince, since)))
+    .where(and(...candidateConditions(filters, companyId), gt(profile.visibleSince, since)))
     .orderBy(desc(profile.visibleSince))
     .limit(limit);
 }
@@ -131,22 +144,42 @@ export async function newCandidatesSince(filters: CandidateFilters, since: Date,
 /*  Lister                                                                    */
 /* -------------------------------------------------------------------------- */
 
+// De som vises i en liste: fortsatt synlige, ikke utløpt og har ikke blokkert bedriften.
+// Kolonnene skrives med tabellnavn (outer), så det også virker i underspørringer.
+const shownMember = (companyId: string) =>
+  sql`${outer(talentListMember.expiresAt)} > now()
+    and exists (select 1 from profile p where p.user_id = ${outer(talentListMember.userId)} and p.visible_to_companies)
+    and ${notBlockedSql(companyId, outer(talentListMember.userId))}`;
+
 export async function listTalentLists(viewerId: string, companyId: string) {
-  await requireCompanyRole(viewerId, companyId);
-  return db
+  await requireCompanyPermission(viewerId, companyId, "lists.edit");
+  const lists = await db
     .select({
       id: talentList.id,
       name: talentList.name,
       createdAt: talentList.createdAt,
-      members: sql<number>`(select count(*)::int from ${talentListMember} where ${talentListMember.listId} = ${talentList.id})`,
+      members: sql<number>`(select count(*)::int from ${talentListMember} where ${outer(talentListMember.listId)} = ${outer(talentList.id)} and ${shownMember(companyId)})`,
     })
     .from(talentList)
     .where(eq(talentList.companyId, companyId))
     .orderBy(desc(talentList.createdAt));
+  // De fire sist lagt til i hver liste, til avatarene i oversikten.
+  const ids = lists.map((l) => l.id);
+  const previews = ids.length
+    ? await db.execute<{ list_id: string; name: string; image: string | null }>(sql`
+        select list_id, name, image from (
+          select m.list_id, u.name, u.image, row_number() over (partition by m.list_id order by m.added_at desc) as rn
+          from ${talentListMember} m join "user" u on u.id = m.user_id
+          where m.list_id in (${sql.join(ids.map((id) => sql`${id}`), sql`, `)}) and m.expires_at > now()
+            and exists (select 1 from profile p where p.user_id = m.user_id and p.visible_to_companies)
+            and not exists (select 1 from company_block b where b.user_id = m.user_id and b.company_id = ${companyId})
+        ) x where rn <= 4`)
+    : [];
+  return lists.map((l) => ({ ...l, preview: previews.filter((p) => p.list_id === l.id).map((p) => ({ name: p.name, image: p.image })) }));
 }
 
 export async function createTalentList(viewerId: string, companyId: string, name: string) {
-  await requireCompanyRole(viewerId, companyId);
+  await requireCompanyPermission(viewerId, companyId, "lists.edit");
   await requireBusiness(companyId);
   const clean = name.trim().slice(0, 80);
   if (!clean) throw new UserFacingError("Listen må ha et navn.");
@@ -164,56 +197,112 @@ async function listCompany(listId: string) {
 }
 
 export async function deleteTalentList(viewerId: string, listId: string) {
-  const { companyId } = await listCompany(listId);
-  await requireCompanyRole(viewerId, companyId, ["owner", "admin"]);
+  const { companyId, name } = await listCompany(listId);
+  await requireCompanyPermission(viewerId, companyId, "lists.delete");
+  const [{ n }] = await db.select({ n: count() }).from(talentListMember).where(eq(talentListMember.listId, listId));
   await db.delete(talentList).where(eq(talentList.id, listId));
+  await audit({ companyId, actorId: viewerId, action: "list.deleted", targetType: "list", targetId: listId, label: name, meta: { n } });
   return companyId;
 }
 
+// Kandidaten får «{bedrift} lagret profilen din» maks én gang per bedrift per 30 dager
+// (informasjonsplikten i GDPR art. 14). Kaster aldri.
+async function sendTalentNotice(actorId: string, companyId: string, userId: string) {
+  try {
+    if (!(await check("talentNotice", `${companyId}:${userId}`)).ok) return;
+    const [co] = await db.select({ name: company.name, slug: company.slug }).from(company).where(eq(company.id, companyId)).limit(1);
+    if (!co) return;
+    await notify({ userId, actorId, type: "talent", data: { event: "saved", companyName: co.name, companySlug: co.slug } });
+  } catch (error) {
+    log.error("talent.notice", { error, companyId });
+  }
+}
+
+const cleanNote = (note: string | null | undefined) => note?.trim().slice(0, 500) || null;
+
+// Legg til eller fjern en kandidat. Bare synlige kandidater som ikke har blokkert bedriften
+// kan legges til; de står i listen i 12 måneder.
 export async function setTalentListMember(viewerId: string, listId: string, userId: string, on: boolean, note?: string | null) {
-  const { companyId } = await listCompany(listId);
-  await requireCompanyRole(viewerId, companyId);
+  const { companyId, name } = await listCompany(listId);
+  await requireCompanyPermission(viewerId, companyId, "lists.edit");
   await requireBusiness(companyId);
   if (!on) {
-    await db.delete(talentListMember).where(and(eq(talentListMember.listId, listId), eq(talentListMember.userId, userId)));
+    const removed = await db
+      .delete(talentListMember)
+      .where(and(eq(talentListMember.listId, listId), eq(talentListMember.userId, userId)))
+      .returning({ userId: talentListMember.userId });
+    if (removed.length) await audit({ companyId, actorId: viewerId, action: "list.removed", targetType: "list", targetId: listId, subjectUserId: userId, label: name });
     return companyId;
   }
-  // Bare kandidater som er synlige for bedrifter kan legges til.
   const [visible] = await db
     .select({ id: profile.userId })
     .from(profile)
-    .where(and(eq(profile.userId, userId), eq(profile.visibleToCompanies, true)))
+    .innerJoin(user, eq(user.id, profile.userId))
+    .where(and(eq(profile.userId, userId), eq(profile.visibleToCompanies, true), sql`coalesce(${user.banned}, false) = false`, notBlockedSql(companyId, outer(profile.userId))))
     .limit(1);
+  // Samme svar om personen er skjult eller har blokkert bedriften.
   if (!visible) throw new UserFacingError("Denne personen er ikke synlig for bedrifter.");
-  await db
+  const added = await db
     .insert(talentListMember)
-    .values({ listId, userId, note: note?.trim().slice(0, 500) || null })
-    .onConflictDoUpdate({ target: [talentListMember.listId, talentListMember.userId], set: { note: note?.trim().slice(0, 500) || null } });
+    .values({ listId, userId, note: cleanNote(note), addedById: viewerId })
+    .onConflictDoNothing()
+    .returning({ userId: talentListMember.userId });
+  if (added.length === 0) {
+    if (note !== undefined) await setTalentListNote(viewerId, listId, userId, note);
+    return companyId;
+  }
+  await audit({ companyId, actorId: viewerId, action: "list.added", targetType: "list", targetId: listId, subjectUserId: userId, label: name });
+  await sendTalentNotice(viewerId, companyId, userId);
+  return companyId;
+}
+
+// Notat om en kandidat i en liste. Kandidaten kan be om innsyn, så skriv det som om de leser det.
+export async function setTalentListNote(viewerId: string, listId: string, userId: string, note: string | null) {
+  const { companyId, name } = await listCompany(listId);
+  await requireCompanyPermission(viewerId, companyId, "lists.edit");
+  await requireBusiness(companyId);
+  const clean = cleanNote(note);
+  const updated = await db
+    .update(talentListMember)
+    .set({ note: clean })
+    .where(and(eq(talentListMember.listId, listId), eq(talentListMember.userId, userId)))
+    .returning({ userId: talentListMember.userId });
+  if (updated.length === 0) throw new UserFacingError("Kandidaten står ikke i listen.");
+  await audit({ companyId, actorId: viewerId, action: "list.note", targetType: "list", targetId: listId, subjectUserId: userId, label: name, meta: { cleared: clean === null } });
   return companyId;
 }
 
 export async function getTalentList(viewerId: string, listId: string) {
   const list = await listCompany(listId);
-  await requireCompanyRole(viewerId, list.companyId);
+  await requireCompanyPermission(viewerId, list.companyId, "lists.edit");
+  const addedBy = alias(user, "added_by");
   const members = await db
-    .select({ ...candidateColumns, note: talentListMember.note, addedAt: talentListMember.addedAt, visible: profile.visibleToCompanies })
+    .select({
+      ...candidateColumns,
+      note: talentListMember.note,
+      addedAt: talentListMember.addedAt,
+      expiresAt: talentListMember.expiresAt,
+      addedByName: addedBy.name,
+    })
     .from(talentListMember)
     .innerJoin(user, eq(user.id, talentListMember.userId))
     .innerJoin(profile, eq(profile.userId, user.id))
-    .where(eq(talentListMember.listId, listId))
+    .leftJoin(addedBy, eq(addedBy.id, talentListMember.addedById))
+    // Har noen slått av «Synlig for bedrifter» eller blokkert bedriften, vises de ikke.
+    .where(and(eq(talentListMember.listId, listId), shownMember(list.companyId)))
     .orderBy(desc(talentListMember.addedAt));
-  // Har noen slått av «Synlig for bedrifter» etterpå, vises de ikke lenger.
-  return { id: listId, name: list.name, companyId: list.companyId, members: members.filter((m) => m.visible) };
+  return { id: listId, name: list.name, companyId: list.companyId, members };
 }
 
-// Hvilke lister kandidatene allerede står i (til «Legg i liste»-knappen).
+// Hvilke lister kandidatene allerede står i (til «Legg i liste»-knappen). Kalles etter at
+// tilgangen er sjekket.
 export async function listMembershipsFor(companyId: string, userIds: string[]) {
   if (userIds.length === 0) return new Map<string, string[]>();
   const rows = await db
     .select({ userId: talentListMember.userId, listId: talentListMember.listId })
     .from(talentListMember)
     .innerJoin(talentList, eq(talentList.id, talentListMember.listId))
-    .where(and(eq(talentList.companyId, companyId), inArray(talentListMember.userId, userIds)));
+    .where(and(eq(talentList.companyId, companyId), inArray(talentListMember.userId, userIds), gt(talentListMember.expiresAt, sql`now()`)));
   const map = new Map<string, string[]>();
   for (const r of rows) map.set(r.userId, [...(map.get(r.userId) ?? []), r.listId]);
   return map;
@@ -226,11 +315,18 @@ const csvCell = (value: unknown) => {
   return `"${safe.replace(/"/g, '""')}"`;
 };
 
-// Eksport av en liste til CSV (Excel/Numbers/Google Sheets). Ingen e-postadresser.
-export async function talentListCsv(viewerId: string, listId: string) {
+export const CSV_FOOTER = "Personopplysninger – slett filen når dere er ferdige (vilkår § 6)";
+
+// Eksport av en liste til CSV (Excel/Numbers/Google Sheets). Bare eier og administratorer,
+// maks 20 i døgnet per bedrift, og hver eksport logges med antall rader. Ingen e-postadresser;
+// notater bare når de ber om det.
+export async function talentListCsv(viewerId: string, listId: string, { notes = false }: { notes?: boolean } = {}) {
+  const meta = await listCompany(listId);
+  await requireCompanyPermission(viewerId, meta.companyId, "lists.export");
+  await requireBusiness(meta.companyId);
+  await enforce("csvExport", meta.companyId);
   const list = await getTalentList(viewerId, listId);
-  await requireBusiness(list.companyId);
-  const header = ["Navn", "Brukernavn", "Profil", "Tittel", "Sted", "Ferdigheter", "Prosjekter", "Notat", "Lagt til"];
+  const header = ["Navn", "Brukernavn", "Profil", "Tittel", "Sted", "Ferdigheter", "Prosjekter", ...(notes ? ["Notat"] : []), "Lagt til"];
   const rows = list.members.map((m) => [
     m.name,
     m.username,
@@ -239,11 +335,12 @@ export async function talentListCsv(viewerId: string, listId: string) {
     m.location,
     m.skills.slice(0, 15),
     m.projects,
-    m.note,
+    ...(notes ? [m.note] : []),
     new Date(m.addedAt).toISOString().slice(0, 10),
   ]);
+  await audit({ companyId: list.companyId, actorId: viewerId, action: "list.exported", targetType: "list", targetId: listId, label: list.name, meta: { rows: rows.length, notes } });
   // BOM så Excel leser æ, ø og å riktig.
-  return { name: list.name, csv: `﻿${[header, ...rows].map((r) => r.map(csvCell).join(";")).join("\r\n")}\r\n` };
+  return { name: list.name, rows: rows.length, csv: `\uFEFF${[header, ...rows, [], [CSV_FOOTER]].map((r) => r.map(csvCell).join(";")).join("\r\n")}\r\n` };
 }
 
 /* -------------------------------------------------------------------------- */
@@ -252,22 +349,50 @@ export async function talentListCsv(viewerId: string, listId: string) {
 
 export const MAX_COMPARE = 4;
 
-// Opptil fire kandidater side om side. Bedriften kan sammenligne dem som er synlige for
-// bedrifter, og dem som har søkt hos dem (søknaden deler profilen).
+// «Sammenlignet kandidater» logges maks én gang per person, kandidat og dag (Oslo-tid), så
+// loggen svarer på «hvem så på Kari» uten å fylles opp når siden lastes på nytt.
+async function auditCompareOnce(companyId: string, actorId: string, subjectIds: string[]) {
+  for (const subjectId of subjectIds) {
+    try {
+      await db.execute(sql`
+        insert into company_audit (company_id, actor_id, action, target_type, target_id, subject_user_id, meta)
+        select ${companyId}::uuid, ${actorId}, 'application.compared', 'user', ${subjectId}, ${subjectId}, ${JSON.stringify({ n: subjectIds.length })}::jsonb
+        where not exists (
+          select 1 from company_audit
+          where company_id = ${companyId} and actor_id = ${actorId} and action = 'application.compared' and subject_user_id = ${subjectId}
+            and (created_at at time zone 'Europe/Oslo')::date = (now() at time zone 'Europe/Oslo')::date)`);
+    } catch (error) {
+      log.error("audit.compare", { error, companyId });
+    }
+  }
+}
+
+// Opptil fire kandidater side om side. Alle i bedriften kan sammenligne dem som har søkt hos
+// dem (søknaden deler profilen); de som kan bruke kandidatsøket, også dem som er synlige for
+// bedrifter. E-posten er bare med når kandidaten har søkt og rollen kan se kontaktinfo.
 export async function compareCandidates(viewerId: string, companyId: string, userIds: string[]) {
-  await requireCompanyRole(viewerId, companyId);
+  const role = await requireCompanyPermission(viewerId, companyId, "applications.view");
   await requireBusiness(companyId);
   const ids = [...new Set(userIds)].filter((id) => /^[\w-]{1,64}$/.test(id)).slice(0, MAX_COMPARE);
   if (ids.length === 0) return [];
+  const gate = await getCompanyGate(viewerId, companyId);
+  const searchable = can(role, "candidates.search") && Boolean(gate?.termsAccepted);
+  const contactDetails = can(role, "applications.contactDetails");
 
   const { cvEducation, cvExperience, job, jobApplication } = schema;
   const applied = sql<boolean>`exists (select 1 from ${jobApplication} join ${job} on ${job.id} = ${jobApplication.jobId}
     where ${jobApplication.userId} = ${user.id} and ${job.companyId} = ${companyId} and ${jobApplication.status} <> 'trukket')`;
   const rows = await db
-    .select(candidateColumns)
+    .select({ ...candidateColumns, email: user.email, applied })
     .from(user)
     .innerJoin(profile, eq(profile.userId, user.id))
-    .where(and(inArray(user.id, ids), sql`coalesce(${user.banned}, false) = false`, or(eq(profile.visibleToCompanies, true), applied)));
+    .where(
+      and(
+        inArray(user.id, ids),
+        sql`coalesce(${user.banned}, false) = false`,
+        searchable ? or(and(eq(profile.visibleToCompanies, true), notBlockedSql(companyId)), applied) : applied,
+      ),
+    );
 
   const found = rows.map((r) => r.id);
   const [showcase, experience, education, applications] = await Promise.all([
@@ -296,12 +421,15 @@ export async function compareCandidates(viewerId: string, companyId: string, use
       : [],
   ]);
 
+  await auditCompareOnce(companyId, viewerId, found);
+
   // Samme rekkefølge som de ble valgt i.
   return ids
     .map((id) => rows.find((r) => r.id === id))
     .filter((r) => r !== undefined)
-    .map((r) => ({
+    .map(({ email, applied: hasApplied, ...r }) => ({
       ...r,
+      email: contactDetails && hasApplied ? email : null,
       openTo: (r.openTo ?? []) as OpenTo[],
       showcase: showcase.get(r.id) ?? [],
       experience: experience.filter((e) => e.userId === r.id).slice(0, 3),

@@ -21,7 +21,7 @@ describe("bedrift: søknader, lagrede søk, team og utfordringer", { skip }, () 
       await db.insert(schema.user).values({ id, name: `Test ${id.slice(-4)}`, email: `${id}@test.no`, emailVerified: true, username: id.slice(0, 30) });
     }
     const { createCompany } = await import("@/lib/companies");
-    companyId = (await createCompany(owner, { name: `Testfirma ${owner.slice(-6)}` })).id;
+    companyId = (await createCompany(owner, { name: `Testfirma ${owner.slice(-6)}`, acceptTerms: true })).id;
     const { createJob } = await import("@/lib/jobs");
     jobId = await createJob(owner, companyId, { title: "Frontend-utvikler", applyMode: "vis" }, true);
     const [p] = await db
@@ -112,10 +112,13 @@ describe("bedrift: søknader, lagrede søk, team og utfordringer", { skip }, () 
     assert.equal(found.showcase[0]?.id, projectId, "prosjektene vises i kandidatsøket");
   });
 
-  test("teamet vises på bedriftssiden, og man kan fjerne seg selv", async () => {
-    const { addEmployee, isEmployee, listTeam, removeEmployee } = await import("@/lib/companies");
-    await assert.rejects(addEmployee(outsider, companyId, candidate.slice(0, 30)), /tilgang/);
-    await addEmployee(owner, companyId, candidate.slice(0, 30), "Frontend");
+  test("teamet vises på bedriftssiden etter en godtatt invitasjon, og man kan fjerne seg selv", async () => {
+    const { isEmployee, listTeam, removeEmployee } = await import("@/lib/companies");
+    const { acceptInvite, inviteToCompany } = await import("@/lib/company-invites");
+    await assert.rejects(inviteToCompany(outsider, companyId, { target: candidate.slice(0, 30), kind: "employee" }), /tilgang/);
+    const { id } = await inviteToCompany(owner, companyId, { target: candidate.slice(0, 30), kind: "employee", title: "Frontend" });
+    assert.equal(await isEmployee(candidate, companyId), false, "ingen vises før de har sagt ja");
+    await acceptInvite(candidate, { inviteId: id });
     const team = await listTeam(companyId);
     assert.deepEqual(team.map((m) => [m.userId, m.admin]).sort(), [[candidate, false], [owner, true]].sort());
     await removeEmployee(candidate, companyId, candidate);

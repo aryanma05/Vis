@@ -3,63 +3,54 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { UserMinus } from "lucide-react";
-import { addEmployeeAction, removeEmployeeAction } from "@/app/actions/companies";
+import { removeEmployeeAction } from "@/app/actions/companies";
 import { useT } from "@/components/LocaleProvider";
 import { Button } from "@/components/ui/button";
-import { inputClass } from "@/components/ui/field";
+import Dialog from "@/components/ui/dialog";
 import { toast } from "@/components/ui/toast";
 
-// Legg til folk i teamet på bedriftssiden (uten tilgang til å administrere).
-export function AddEmployee({ companyId }: { companyId: string }) {
-  const t = useT();
-  const router = useRouter();
-  const [username, setUsername] = useState("");
-  const [title, setTitle] = useState("");
-  const [pending, start] = useTransition();
-  return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        start(async () => {
-          const result = await addEmployeeAction(companyId, username, title);
-          if (!result.ok) return void toast.error(result.error);
-          toast.success(t("Lagt til i teamet"), { description: t("Personen får beskjed og kan fjerne seg selv.") });
-          setUsername("");
-          setTitle("");
-          router.refresh();
-        });
-      }}
-      className="flex flex-wrap gap-2"
-    >
-      <input className={`${inputClass} h-10 min-w-40 flex-1`} value={username} onChange={(e) => setUsername(e.target.value)} placeholder={t("Brukernavn på Vis")} aria-label={t("Brukernavn")} required />
-      <input className={`${inputClass} h-10 min-w-40 flex-1`} value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t("Rolle, f.eks. Frontend-utvikler")} aria-label={t("Rolle")} maxLength={80} />
-      <Button type="submit" size="sm" loading={pending} className="h-10">
-        {t("Legg til")}
-      </Button>
-    </form>
-  );
-}
+// Folk kommer inn i teamet på bedriftssiden bare med en godtatt invitasjon (InviteDialog).
 
 // Fjern en person fra teamet (administrasjonen), eller deg selv (bedriftssiden).
-export function RemoveEmployee({ companyId, userId, self = false }: { companyId: string; userId?: string; self?: boolean }) {
+export function RemoveEmployee({ companyId, userId, name, self = false }: { companyId: string; userId?: string; name?: string; self?: boolean }) {
   const t = useT();
   const router = useRouter();
+  const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
+  const remove = () =>
+    start(async () => {
+      const result = await removeEmployeeAction(companyId, userId);
+      if (!result.ok) return void toast.error(result.error);
+      setOpen(false);
+      if (self) toast.success("Du er fjernet fra teamet");
+      else toast.success("Fjernet fra teamet");
+      router.refresh();
+    });
   return (
-    <button
-      type="button"
-      disabled={pending}
-      onClick={() =>
-        window.confirm(self ? t("Fjerne deg fra teamet på bedriftssiden?") : t("Fjerne personen fra teamet?")) &&
-        start(async () => {
-          const result = await removeEmployeeAction(companyId, userId);
-          if (!result.ok) return void toast.error(result.error);
-          router.refresh();
-        })
-      }
-      className="inline-flex items-center gap-1.5 text-sm text-mist hover:text-danger"
-    >
-      <UserMinus className="size-4" /> {self ? t("Fjern meg fra teamet") : t("Fjern")}
-    </button>
+    <>
+      <button type="button" onClick={() => setOpen(true)} className="inline-flex items-center gap-1.5 text-sm text-mist transition hover:text-danger">
+        <UserMinus className="size-4" /> {self ? t("Fjern meg fra teamet") : t("Fjern")}
+      </button>
+      <Dialog
+        open={open}
+        onClose={() => setOpen(false)}
+        size="sm"
+        title={self ? t("Fjerne deg fra teamet på bedriftssiden?") : t("Fjerne {name} fra teamet?", { name: name ?? t("personen") })}
+        description={
+          self
+            ? t("Profilen og prosjektene dine vises ikke lenger på bedriftssiden. Bedriften kan invitere deg igjen.")
+            : t("Personen vises ikke lenger på bedriftssiden. Dere kan invitere på nytt senere.")
+        }
+      >
+        <div className="flex justify-end gap-3">
+          <Button variant="ghost" onClick={() => setOpen(false)}>
+            {t("Avbryt")}
+          </Button>
+          <Button variant="danger" loading={pending} onClick={remove}>
+            {self ? t("Fjern meg") : t("Fjern")}
+          </Button>
+        </div>
+      </Dialog>
+    </>
   );
 }

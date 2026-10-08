@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Download, Eye, Shield } from "lucide-react";
+import { Building2, ChevronRight, Download, Eye, Shield } from "lucide-react";
 import { OAuthButton } from "@/components/GithubButton";
 import { GithubMark } from "@/components/icons";
 import { Section } from "@/components/ui/field";
@@ -11,6 +11,7 @@ import { emailProviderConfigured } from "@/lib/mailer";
 import { ApiKeys } from "@/components/developers/DeveloperTools";
 import { listApiKeys } from "@/lib/api-keys";
 import { getUserPlan } from "@/lib/billing";
+import { countCompanyRelations } from "@/lib/company-privacy";
 import { formatDate } from "@/lib/format";
 import { getLocale } from "@/lib/i18n/server";
 import { makeT } from "@/lib/i18n";
@@ -32,13 +33,14 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function AccountPage() {
   const user = await requireUser();
-  const [info, prefs, plan, flags, domain, keys] = await Promise.all([
+  const [info, prefs, plan, flags, domain, keys, relations] = await Promise.all([
     getAccountInfo(user.id),
     getNotificationPrefs(user.id),
     getUserPlan(user.id),
     getOwnProfileFlags(user.id),
     getCustomDomain(user.id),
     listApiKeys(user.id),
+    countCompanyRelations(user.id),
   ]);
   const pro = plan.plan === "pro";
   const locale = await getLocale();
@@ -91,12 +93,32 @@ export default async function AccountPage() {
           <VisitPrivacy initial={{ hideVisits: flags.hideVisits }} />
         </Section>
 
+        <Section id="bedrifter" title={t("Bedrifter og deg")} description={t("Bedrifter som har lagret deg, kontaktet deg eller fått en søknad fra deg.")}>
+          <Link href="/profil/rediger/konto/bedrifter" className="group flex max-w-lg items-center gap-4 rounded-[18px] glass-card p-4 transition-colors hover:bg-fill">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-[14px] bg-sea/15 text-sea">
+              <Building2 className="size-5" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-medium">{t("Se bedriftene, fjern deg fra listene eller blokker")}</span>
+              <span className="mt-0.5 block text-xs text-mist">
+                {[
+                  relations.saved ? t("{n} har lagret deg nå", { n: relations.saved }) : t("Ingen har lagret deg nå"),
+                  relations.blocked ? t("{n} blokkert", { n: relations.blocked }) : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </span>
+            </span>
+            <ChevronRight className="size-4 shrink-0 text-mist transition-transform group-hover:translate-x-0.5" />
+          </Link>
+        </Section>
+
         <Section title={t("E-post")} description={t("Brukes til innlogging og beskjeder. Den vises aldri for andre.")}>
           <EmailStatus email={info.email} verified={info.emailVerified} canSend={isEmailEnabled} devHint={devHint} />
         </Section>
 
         <Section id="varsler" title={t("E-postvarsler")} description={t("Velg hva du vil få e-post om.")}>
-          <NotificationSettings initial={prefs} emailEnabled={emailProviderConfigured || process.env.NODE_ENV !== "production"} />
+          <NotificationSettings initial={prefs} emailEnabled={emailProviderConfigured || process.env.NODE_ENV !== "production"} inCompany={relations.memberOf > 0} />
         </Section>
 
         {info.hasPassword && (
@@ -149,6 +171,11 @@ export default async function AccountPage() {
                 <Download className="size-4" /> {t("Last ned alt vi har lagret om deg")}
               </a>
               <span className="text-mist"> ({t("JSON med profil, prosjekter, CV, kommentarer og følgere")})</span>
+            </li>
+            <li>
+              <Link href="/profil/rediger/konto/bedrifter" className="inline-flex items-center gap-2 font-medium text-ice hover:underline">
+                <Building2 className="size-4" /> {t("Se hva bedrifter har lagret om deg")}
+              </Link>
             </li>
             <li>
               <Link href="/profil/rediger/cv" className="inline-flex items-center gap-2 font-medium text-ice hover:underline">

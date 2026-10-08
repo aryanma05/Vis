@@ -17,17 +17,18 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ neste?: string }> }) {
   const [user, { neste }, t] = await Promise.all([getCurrentUser(), searchParams, getT()]);
-  if (user) redirect(safeInternalPath(neste) ?? `/@${user.username}`);
+  const next = safeInternalPath(neste);
+  if (user) redirect(next ?? `/@${user.username}`);
 
   return (
     <AuthCard title={t("Velkommen tilbake")} subtitle={t("Logg inn for å dele prosjekter, følge folk og kommentere.")}>
-      <SocialLogins github={isGithubConfigured} google={isGoogleConfigured} callbackURL={safeInternalPath(neste) ?? "/"} />
+      <SocialLogins github={isGithubConfigured} google={isGoogleConfigured} callbackURL={next ?? "/"} />
       <Suspense>
         <LoginForm devHint={!emailProviderConfigured && process.env.NODE_ENV !== "production"} />
       </Suspense>
       <p className="mt-8 text-center text-sm text-mist">
         {t("Ny på Vis?")}{" "}
-        <Link href="/register" className="font-semibold text-fg underline-offset-4 hover:underline">
+        <Link href={next ? `/register?neste=${encodeURIComponent(next)}` : "/register"} className="font-semibold text-fg underline-offset-4 hover:underline">
           {t("Lag en profil")}
         </Link>
       </p>

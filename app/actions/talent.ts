@@ -3,11 +3,11 @@
 import { revalidatePath } from "next/cache";
 import type { SavedSearchFilters } from "@/db/schema";
 import { runAction } from "@/lib/action";
-import { getCompanyById, requireBusiness, requireCompanyRole } from "@/lib/companies";
+import { getCompanyById } from "@/lib/companies";
 import { sendContactRequest } from "@/lib/contact";
 import { createSavedSearch, deleteSavedSearch, setSavedSearchNotify } from "@/lib/saved-searches";
 import { requireUserForAction } from "@/lib/session";
-import { createTalentList, deleteTalentList, setTalentListMember } from "@/lib/talent";
+import { createTalentList, deleteTalentList, setTalentListMember, setTalentListNote } from "@/lib/talent";
 
 async function companyPath(companyId: string) {
   const c = await getCompanyById(companyId);
@@ -26,24 +26,32 @@ export async function createTalentListAction(companyId: string, name: string) {
 export async function deleteTalentListAction(listId: string) {
   return runAction(async () => {
     const user = await requireUserForAction();
-    await deleteTalentList(user.id, String(listId));
+    const companyId = await deleteTalentList(user.id, String(listId));
+    revalidatePath(`${await companyPath(companyId)}/admin`);
   }, "talent.list-delete");
 }
 
 export async function setTalentListMemberAction(listId: string, userId: string, on: boolean, note?: string) {
   return runAction(async () => {
     const user = await requireUserForAction();
-    await setTalentListMember(user.id, String(listId), String(userId), Boolean(on), note ?? null);
+    await setTalentListMember(user.id, String(listId), String(userId), Boolean(on), note === undefined || note === null ? undefined : String(note));
   }, "talent.member");
 }
 
+export async function setTalentListNoteAction(listId: string, userId: string, note: string) {
+  return runAction(async () => {
+    const user = await requireUserForAction();
+    const companyId = await setTalentListNote(user.id, String(listId), String(userId), String(note ?? ""));
+    revalidatePath(`${await companyPath(companyId)}/admin`);
+  }, "talent.note");
+}
+
 // Bedriften tar kontakt med en kandidat. Kandidaten har selv slått på «Synlig for
-// bedrifter», så det trengs ikke at «Kontakt meg» er på.
+// bedrifter», så det trengs ikke at «Kontakt meg» er på. Tilgang, avtale, Bedrift, blokkering
+// og grenser sjekkes i sendContactRequest.
 export async function contactCandidateAction(companyId: string, candidateId: string, input: { reason: string; message: string }) {
   return runAction(async () => {
     const user = await requireUserForAction();
-    await requireCompanyRole(user.id, String(companyId));
-    await requireBusiness(String(companyId));
     await sendContactRequest(user, String(candidateId), { reason: String(input?.reason ?? ""), message: String(input?.message ?? ""), companyId: String(companyId) });
   }, "talent.contact");
 }

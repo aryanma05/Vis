@@ -46,7 +46,7 @@ function PrivacyNb({ blob, emailService, github, google, contact, stripe, analyt
       eyebrow="Personvern"
       title="Slik tar vi vare på dataene dine"
       intro="Vis er et studentprosjekt der du kan vise frem prosjektene og CV-en din. Vi lagrer bare det som trengs for at tjenesten skal virke, vi selger ingen opplysninger, og vi har ingen annonser eller sporing på tvers av nettsteder."
-      updated="6. oktober 2026"
+      updated="8. oktober 2026"
     >
       <h2>Hva vi lagrer</h2>
       <ul>
@@ -95,9 +95,9 @@ function PrivacyNb({ blob, emailService, github, google, contact, stripe, analyt
         </li>
         <li>
           <strong>Søknader med Vis-profilen:</strong> søker du på en stilling med profilen din, lagrer vi søknaden: stillingen,
-          meldingen din, prosjektene du valgte og statusen bedriften setter (ny, intervju, tilbud eller avslag). Bedriften ser
-          profilen, prosjektene, meldingen og e-postadressen din, og kan skrive et internt notat. Du kan trekke søknaden når som
-          helst, og søknader som ikke er endret på et år slettes automatisk.
+          meldingen din, prosjektene du valgte og statusen bedriften setter (ny, intervju, tilbud eller avslag). Bedriften er
+          ansvarlig for søknaden; se <a href="#bedrifter">Søknader, kandidatsøk og bedrifter</a>. Du kan trekke søknaden når som
+          helst, og den slettes senest 12 måneder etter at du søkte.
         </li>
         <li>
           <strong>Utfordringer:</strong> svarer du på en utfordring fra en bedrift, lagrer vi hvilket prosjekt du svarte med og en
@@ -139,15 +139,83 @@ function PrivacyNb({ blob, emailService, github, google, contact, stripe, analyt
         <li>
           <strong>Bedrifter med Bedrift-abonnement:</strong> kan finne deg i kandidatsøket bare hvis du har slått på «Synlig for
           bedrifter» under Rediger profil (det er av som standard). De ser det samme som står på profilen din, og kan legge deg
-          i egne kandidatlister med notater og eksportere listene. Slår du det av, forsvinner du fra søket. E-postadressen din
-          ser de ikke fra kandidatsøket; tar de kontakt, skjer det gjennom «Kontakt». Den deles bare når du selv søker på en
-          stilling hos dem.
+          i egne kandidatlister med notater og eksportere listene. Da får du beskjed. Slår du det av, forsvinner du fra søket og
+          slettes fra alle lister med en gang. E-postadressen din ser de ikke fra kandidatsøket; tar de kontakt, skjer det
+          gjennom «Kontakt». Den deles bare når du selv søker på en stilling hos dem.
         </li>
         <li>
           <strong>Moderatorer:</strong> kan se rapporter og e-postadressen til kontoer når de behandler et brudd på
           retningslinjene.
         </li>
       </ul>
+
+      <h2 id="bedrifter">Søknader, kandidatsøk og bedrifter</h2>
+      <p>
+        Når du søker på en stilling, blir lagret i en kandidatliste eller får en melding fra en bedrift, er det{" "}
+        <strong>bedriften som er behandlingsansvarlig</strong> for opplysningene: søknaden, listene, notatene, vurderingene og
+        meldingene. Vis er <strong>databehandler</strong> og behandler dem bare på vegne av bedriften, etter en{" "}
+        <Link href="/vilkar/databehandleravtale">databehandleravtale</Link> som alle bedrifter må godta før de kan publisere
+        stillinger eller bruke kandidatsøket.
+      </p>
+      <ul>
+        <li>
+          <strong>Hva bedriften ser:</strong> når du søker, ser bedriften profilen din, prosjektene du velger, meldingen,
+          e-postadressen og CV-en (erfaring, utdanning og ferdigheter). De med rollen Vurderer (for eksempel ledere og
+          intervjuere) ser ikke e-postadressen din og kan ikke sende deg meldinger.
+        </li>
+        <li>
+          <strong>Notater og vurderinger:</strong> bedriften kan skrive notater og fylle ut vurderingskort om søknaden din. Du
+          kan be bedriften om innsyn, og notatene og vurderingene er med når du laster ned dataene dine.
+        </li>
+        <li>
+          <strong>Aktivitetslogg:</strong> bedriften har en logg over hvem i bedriften som har åpnet, flyttet eller eksportert
+          opplysninger om deg.
+        </li>
+        <li>
+          <strong>Lagret i en liste:</strong> lagrer en bedrift profilen din i en kandidatliste, får du et varsel («Bedriften
+          lagret profilen din»), maks én gang per bedrift per 30 dager.
+        </li>
+        <li>
+          <strong>Bedrifter og deg:</strong> under <Link href="/profil/rediger/konto/bedrifter">Konto → Bedrifter og deg</Link>{" "}
+          ser du hvilke bedrifter som har lagret deg, kontaktet deg, fått en søknad fra deg eller åpnet søknaden din. Der kan du
+          fjerne deg fra listene deres eller blokkere dem. En blokkert bedrift finner deg aldri i kandidatsøket, kan ikke lagre
+          deg i lister eller kontakte deg, og får ikke vite at du har blokkert den.
+        </li>
+        <li>
+          <strong>Kontakt fra bedrifter:</strong> en bedrift kan sende deg én melding per 30 dager, uansett hvem i bedriften
+          som sender, og hver bedrift har en grense per dag. Bedrifter som ikke er bekreftet av Vis, er tydelig merket.
+        </li>
+        <li>
+          <strong>Webhooks:</strong> bedrifter kan koble Vis til egne systemer. Navnet ditt, e-postadressen og meldingen sendes
+          bare videre hvis bedriften har slått det på, og ingenting sendes når abonnementet deres er avsluttet.
+        </li>
+        <li>
+          <strong>Ingen automatiske avgjørelser:</strong> Vis rangerer eller avviser aldri kandidater automatisk. Det er alltid
+          et menneske i bedriften som vurderer søknaden.
+        </li>
+      </ul>
+      <p>Så lenge lagres det:</p>
+      <ul>
+        <li>
+          Søknader: senest 12 måneder etter at du søkte, og tidligere når stillingen lukkes (3, 6 eller 12 måneder etter, valgt
+          av bedriften).
+        </li>
+        <li>
+          Trekker du søknaden, slettes meldingen, prosjektvalget, notatene, vurderingene og en eventuell intervjutid med en gang.
+          Bedriften ser bare navnet ditt og «Trukket», og søknaden slettes helt etter 30 dager.
+        </li>
+        <li>Kandidatlister: 12 måneder, og med en gang du slår av «Synlig for bedrifter» eller blokkerer bedriften.</li>
+        <li>Kontaktforespørsler: 24 måneder.</li>
+        <li>Aktivitetsloggen hos bedriften: 24 måneder.</li>
+        <li>Invitasjoner til en bedrift: 90 dager etter at de er besvart eller har utløpt.</li>
+      </ul>
+      <p>
+        Ta gjerne kontakt med bedriften først, siden det er de som er ansvarlige for søknaden. Du kan også alltid klage til{" "}
+        <a href="https://www.datatilsynet.no" target="_blank" rel="noreferrer">
+          Datatilsynet
+        </a>
+        .
+      </p>
 
       <h2>E-post</h2>
       <p>
@@ -157,7 +225,7 @@ function PrivacyNb({ blob, emailService, github, google, contact, stripe, analyt
         <Link href="/profil/rediger/konto#varsler">Konto og varsler</Link>.
       </p>
 
-      <h2>Hvor dataene ligger</h2>
+      <h2 id="underleverandorer">Hvor dataene ligger</h2>
       <ul>
         <li>Nettsiden kjører hos Render, og databasen ligger hos Neon, begge på servere i EU (Frankfurt).</li>
         <li>{blob ? "Bilder og CV-filer lagres hos Vercel Blob." : "Bilder og CV-filer lagres i den samme databasen."}</li>
@@ -183,6 +251,7 @@ function PrivacyNb({ blob, emailService, github, google, contact, stripe, analyt
       <h2>Hvor lenge vi lagrer</h2>
       <ul>
         <li>Det du har lagt ut, til du sletter det eller kontoen.</li>
+        <li>Søknader, kandidatlister, kontaktforespørsler og bedriftenes logg: se <a href="#bedrifter">over</a>.</li>
         <li>Hvem som har sett en profil: 13 måneder etter siste besøk.</li>
         <li>Feillogg og logg over webhook-leveringer: 30 dager.</li>
         <li>Tellere for å stoppe misbruk (antall forsøk per IP-adresse eller konto): to døgn.</li>
@@ -200,8 +269,9 @@ function PrivacyNb({ blob, emailService, github, google, contact, stripe, analyt
       <h2>Dine rettigheter</h2>
       <p>
         Du kan når som helst se, endre og slette det du har lagt ut. Under{" "}
-        <Link href="/profil/rediger/konto">Konto og personvern</Link> kan du laste ned alt vi har lagret om deg som en fil, og
-        slette kontoen. Da slettes profilen, prosjektene, bildene, CV-en, kommentarene, reaksjonene, følgerne, samlingene,
+        <Link href="/profil/rediger/konto">Konto og personvern</Link> kan du laste ned alt vi har lagret om deg som en fil (også
+        listene bedrifter har lagt deg i, notater og vurderinger på søknadene dine og hva bedriftene har gjort med dataene
+        dine), og slette kontoen. Da slettes profilen, prosjektene, bildene, CV-en, kommentarene, reaksjonene, følgerne, samlingene,
         meldingene og API-nøklene dine med en gang. Har du et aktivt abonnement, sier du det opp under Konto først. Sikkerhetskopier hos databaseleverandøren slettes automatisk etter kort tid.
       </p>
       <p>
@@ -238,7 +308,7 @@ function PrivacyEn({ blob, emailService, github, google, contact, stripe, analyt
           </p>
         </>
       }
-      updated="6 October 2026"
+      updated="8 October 2026"
     >
       <h2>What we store</h2>
       <ul>
@@ -289,9 +359,9 @@ function PrivacyEn({ blob, emailService, github, google, contact, stripe, analyt
         <li>
           <strong>Applications with your Vis profile:</strong> if you apply for a job with your profile, we store the
           application: the job, your message, the projects you picked and the status the company sets (new, interview, offer
-          or rejected). The company sees your profile, projects, message and email address, and can write an internal note.
-          You can withdraw the application at any time, and applications that haven&apos;t changed for a year are deleted
-          automatically.
+          or rejected). The company is responsible for the application; see{" "}
+          <a href="#bedrifter">Applications, candidate search and companies</a>. You can withdraw the application at any time,
+          and it&apos;s deleted no later than 12 months after you applied.
         </li>
         <li>
           <strong>Challenges:</strong> if you answer a challenge from a company, we store which project you answered with and
@@ -334,15 +404,86 @@ function PrivacyEn({ blob, emailService, github, google, contact, stripe, analyt
         <li>
           <strong>Companies with a Business subscription:</strong> can only find you in candidate search if you&apos;ve turned
           on “Visible to companies” under Edit profile (it&apos;s off by default). They see the same as what&apos;s on your
-          profile, and can add you to their own candidate lists with notes and export the lists. If you turn it off, you
-          disappear from search. They don&apos;t see your email address from candidate search; if they get in touch, it happens
-          through “Contact”. It&apos;s only shared when you apply for a job with them yourself.
+          profile, and can add you to their own candidate lists with notes and export the lists. You&apos;re told when that
+          happens. If you turn it off, you disappear from search and are deleted from every list right away. They don&apos;t see
+          your email address from candidate search; if they get in touch, it happens through “Contact”. It&apos;s only shared
+          when you apply for a job with them yourself.
         </li>
         <li>
           <strong>Moderators:</strong> can see reports and the email address of accounts when they handle a breach of the
           guidelines.
         </li>
       </ul>
+
+      <h2 id="bedrifter">Applications, candidate search and companies</h2>
+      <p>
+        When you apply for a job, are saved in a candidate list or get a message from a company, <strong>the company is the
+        controller</strong> of the data: the application, the lists, the notes, the reviews and the messages. Vis is the{" "}
+        <strong>processor</strong> and only processes them on the company&apos;s behalf, under a{" "}
+        <Link href="/vilkar/databehandleravtale">data processing agreement</Link> that every company must accept before it can
+        publish jobs or use candidate search.
+      </p>
+      <ul>
+        <li>
+          <strong>What the company sees:</strong> when you apply, the company sees your profile, the projects you pick, your
+          message, your email address and your CV (experience, education and skills). People with the Reviewer role (for
+          example managers and interviewers) don&apos;t see your email address and can&apos;t send you messages.
+        </li>
+        <li>
+          <strong>Notes and reviews:</strong> the company can write notes and fill in scorecards about your application. You
+          can ask the company for access, and the notes and reviews are included when you download your data.
+        </li>
+        <li>
+          <strong>Activity log:</strong> the company has a log of who in the company has opened, moved or exported data about
+          you.
+        </li>
+        <li>
+          <strong>Saved to a list:</strong> if a company saves your profile in a candidate list, you get a notification (“The
+          company saved your profile”), at most once per company per 30 days.
+        </li>
+        <li>
+          <strong>Companies and you:</strong> under <Link href="/profil/rediger/konto/bedrifter">Account → Companies and you</Link>{" "}
+          you can see which companies have saved you, contacted you, received an application from you or opened your
+          application. There you can remove yourself from their lists or block them. A blocked company never finds you in
+          candidate search, can&apos;t save you in lists or contact you, and isn&apos;t told that you blocked it.
+        </li>
+        <li>
+          <strong>Contact from companies:</strong> a company can send you one message per 30 days, whoever in the company sends
+          it, and each company has a daily limit. Companies that aren&apos;t verified by Vis are clearly marked.
+        </li>
+        <li>
+          <strong>Webhooks:</strong> companies can connect Vis to their own systems. Your name, email address and message are
+          only passed on if the company has turned that on, and nothing is sent once their subscription has ended.
+        </li>
+        <li>
+          <strong>No automated decisions:</strong> Vis never ranks or rejects candidates automatically. A person at the company
+          always assesses the application.
+        </li>
+      </ul>
+      <p>How long it&apos;s kept:</p>
+      <ul>
+        <li>
+          Applications: no later than 12 months after you applied, and earlier when the job closes (3, 6 or 12 months after,
+          chosen by the company).
+        </li>
+        <li>
+          If you withdraw the application, the message, the chosen projects, the notes, the reviews and any interview slot are
+          deleted right away. The company only sees your name and “Withdrawn”, and the application is deleted completely after
+          30 days.
+        </li>
+        <li>Candidate lists: 12 months, and right away if you turn off “Visible to companies” or block the company.</li>
+        <li>Contact requests: 24 months.</li>
+        <li>The company&apos;s activity log: 24 months.</li>
+        <li>Invitations to a company: 90 days after they&apos;re answered or expire.</li>
+      </ul>
+      <p>
+        Feel free to contact the company first, since they&apos;re responsible for the application. You can also always
+        complain to{" "}
+        <a href="https://www.datatilsynet.no/en/" target="_blank" rel="noreferrer">
+          Datatilsynet
+        </a>
+        .
+      </p>
 
       <h2>Email</h2>
       <p>
@@ -352,7 +493,7 @@ function PrivacyEn({ blob, emailService, github, google, contact, stripe, analyt
         <Link href="/profil/rediger/konto#varsler">Account and notifications</Link>.
       </p>
 
-      <h2>Where the data is</h2>
+      <h2 id="underleverandorer">Where the data is</h2>
       <ul>
         <li>The website runs at Render, and the database is at Neon, both on servers in the EU (Frankfurt).</li>
         <li>{blob ? "Images and CV files are stored at Vercel Blob." : "Images and CV files are stored in the same database."}</li>
@@ -379,6 +520,7 @@ function PrivacyEn({ blob, emailService, github, google, contact, stripe, analyt
       <h2>How long we store it</h2>
       <ul>
         <li>What you&apos;ve posted, until you delete it or your account.</li>
+        <li>Applications, candidate lists, contact requests and the companies&apos; logs: see <a href="#bedrifter">above</a>.</li>
         <li>Who has viewed a profile: 13 months after the last visit.</li>
         <li>Error log and log of webhook deliveries: 30 days.</li>
         <li>Counters for stopping abuse (number of attempts per IP address or account): two days.</li>
@@ -397,7 +539,8 @@ function PrivacyEn({ blob, emailService, github, google, contact, stripe, analyt
       <p>
         You can see, change and delete what you&apos;ve posted at any time. Under{" "}
         <Link href="/profil/rediger/konto">Account and privacy</Link> you can download everything we&apos;ve stored about you as
-        a file, and delete your account. This immediately deletes your profile, projects, images, CV, comments, reactions,
+        a file (including the lists companies have put you in, notes and reviews on your applications and what the companies
+        have done with your data), and delete your account. This immediately deletes your profile, projects, images, CV, comments, reactions,
         followers, collections, messages and API keys. If you have an active subscription, cancel it under Account first.
         Backups at the database provider are deleted automatically after a short time.
       </p>

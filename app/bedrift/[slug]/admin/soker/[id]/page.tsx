@@ -3,15 +3,18 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowUpRight, FileText, Mail, MapPin } from "lucide-react";
 import Avatar from "@/components/Avatar";
-import { ApplicantNote, StageButtons, UsedTech } from "@/components/company/Applicants";
+import { AgeChip, StageButtons, UsedTech } from "@/components/company/Applicants";
+import TeamPanel from "@/components/company/TeamPanel";
 import { EmptyState } from "@/components/ui/misc";
-import { getApplicationForCompany } from "@/lib/applications";
+import { bookingUrl, getApplicationForCompany } from "@/lib/applications";
 import { hasBusiness } from "@/lib/billing";
 import { getCompanyBySlug, getMembership } from "@/lib/companies";
+import { can } from "@/lib/company-permissions";
 import { APPLICATION_STATUS_LABELS, OPEN_TO_LABELS } from "@/lib/constants";
 import { timeAgo } from "@/lib/format";
 import type { T } from "@/lib/i18n";
 import { getLocale, getT } from "@/lib/i18n/server";
+import { listTemplates } from "@/lib/message-templates";
 import { requireUser } from "@/lib/session";
 import { loadShowcase } from "@/lib/talent";
 
@@ -30,8 +33,23 @@ export default async function ApplicantPage({ params }: { params: Promise<{ slug
   if (!company || !(await getMembership(user.id, company.id))) notFound();
   const application = await getApplicationForCompany(user.id, id).catch(() => null);
   if (!application || application.companyId !== company.id) notFound();
-  const [business, showcase] = await Promise.all([hasBusiness(company.id), loadShowcase([application.candidate.id], 6)]);
   const base = `/bedrift/${company.slug}/admin`;
+  if (application.withdrawn) {
+    return (
+      <main className="px-5 pb-28 pt-10 md:pb-20 md:pl-28 md:pr-10 md:pt-14">
+        <div className="mx-auto max-w-5xl">
+          <Link href={`${base}?fane=sokere`} className="inline-flex items-center gap-2 text-sm text-mist hover:text-fg">
+            <ArrowLeft className="size-4" /> {t("Søkere")}
+          </Link>
+          <EmptyState className="mt-8" title={t("Kandidaten har trukket søknaden")}>
+            {t("{name} trakk søknaden til {job}. Innholdet er slettet, og resten slettes automatisk etter 30 dager.", { name: application.candidate.name, job: application.job.title })}
+          </EmptyState>
+        </div>
+      </main>
+    );
+  }
+  const [business, showcase, templates] = await Promise.all([hasBusiness(company.id), loadShowcase([application.candidate.id], 6), listTemplates(user.id, company.id)]);
+  const canMove = business && can(application.role, "applications.move");
   const c = application.candidate;
   const highlighted = new Set(application.highlights.map((h) => h.id));
   const more = (showcase.get(c.id) ?? []).filter((p) => !highlighted.has(p.id));
@@ -65,19 +83,39 @@ export default async function ApplicantPage({ params }: { params: Promise<{ slug
               <Link href={`/@${c.username}/cv`} target="_blank" className="inline-flex items-center gap-1 rounded-full glass-chip px-3 py-1.5 font-medium hover:bg-fill-2">
                 <FileText className="size-3.5" /> {t("CV")}
               </Link>
-              <a href={`mailto:${c.email}?subject=${encodeURIComponent(application.job.title)}`} className="inline-flex items-center gap-1 rounded-full glass-chip px-3 py-1.5 font-medium hover:bg-fill-2">
-                <Mail className="size-3.5" /> {c.email}
-              </a>
+              {c.email ? (
+                <a href={`mailto:${c.email}?subject=${encodeURIComponent(application.job.title)}`} className="inline-flex items-center gap-1 rounded-full glass-chip px-3 py-1.5 font-medium hover:bg-fill-2">
+                  <Mail className="size-3.5" /> {c.email}
+                </a>
+              ) : (
+                <span className="inline-flex items-center gap-1 rounded-full bg-fill px-3 py-1.5 text-mist">
+                  <Mail className="size-3.5" /> {t("Kontaktinfo er skjult for rollen din")}
+                </span>
+              )}
             </p>
           </div>
         </header>
 
         <section className="mt-8 rounded-[22px] glass-card p-5">
-          <h2 className="caption">{t("Status")}</h2>
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="caption">{t("Status")}</h2>
+            <AgeChip status={application.status} since={application.statusChangedAt} />
+            {application.hiredAt && <span className="rounded-full bg-success/15 px-2.5 py-0.5 text-xs font-semibold text-success">{t("Ansatt")}</span>}
+            <span className="ml-auto text-xs text-mist" suppressHydrationWarning>
+              {t("Slettes automatisk {time}", { time: timeAgo(application.expiresAt, locale) })}
+            </span>
+          </div>
           <div className="mt-3">
-            {business ? (
-              <StageButtons id={application.id} status={application.status} name={c.name} />
-            ) : (
+            {canMove ? (
+              <StageButtons
+                id={application.id}
+                status={application.status}
+                name={c.name}
+                jobTitle={application.job.title}
+                templates={templates.map(({ id, kind, name, subject, body, builtIn }) => ({ id, kind, name, subject, body, builtIn }))}
+                ctx={{ companyName: company.name, responseDays: company.responseDays, bookingUrl: application.canBook ? bookingUrl(application.id) : null }}
+              />
+            ) : !business ? (
               <p className="text-sm text-mist">
                 {t(APPLICATION_STATUS_LABELS[application.status])}.{" "}
                 <Link href={`${base}?fane=abonnement`} className="text-ice hover:underline">
@@ -85,6 +123,8 @@ export default async function ApplicantPage({ params }: { params: Promise<{ slug
                 </Link>{" "}
                 {t("kan dere flytte søkeren til intervju, tilbud eller avslag, og kandidaten får beskjed automatisk.")}
               </p>
+            ) : (
+              <p className="text-sm text-mist">{t(APPLICATION_STATUS_LABELS[application.status])}</p>
             )}
           </div>
         </section>
@@ -201,12 +241,7 @@ export default async function ApplicantPage({ params }: { params: Promise<{ slug
               {c.openTo.length > 0 && <p className="mt-4 text-xs text-success">{t("Åpen for")} {c.openTo.map((o) => t(OPEN_TO_LABELS[o]).toLowerCase()).join(", ")}</p>}
             </section>
 
-            <section className="rounded-[22px] glass-card p-5">
-              <h2 className="caption">{t("Notat")}</h2>
-              <div className="mt-3">
-                {business ? <ApplicantNote id={application.id} initial={application.note} /> : <p className="text-sm text-mist">{t("Notater krever Bedrift.")}</p>}
-              </div>
-            </section>
+            <TeamPanel applicationId={application.id} companyId={company.id} jobId={application.job.id} viewerId={user.id} role={application.role} business={business} />
           </aside>
         </div>
       </div>
