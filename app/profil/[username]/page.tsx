@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { CSSProperties } from "react";
-import { ArrowRight, ArrowUpRight, CalendarDays, Download, FileText, FolderPlus, MapPin, Paintbrush, Printer } from "lucide-react";
+import { ArrowRight, ArrowUpRight, CalendarDays, Download, FileText, FolderPlus, GraduationCap, MapPin, Paintbrush, Printer } from "lucide-react";
 import AchievementCelebration from "@/components/achievements/AchievementCelebration";
 import ProfileAchievements from "@/components/achievements/ProfileAchievements";
 import Avatar from "@/components/Avatar";
@@ -214,6 +214,14 @@ export default async function ProfilePage({ params, searchParams }: Props) {
               <li className="flex items-center gap-3 px-4 py-3">
                 <MapPin className="size-4 shrink-0 text-mist" aria-hidden="true" />
                 <span className="min-w-0 flex-1 truncate">{profile.location}</span>
+              </li>
+            )}
+            {(profile.studyProgram || profile.graduationYear) && (
+              <li className="flex items-center gap-3 px-4 py-3">
+                <GraduationCap className="size-4 shrink-0 text-mist" aria-hidden="true" />
+                <span className="min-w-0 flex-1 truncate">
+                  {[profile.studyProgram, profile.graduationYear ? t("ferdig {year}", { year: profile.graduationYear }) : null].filter(Boolean).join(", ")}
+                </span>
               </li>
             )}
             <li className="flex items-center gap-3 px-4 py-3">

@@ -13,6 +13,7 @@ import {
   MAX_PROJECT_IMAGES,
   replaceProjectDescription,
 } from "@/lib/projects";
+import { recordError } from "@/lib/errors";
 import { log } from "@/lib/log";
 import { UserFacingError } from "@/lib/result";
 import { enforce } from "@/lib/rate-limit";
@@ -21,8 +22,10 @@ import { projectInput } from "@/lib/validation";
 const API = "https://api.github.com";
 
 // Valgfri nøkkel for serveren (en «fine-grained» token uten noen tilganger holder). Den
-// brukes til offentlige data når brukeren ikke har koblet til GitHub. Uten den deler alle
-// besøkende GitHubs grense på 60 forespørsler i timen fra serverens IP-adresse.
+// brukes til offentlige data når brukeren ikke har koblet til GitHub. Uten den spør vi
+// GitHub anonymt, og da deler alle på samme IP-adresse 60 forespørsler i timen. Hos
+// Render og andre skytjenester deles IP-adressen med mange andre, så den grensen er som
+// regel brukt opp. Derfor trengs GITHUB_TOKEN i produksjon (se README).
 const SERVER_TOKEN = process.env.GITHUB_TOKEN?.trim() || null;
 
 /* -------------------------------------------------------------------------- */
@@ -53,7 +56,13 @@ export async function hasGithubAccount(userId: string) {
 }
 
 async function requireGithubToken(userId: string) {
-  const token = await getGithubToken(userId);
+  let token: string | null = null;
+  try {
+    token = await getGithubToken(userId);
+  } catch (error) {
+    log.warn("github.user-token", { error, userId });
+    throw new UserFacingError("GitHub-tilgangen har utløpt. Koble til GitHub på nytt.");
+  }
   if (!token) throw new UserFacingError("Koble til GitHub-kontoen din først.");
   return token;
 }
@@ -68,34 +77,203 @@ async function optionalGithubToken(userId: string | null | undefined) {
   }
 }
 
-async function gh<T>(path: string, token: string | null, accept = "application/vnd.github+json"): Promise<T> {
-  const auth = token ?? SERVER_TOKEN;
-  const res = await fetch(path.startsWith("http") ? path : `${API}${path}`, {
-    headers: {
-      Accept: accept,
-      "X-GitHub-Api-Version": "2022-11-28",
-      "User-Agent": "vis-app",
-      ...(auth ? { Authorization: `Bearer ${auth}` } : {}),
-    },
-    signal: AbortSignal.timeout(10_000),
-    cache: "no-store",
-  });
-
-  if (res.ok) return (accept.includes("json") ? res.json() : res.text()) as Promise<T>;
-
-  if (res.status === 401 && token) throw new UserFacingError("GitHub-tilgangen har utløpt. Koble til GitHub på nytt.");
-  if (res.status === 401) throw new Error("GITHUB_TOKEN er ugyldig eller utløpt.");
-  if (res.status === 404) throw new GithubNotFound();
-  if (res.status === 403 || res.status === 429) {
-    throw new UserFacingError("GitHub begrenser antall forespørsler akkurat nå. Prøv igjen om litt.");
-  }
-  throw new Error(`GitHub ${res.status} for ${path}`);
-}
-
 class GithubNotFound extends UserFacingError {
   constructor() {
     super("Fant ikke repoet på GitHub.");
   }
+}
+
+// Alle nøklene vi har prøvd har nådd grensen hos GitHub. Teksten er en mal som t(), så
+// runAction kan oversette den (lib/action.ts).
+export class GithubRateLimited extends UserFacingError {
+  constructor(
+    readonly resetAt: number,
+    readonly canLink: boolean,
+  ) {
+    const n = Math.max(1, Math.ceil((resetAt - Date.now()) / 60_000));
+    super(
+      canLink
+        ? "GitHub tar bare imot et begrenset antall forespørsler, og grensen er nådd akkurat nå. Prøv igjen om {n} min. Kobler du til GitHub-kontoen din, får du din egen grense og slipper å vente."
+        : "GitHub tar bare imot et begrenset antall forespørsler, og grensen er nådd akkurat nå. Prøv igjen om {n} min.",
+      { n },
+    );
+    this.name = "GithubRateLimited";
+  }
+}
+
+type Credential = { kind: "user" | "server" | "anon"; token: string | null };
+
+// Husker nøkler som ikke virker, så vi ikke bruker en forespørsel på dem hver gang.
+// `blockedUntil` er når vi prøver igjen (grensen nullstilles, eller etter en stund for
+// en ugyldig nøkkel som kan ha blitt byttet ut).
+const blocked = { server: 0, anon: 0 };
+let serverTokenInvalid = false;
+let lastRateLimit: { kind: Credential["kind"]; resetAt: number } | null = null;
+
+function credentialsFor(token: string | null, userOnly: boolean): Credential[] {
+  if (userOnly) return token ? [{ kind: "user", token }] : [];
+  const list: Credential[] = [];
+  if (token) list.push({ kind: "user", token });
+  if (SERVER_TOKEN) list.push({ kind: "server", token: SERVER_TOKEN });
+  list.push({ kind: "anon", token: null });
+  return list;
+}
+
+// Grensen er nådd: 429, eller 403 med «x-ratelimit-remaining: 0» eller en melding om
+// «secondary rate limit». Gir tidspunktet grensen nullstilles.
+async function rateLimitReset(res: Response): Promise<number | null> {
+  if (res.status !== 403 && res.status !== 429) return null;
+  const remaining = res.headers.get("x-ratelimit-remaining");
+  const retryAfter = Number(res.headers.get("retry-after"));
+  const reset = Number(res.headers.get("x-ratelimit-reset"));
+  let limited = res.status === 429 || remaining === "0" || retryAfter > 0;
+  if (!limited) {
+    const body = await res
+      .clone()
+      .text()
+      .catch(() => "");
+    limited = /rate limit/i.test(body);
+  }
+  if (!limited) return null;
+  if (retryAfter > 0) return Date.now() + retryAfter * 1000;
+  if (reset > 0) return reset * 1000;
+  return Date.now() + 60_000;
+}
+
+export type GhOptions = { accept?: string; userOnly?: boolean };
+
+// Spør GitHub med den beste nøkkelen vi har: brukerens egen (5 000 i timen per bruker),
+// så serverens GITHUB_TOKEN (5 000 i timen), og til slutt anonymt (60 i timen per
+// IP-adresse). Er en nøkkel ugyldig eller har nådd grensen, prøves neste. `userOnly`
+// brukes for /user/…, der svaret gjelder den som eier nøkkelen.
+async function gh<T>(path: string, token: string | null, { accept = "application/vnd.github+json", userOnly = false }: GhOptions = {}): Promise<T> {
+  let resetAt = Number.POSITIVE_INFINITY;
+  let userExpired = false;
+
+  for (const cred of credentialsFor(token, userOnly)) {
+    if (cred.kind !== "user" && Date.now() < blocked[cred.kind]) {
+      if (cred.kind === "anon" || !serverTokenInvalid) resetAt = Math.min(resetAt, blocked[cred.kind]);
+      continue;
+    }
+
+    const res = await fetch(path.startsWith("http") ? path : `${API}${path}`, {
+      headers: {
+        Accept: accept,
+        "X-GitHub-Api-Version": "2022-11-28",
+        "User-Agent": "vis-app",
+        ...(cred.token ? { Authorization: `Bearer ${cred.token}` } : {}),
+      },
+      signal: AbortSignal.timeout(10_000),
+      cache: "no-store",
+    });
+
+    if (res.ok) {
+      if (cred.kind === "server" && serverTokenInvalid) serverTokenInvalid = false;
+      return (accept.includes("json") ? res.json() : res.text()) as Promise<T>;
+    }
+
+    if (res.status === 401) {
+      if (cred.kind === "user") {
+        userExpired = true;
+        continue;
+      }
+      if (cred.kind === "server") {
+        // Utløpt eller feil GITHUB_TOKEN. Logges som feil, så det vises under /admin → System.
+        if (!serverTokenInvalid) {
+          const error = new Error("GITHUB_TOKEN er ugyldig eller utløpt. Lag en ny og legg den inn hos Render.");
+          log.error("github.server-token", { error });
+          recordError({ source: "server", event: "github.server-token", error });
+        }
+        serverTokenInvalid = true;
+        blocked.server = Date.now() + 10 * 60_000;
+        continue;
+      }
+    }
+
+    const reset = await rateLimitReset(res);
+    if (reset) {
+      lastRateLimit = { kind: cred.kind, resetAt: reset };
+      if (cred.kind !== "user") blocked[cred.kind] = reset;
+      resetAt = Math.min(resetAt, reset);
+      log.warn("github.rate-limit", { kind: cred.kind, path: path.split("?")[0], resetAt: new Date(reset).toISOString() });
+      continue;
+    }
+
+    if (res.status === 404) throw new GithubNotFound();
+    // 451: sperret av GitHub (f.eks. DMCA). 403 uten grense: f.eks. krever SSO.
+    if (res.status === 451 || res.status === 403) throw new UserFacingError("GitHub gir ikke tilgang til dette akkurat nå.");
+    throw new Error(`GitHub ${res.status} for ${path.split("?")[0]}`);
+  }
+
+  if (userOnly && userExpired) throw new UserFacingError("GitHub-tilgangen har utløpt. Koble til GitHub på nytt.");
+  if (userOnly && !token) throw new UserFacingError("Koble til GitHub-kontoen din først.");
+  throw new GithubRateLimited(Number.isFinite(resetAt) ? resetAt : Date.now() + 60 * 60_000, !token);
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Mellomlager                                                               */
+/* -------------------------------------------------------------------------- */
+
+// Repoer og repolister vi nettopp har hentet. Når noen søker opp et brukernavn og så
+// importerer et av repoene, trenger vi ikke spørre GitHub om det samme to ganger.
+const REPO_TTL = 10 * 60_000;
+const repoCache = new Map<string, { at: number; repo: ApiRepo }>();
+const userReposCache = new Map<string, { at: number; repos: ApiRepo[] }>();
+
+function remember<V>(map: Map<string, V>, key: string, value: V) {
+  map.set(key, value);
+  if (map.size > 500) map.delete(map.keys().next().value!);
+}
+
+function cacheRepos(repos: ApiRepo[]) {
+  for (const repo of repos) remember(repoCache, repo.full_name.toLowerCase(), { at: Date.now(), repo });
+}
+
+async function getRepo(fullName: string, token: string | null, { fresh = false } = {}): Promise<ApiRepo> {
+  const hit = repoCache.get(fullName.toLowerCase());
+  if (!fresh && hit && Date.now() - hit.at < REPO_TTL) return hit.repo;
+  const repo = await gh<ApiRepo>(`/repos/${fullName}`, token);
+  cacheRepos([repo]);
+  return repo;
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Status (vises for admin under /admin → System)                            */
+/* -------------------------------------------------------------------------- */
+
+export type GithubStatus = {
+  token: "missing" | "ok" | "invalid" | "unknown";
+  remaining: number | null;
+  limit: number | null;
+  resetAt: string | null;
+  anonRemaining: number | null;
+  lastRateLimit: { kind: string; resetAt: string } | null;
+};
+
+// /rate_limit teller ikke mot grensen, så den er trygg å kalle.
+export async function getGithubStatus(): Promise<GithubStatus> {
+  type Limits = { resources: { core: { limit: number; remaining: number; reset: number } } };
+  const read = async (token: string | null) => {
+    const res = await fetch(`${API}/rate_limit`, {
+      headers: { Accept: "application/vnd.github+json", "User-Agent": "vis-app", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      signal: AbortSignal.timeout(5_000),
+      cache: "no-store",
+    });
+    if (res.status === 401) return "invalid" as const;
+    if (!res.ok) return null;
+    return ((await res.json()) as Limits).resources.core;
+  };
+
+  const [server, anon] = await Promise.all([SERVER_TOKEN ? read(SERVER_TOKEN).catch(() => null) : null, read(null).catch(() => null)]);
+  const core = server && server !== "invalid" ? server : null;
+  return {
+    token: !SERVER_TOKEN ? "missing" : server === "invalid" ? "invalid" : core ? "ok" : "unknown",
+    remaining: core?.remaining ?? null,
+    limit: core?.limit ?? null,
+    resetAt: core ? new Date(core.reset * 1000).toISOString() : null,
+    anonRemaining: anon && anon !== "invalid" ? anon.remaining : null,
+    lastRateLimit: lastRateLimit ? { kind: lastRateLimit.kind, resetAt: new Date(lastRateLimit.resetAt).toISOString() } : null,
+  };
 }
 
 /* -------------------------------------------------------------------------- */
@@ -149,13 +327,16 @@ export async function listImportableRepos(userId: string): Promise<RepoSummary[]
     const batch = await gh<ApiRepo[]>(
       `/user/repos?visibility=public&affiliation=owner,collaborator,organization_member&sort=pushed&per_page=100&page=${page}`,
       token,
+      { userOnly: true },
     );
     repos.push(...batch);
     if (batch.length < 100) break;
   }
 
+  const publicRepos = repos.filter((r) => !r.private);
+  cacheRepos(publicRepos);
   const imported = await getImportedRepoIds(userId);
-  return repos.filter((r) => !r.private && (r.permissions?.push || r.permissions?.admin)).map((r) => toSummary(r, imported));
+  return publicRepos.filter((r) => r.permissions?.push || r.permissions?.admin).map((r) => toSummary(r, imported));
 }
 
 function toSummary(r: ApiRepo, imported: Set<number>): RepoSummary {
@@ -220,23 +401,31 @@ export async function lookupGithub(userId: string, input: string): Promise<Githu
   const [token, imported] = await Promise.all([optionalGithubToken(userId), getImportedRepoIds(userId)]);
 
   if (query.kind === "repo") {
-    const repo = await gh<ApiRepo>(`/repos/${query.fullName}`, token);
+    const repo = await getRepo(query.fullName, token);
     if (repo.private) throw new UserFacingError("Repoet er privat. Bare offentlige repoer kan vises på Vis.");
     return { kind: "repo", repos: [toSummary(repo, imported)] };
   }
 
+  const key = query.login.toLowerCase();
+  const hit = userReposCache.get(key);
   let repos: ApiRepo[];
-  try {
-    repos = await gh<ApiRepo[]>(`/users/${query.login}/repos?type=owner&sort=pushed&per_page=100`, token);
-  } catch (error) {
-    if (error instanceof GithubNotFound) throw new UserFacingError("Fant ingen GitHub-bruker som heter «{login}».", { login: query.login });
-    throw error;
+  if (hit && Date.now() - hit.at < 5 * 60_000) {
+    repos = hit.repos;
+  } else {
+    try {
+      repos = (await gh<ApiRepo[]>(`/users/${query.login}/repos?type=owner&sort=pushed&per_page=100`, token)).filter((r) => !r.private);
+    } catch (error) {
+      if (error instanceof GithubNotFound) throw new UserFacingError("Fant ingen GitHub-bruker som heter «{login}».", { login: query.login });
+      throw error;
+    }
+    remember(userReposCache, key, { at: Date.now(), repos });
+    cacheRepos(repos);
   }
   return {
     kind: "user",
     login: repos[0]?.owner.login ?? query.login,
     avatar: repos[0]?.owner.avatar_url ?? null,
-    repos: repos.filter((r) => !r.private).map((r) => toSummary(r, imported)),
+    repos: repos.map((r) => toSummary(r, imported)),
   };
 }
 
@@ -418,15 +607,38 @@ export type RepoImportDraft = {
   images: { url: string; alt: string | null }[];
 };
 
+// README.md i roten hentes fra raw.githubusercontent.com, som ikke teller mot grensen i
+// API-et. Ligger README-en et annet sted eller heter noe annet, spør vi API-et.
+async function fetchRawReadme(fullName: string): Promise<{ text: string; path: string } | null> {
+  try {
+    const res = await fetch(`https://raw.githubusercontent.com/${fullName}/HEAD/README.md`, {
+      headers: { "User-Agent": "vis-app" },
+      signal: AbortSignal.timeout(10_000),
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    return { text: await res.text(), path: "README.md" };
+  } catch {
+    return null;
+  }
+}
+
+async function fetchApiReadme(fullName: string, token: string | null): Promise<{ text: string; path: string } | null> {
+  try {
+    const readme = await gh<{ content: string; path: string }>(`/repos/${fullName}/readme`, token);
+    return { text: Buffer.from(readme.content, "base64").toString("utf8"), path: readme.path };
+  } catch (error) {
+    if (error instanceof GithubNotFound) return null;
+    throw error;
+  }
+}
+
 // README-en som prosjektbeskrivelse: relative bilder og lenker gjøres om til faste
 // adresser (låst til siste commit), og en innledende overskrift med reponavnet fjernes.
 async function fetchReadme(repo: ApiRepo, token: string | null) {
   const [readme, sha] = await Promise.all([
-    gh<{ content: string; encoding: string; path: string }>(`/repos/${repo.full_name}/readme`, token).catch((e) => {
-      if (e instanceof GithubNotFound) return null;
-      throw e;
-    }),
-    gh<string>(`/repos/${repo.full_name}/commits/${repo.default_branch}`, token, "application/vnd.github.sha").catch(
+    fetchRawReadme(repo.full_name).then((raw) => raw ?? fetchApiReadme(repo.full_name, token)),
+    gh<string>(`/repos/${repo.full_name}/commits/${encodeURIComponent(repo.default_branch)}`, token, { accept: "application/vnd.github.sha" }).catch(
       () => repo.default_branch,
     ),
   ]);
@@ -440,7 +652,7 @@ async function fetchReadme(repo: ApiRepo, token: string | null) {
     dir: readmePath.includes("/") ? readmePath.slice(0, readmePath.lastIndexOf("/") + 1) : "",
   };
 
-  const raw = readme ? Buffer.from(readme.content, "base64").toString("utf8") : "";
+  const raw = readme?.text ?? "";
   let description = absolutizeReadme(stripLeadingTitle(raw, repo.name), ref);
   if (description.length > MAX_DESCRIPTION) {
     description = `${description.slice(0, MAX_DESCRIPTION - 80)}\n\n…\n\n[Les hele README-en på GitHub](${repo.html_url}#readme)`;
@@ -449,10 +661,10 @@ async function fetchReadme(repo: ApiRepo, token: string | null) {
 }
 
 // Henter alt vi trenger fra GitHub og gjør det om til et prosjekt, uten å lagre noe.
-export async function buildRepoImport(fullName: string, token: string | null): Promise<RepoImportDraft> {
-  if (!/^[\w.-]+\/[\w.-]+$/.test(fullName)) throw new UserFacingError("Ugyldig reponavn.");
+export async function buildRepoImport(source: string | ApiRepo, token: string | null): Promise<RepoImportDraft> {
+  if (typeof source === "string" && !/^[\w.-]+\/[\w.-]+$/.test(source)) throw new UserFacingError("Ugyldig reponavn.");
 
-  const repo = await gh<ApiRepo>(`/repos/${fullName}`, token);
+  const repo = typeof source === "string" ? await getRepo(source, token) : source;
   if (repo.private) throw new UserFacingError("Bare offentlige repoer kan importeres.");
 
   const socialToken = token ?? SERVER_TOKEN;
@@ -523,13 +735,13 @@ export async function importGithubRepo(
   if (query?.kind !== "repo") throw new UserFacingError("Ugyldig reponavn.");
   const token = await optionalGithubToken(userId);
 
-  const repo = await gh<ApiRepo>(`/repos/${query.fullName}`, token);
+  const repo = await getRepo(query.fullName, token);
   if (repo.private) throw new UserFacingError("Bare offentlige repoer kan importeres.");
 
   const existing = await findProjectByGithubRepo(userId, repo.id);
   if (existing) return { projectId: existing, alreadyImported: true, screenshots: 0 };
 
-  const draft = await buildRepoImport(repo.full_name, token);
+  const draft = await buildRepoImport(repo, token);
   let projectId: string;
   try {
     projectId = await createProject(
@@ -579,7 +791,7 @@ export async function syncProjectReadme(userId: string, projectId: string) {
   if (!fullName) throw new UserFacingError("Prosjektet er ikke koblet til et repo på GitHub.");
 
   const token = await optionalGithubToken(userId);
-  const repo = await gh<ApiRepo>(`/repos/${fullName}`, token);
+  const repo = await getRepo(fullName, token, { fresh: true });
   if (repo.private) throw new UserFacingError("Repoet er privat.");
   const readme = await fetchReadme(repo, token);
   if (!readme.found) throw new UserFacingError("Repoet har ingen README.");
@@ -686,7 +898,7 @@ async function loadRepoInsights(fullName: string): Promise<RepoInsights | null> 
   if (parseGithubInput(fullName)?.kind !== "repo") return null;
   let repo: ApiRepo;
   try {
-    repo = await gh<ApiRepo>(`/repos/${fullName}`, null);
+    repo = await getRepo(fullName, null);
   } catch (error) {
     if (error instanceof GithubNotFound) return null;
     throw error;

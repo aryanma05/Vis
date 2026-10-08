@@ -3,7 +3,7 @@ import "server-only";
 import { and, desc, eq, gte, isNull, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db, schema } from "@/db";
-import type { NotificationPrefs, ReactionType } from "@/db/schema";
+import type { NotificationData, NotificationPrefs } from "@/db/schema";
 import { REACTION_LABELS } from "@/lib/constants";
 import type { Tx } from "@/lib/db-types";
 import { log } from "@/lib/log";
@@ -33,7 +33,7 @@ type NotifyInput = {
   type: NotificationKind;
   projectId?: string | null;
   commentId?: string | null;
-  data?: { reaction?: ReactionType; contactId?: string } | null;
+  data?: NotificationData | null;
 };
 
 // Lager et varsel (aldri til seg selv). Reaksjoner og nye følgere varsles bare én gang
@@ -71,8 +71,9 @@ export async function notify(input: NotifyInput, tx: Tx | typeof db = db) {
 // E-post om et nytt varsel, hvis mottakeren har slått det på. Kalles etter at
 // transaksjonen er ferdig, så en treg e-posttjeneste ikke holder på databasen.
 export async function emailNotification(input: NotifyInput & { excerpt?: string | null }) {
-  // Reaksjoner sendes ikke på e-post, og kontaktforespørsler har sin egen e-post (lib/contact.ts).
-  if (input.userId === input.actorId || input.type === "reaction" || input.type === "contact") return;
+  // Reaksjoner sendes ikke på e-post. Kontaktforespørsler, søknader, team og utfordringer har
+  // sine egne e-poster (lib/contact.ts, lib/applications.ts, lib/companies.ts, lib/challenges.ts).
+  if (input.userId === input.actorId || ["reaction", "contact", "application", "employee", "challenge"].includes(input.type)) return;
   if (!emailProviderConfigured && process.env.NODE_ENV === "production") return;
 
   try {
@@ -116,7 +117,7 @@ export async function emailNotification(input: NotifyInput & { excerpt?: string 
         button: "Se prosjektet",
         path: input.projectId ? projectPath(input.projectId) : "/",
       },
-    }[input.type as Exclude<NotificationKind, "reaction" | "contact">];
+    }[input.type as Exclude<NotificationKind, "reaction" | "contact" | "application" | "employee" | "challenge">];
     if (!content) return;
 
     sendEmailInBackground(
@@ -185,6 +186,7 @@ export async function listNotifications(userId: string, { limit = 60, unreadOnly
     contactReason: r.contactReason,
     excerpt: (r.commentBody ?? r.contactMessage)?.slice(0, 180) ?? null,
     reaction: r.data?.reaction ? REACTION_LABELS[r.data.reaction] : null,
+    data: r.data ?? {},
   }));
 }
 

@@ -4,10 +4,12 @@ import { revalidatePath } from "next/cache";
 import { runAction } from "@/lib/action";
 import {
   addCompanyMember,
+  addEmployee,
   createCompany,
   deleteCompany,
   getCompanyById,
   removeCompanyMember,
+  removeEmployee,
   requireCompanyRole,
   setCompanyLogo,
   updateCompany,
@@ -20,6 +22,8 @@ import { requireUserForAction } from "@/lib/session";
 import { storeImage } from "@/lib/storage";
 import { createTalentList, deleteTalentList, setTalentListMember } from "@/lib/talent";
 import { requireBusiness } from "@/lib/companies";
+import { createSavedSearch, deleteSavedSearch, setSavedSearchNotify } from "@/lib/saved-searches";
+import type { SavedSearchFilters } from "@/db/schema";
 
 const companyInput = (v: Partial<CompanyInput> | undefined): CompanyInput => ({
   name: String(v?.name ?? ""),
@@ -96,6 +100,7 @@ const jobInput = (v: Partial<JobInput> | undefined): JobInput => ({
   applyEmail: v?.applyEmail ? String(v.applyEmail) : null,
   deadline: v?.deadline ? String(v.deadline) : null,
   tags: Array.isArray(v?.tags) ? v.tags.map(String) : [],
+  applyMode: v?.applyMode === "vis" ? "vis" : "ekstern",
 });
 
 export async function createJobAction(companyId: string, values: Partial<JobInput>, publish: boolean) {
@@ -169,4 +174,56 @@ export async function contactCandidateAction(companyId: string, candidateId: str
     await requireBusiness(String(companyId));
     await sendContactRequest(user, String(candidateId), { reason: String(input?.reason ?? ""), message: String(input?.message ?? ""), companyId: String(companyId) });
   }, "talent.contact");
+}
+
+/* Lagrede søk */
+
+export async function createSavedSearchAction(companyId: string, name: string, filters: Partial<SavedSearchFilters>) {
+  return runAction(async () => {
+    const user = await requireUserForAction();
+    const id = await createSavedSearch(user.id, String(companyId), String(name ?? ""), {
+      q: filters?.q ? String(filters.q) : undefined,
+      location: filters?.location ? String(filters.location) : null,
+      openTo: filters?.openTo ? (String(filters.openTo) as SavedSearchFilters["openTo"]) : null,
+      field: filters?.field ? String(filters.field) : null,
+      student: Boolean(filters?.student),
+    });
+    revalidatePath(`${await companyPath(String(companyId))}/admin`);
+    return { id };
+  }, "saved-search.create");
+}
+
+export async function deleteSavedSearchAction(searchId: string) {
+  return runAction(async () => {
+    const user = await requireUserForAction();
+    const companyId = await deleteSavedSearch(user.id, String(searchId));
+    revalidatePath(`${await companyPath(companyId)}/admin`);
+  }, "saved-search.delete");
+}
+
+export async function setSavedSearchNotifyAction(searchId: string, notify: boolean) {
+  return runAction(async () => {
+    const user = await requireUserForAction();
+    const companyId = await setSavedSearchNotify(user.id, String(searchId), Boolean(notify));
+    revalidatePath(`${await companyPath(companyId)}/admin`);
+  }, "saved-search.notify");
+}
+
+/* Teamet på bedriftssiden */
+
+export async function addEmployeeAction(companyId: string, username: string, title?: string) {
+  return runAction(async () => {
+    const user = await requireUserForAction();
+    await addEmployee(user.id, String(companyId), String(username ?? ""), title ? String(title) : null);
+    revalidatePath(await companyPath(String(companyId)), "layout");
+  }, "company.employee-add");
+}
+
+// Fjerner en person fra teamet. Uten userId fjerner man seg selv.
+export async function removeEmployeeAction(companyId: string, userId?: string) {
+  return runAction(async () => {
+    const user = await requireUserForAction();
+    await removeEmployee(user.id, String(companyId), userId ? String(userId) : user.id);
+    revalidatePath(await companyPath(String(companyId)), "layout");
+  }, "company.employee-remove");
 }

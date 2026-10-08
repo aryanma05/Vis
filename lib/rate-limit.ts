@@ -26,6 +26,9 @@ export const RULES = {
   domainCheck: { limit: 20, windowSeconds: 60 * 60, message: SLOW_DOWN },
   collection: { limit: 300, windowSeconds: 60 * 60, message: SLOW_DOWN },
   projectUpdate: { limit: 20, windowSeconds: 24 * 60 * 60, message: "Du har lagt ut mange oppdateringer i dag. Prøv igjen i morgen." },
+  jobApply: { limit: 20, windowSeconds: 24 * 60 * 60, message: "Du har sendt mange søknader i dag. Prøv igjen i morgen." },
+  challengeEntry: { limit: 20, windowSeconds: 24 * 60 * 60, message: SLOW_DOWN },
+  savedSearch: { limit: 50, windowSeconds: 24 * 60 * 60, message: SLOW_DOWN },
 } satisfies Record<string, Rule>;
 
 export type RuleName = keyof typeof RULES;

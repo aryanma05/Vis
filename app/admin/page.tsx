@@ -12,6 +12,7 @@ import { getBillingSummary } from "@/lib/billing";
 import { REPORT_REASON_LABELS } from "@/lib/constants";
 import { checkEnv } from "@/lib/env";
 import { getErrorSummary } from "@/lib/errors";
+import { getGithubStatus } from "@/lib/github";
 import { getKeyMetrics } from "@/lib/metrics";
 import { timeAgo } from "@/lib/format";
 import { getProjectById } from "@/lib/projects";
@@ -37,7 +38,7 @@ export default async function AdminPage({ searchParams }: Props) {
   const tab: Tab = (TABS as readonly string[]).includes(fane ?? "") ? (fane as Tab) : "rapporter";
   const reportStatus = status === "resolved" || status === "dismissed" || status === "all" ? status : "open";
 
-  const [counts, reports, users, focus, metrics, errors, companies, billing] = await Promise.all([
+  const [counts, reports, users, focus, metrics, errors, companies, billing, github] = await Promise.all([
     getModerationCounts(),
     tab === "rapporter" ? listReports(reportStatus) : Promise.resolve([]),
     tab === "brukere" ? listUsers(q ?? "") : Promise.resolve([]),
@@ -46,6 +47,7 @@ export default async function AdminPage({ searchParams }: Props) {
     tab === "system" ? getErrorSummary() : Promise.resolve(null),
     tab === "bedrifter" ? listCompaniesForAdmin(q ?? "") : Promise.resolve([]),
     tab === "nokkeltall" ? getBillingSummary() : Promise.resolve(null),
+    tab === "system" ? getGithubStatus().catch(() => null) : Promise.resolve(null),
   ]);
 
   return (
@@ -106,7 +108,7 @@ export default async function AdminPage({ searchParams }: Props) {
         </div>
 
         {metrics && <MetricsTab metrics={metrics} billing={billing} />}
-        {errors && <SystemTab checks={checkEnv()} errors={errors} />}
+        {errors && <SystemTab checks={checkEnv()} errors={errors} github={github} />}
 
         {tab === "rapporter" ? (
           <>

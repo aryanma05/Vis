@@ -1,17 +1,23 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Download, Eye, Lock, MousePointerClick, Plus } from "lucide-react";
+import { ArrowLeft, Download, Eye, Inbox, Lock, MousePointerClick, Plus, Trophy, Users } from "lucide-react";
 import CheckoutButton from "@/app/priser/CheckoutButton";
 import Avatar from "@/components/Avatar";
 import { AddMember, AddToList, ContactCandidate, JobActions, NewTalentList, RemoveMember, TalentListTools } from "@/components/company/AdminTools";
+import { ApplicantBoard, UsedTech } from "@/components/company/Applicants";
+import { ChallengeActions } from "@/components/company/ChallengeTools";
+import { CompareProvider, CompareToggle, SavedSearchChip, SaveSearchButton } from "@/components/company/TalentTools";
+import { AddEmployee, RemoveEmployee } from "@/components/company/TeamTools";
 import CompanyForm from "@/components/company/CompanyForm";
 import { Webhooks } from "@/components/developers/DeveloperTools";
 import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/misc";
 import { Tabs } from "@/components/ui/tabs";
+import { countApplicationsByJob, listApplications } from "@/lib/applications";
 import { getCompanyPlan, getDisplayPrices } from "@/lib/billing";
-import { getCompanyBySlug, getMembership, listCompanyMembers } from "@/lib/companies";
+import { listCompanyChallenges } from "@/lib/challenges";
+import { getCompanyBySlug, getMembership, listCompanyMembers, listTeam } from "@/lib/companies";
 import { FIELD_KEYS, FIELDS, OPEN_TO, OPEN_TO_LABELS, type FieldKey, type OpenTo } from "@/lib/constants";
 import { formatDate } from "@/lib/format";
 import type { Locale, T } from "@/lib/i18n";
@@ -20,6 +26,7 @@ import { listCompanyJobs } from "@/lib/jobs";
 import { requireUser } from "@/lib/session";
 import { getTalentList, listMembershipsFor, listTalentLists, searchCandidates } from "@/lib/talent";
 import { listWebhooks, WEBHOOK_EVENTS } from "@/lib/webhooks";
+import { describeFilters, listSavedSearches, markSavedSearchSeen, searchHref } from "@/lib/saved-searches";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getT())("Administrer bedrift"), robots: { index: false } };
@@ -29,24 +36,32 @@ export async function generateMetadata(): Promise<Metadata> {
 const formatPrice = (amount: number, locale: Locale) =>
   locale === "en" ? `NOK ${amount.toLocaleString("en-GB")}` : `${amount.toLocaleString("nb-NO")} kr`;
 
-const TABS = ["stillinger", "kandidater", "lister", "profil", "medlemmer", "utviklere", "abonnement"] as const;
+const TABS = ["stillinger", "sokere", "kandidater", "lister", "utfordringer", "profil", "medlemmer", "utviklere", "abonnement"] as const;
 type Tab = (typeof TABS)[number];
 type Props = {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ fane?: string; q?: string; sted?: string; apen?: string; fag?: string; liste?: string; avbrutt?: string }>;
+  searchParams: Promise<{ fane?: string; q?: string; sted?: string; apen?: string; fag?: string; liste?: string; avbrutt?: string; stilling?: string; student?: string; sok?: string }>;
 };
 
 const ROLE_LABEL = { owner: "Eier", admin: "Administrator", member: "Medlem" } as const;
 
-function Upsell({ companyId, price, canBuy, t }: { companyId: string; price: string; canBuy: boolean; t: T }) {
+// Hva Bedrift låser opp, per fane. Oversettes med t().
+const UPSELL_TEXT = {
+  kandidater: "Søk blant folk som har valgt å være synlige for bedrifter, se prosjektene deres, lagre søk og få varsel om nye kandidater, lag lister med notater og ta kontakt direkte.",
+  sokere: "Flytt søkerne gjennom Ny → Intervju → Tilbud → Avslag, skriv notater og sammenlign dem side om side. Kandidaten får beskjed automatisk hver gang dere flytter dem.",
+  utfordringer: "Legg ut en liten oppgave, og la studenter og juniorer svare med et prosjekt. Rettferdigere enn kodetester, og dere ser hvordan folk faktisk jobber.",
+  generelt: "Ubegrenset med stillinger, søkeroversikt, kandidatsøk med lagrede søk og varsler, lister, utfordringer og webhooks.",
+} as const;
+
+function Upsell({ companyId, price, canBuy, t, feature = "kandidater" }: { companyId: string; price: string; canBuy: boolean; t: T; feature?: keyof typeof UPSELL_TEXT }) {
   return (
     <div className="rounded-[22px] glass-card p-6">
       <p className="flex items-center gap-2 font-semibold">
         <Lock className="size-4 text-mist" /> {t("Krever Bedrift")}
       </p>
       <p className="mt-2 max-w-xl text-sm text-mist">
-        {t("Søk blant folk som har valgt å være synlige for bedrifter, lag lister med notater, eksporter til Excel og ta kontakt direkte.")}{" "}
-        {t("{price} i måneden, ingen bindingstid.", { price })}
+        {t(UPSELL_TEXT[feature])} {t("{price} i måneden, ingen bindingstid.", { price })}{" "}
+        {t("Til sammenligning tar et rekrutteringsbyrå ofte 15–25 % av årslønna for én ansettelse.")}
       </p>
       {canBuy && (
         <div className="mt-4">
@@ -79,16 +94,28 @@ export default async function CompanyAdminPage({ params, searchParams }: Props) 
     location: query.sted?.slice(0, 60) ?? null,
     openTo: OPEN_TO.includes(query.apen as OpenTo) ? (query.apen as OpenTo) : null,
     field: FIELD_KEYS.includes(query.fag as FieldKey) ? (query.fag as FieldKey) : null,
+    student: query.student === "1" ? true : undefined,
   };
+  const hasFilters = Boolean(filters.q || filters.location || filters.openTo || filters.field || filters.student);
+  // Åpnes et lagret søk, er de nye kandidatene sett (før tellingen under).
+  if (tab === "kandidater" && business && query.sok) await markSavedSearchSeen(user.id, company.id, query.sok);
 
-  const [jobs, lists, candidates, list, members, hooks] = await Promise.all([
-    tab === "stillinger" ? listCompanyJobs(company.id, { includeAll: true }) : [],
+  const [jobs, lists, candidates, list, members, hooks, applicants, applicationCounts] = await Promise.all([
+    tab === "stillinger" || tab === "sokere" ? listCompanyJobs(company.id, { includeAll: true }) : [],
     tab === "kandidater" || tab === "lister" ? listTalentLists(user.id, company.id) : [],
     tab === "kandidater" && business ? searchCandidates(user.id, company.id, filters) : [],
     tab === "lister" && query.liste ? getTalentList(user.id, query.liste).catch(() => null) : null,
     tab === "medlemmer" ? listCompanyMembers(company.id) : [],
     tab === "utviklere" ? listWebhooks(user.id, company.id) : [],
+    tab === "sokere" ? listApplications(user.id, company.id, { jobId: query.stilling }) : [],
+    countApplicationsByJob(company.id),
   ]);
+  const savedSearches = tab === "kandidater" && business ? await listSavedSearches(user.id, company.id) : [];
+  const [challenges, team] = await Promise.all([
+    tab === "utfordringer" ? listCompanyChallenges(company.id, { includeAll: true }) : [],
+    tab === "medlemmer" ? listTeam(company.id) : [],
+  ]);
+  const freshApplicants = [...applicationCounts.values()].reduce((sum, c) => sum + c.fresh, 0);
   const memberships = tab === "kandidater" ? await listMembershipsFor(company.id, candidates.map((c) => c.id)) : new Map<string, string[]>();
 
   return (
@@ -110,10 +137,12 @@ export default async function CompanyAdminPage({ params, searchParams }: Props) 
             active={tab}
             items={[
               { key: "stillinger", label: t("Stillinger"), href: base },
-              { key: "kandidater", label: t("Kandidater"), href: `${base}?fane=kandidater` },
+              { key: "sokere", label: freshApplicants > 0 ? t("Søkere ({n} nye)", { n: freshApplicants }) : t("Søkere"), href: `${base}?fane=sokere` },
+              { key: "kandidater", label: t("Kandidatsøk"), href: `${base}?fane=kandidater` },
               { key: "lister", label: t("Lister"), href: `${base}?fane=lister` },
+              { key: "utfordringer", label: t("Utfordringer"), href: `${base}?fane=utfordringer` },
               { key: "profil", label: t("Bedriftsprofil"), href: `${base}?fane=profil` },
-              { key: "medlemmer", label: t("Medlemmer"), href: `${base}?fane=medlemmer` },
+              { key: "medlemmer", label: t("Team"), href: `${base}?fane=medlemmer` },
               { key: "utviklere", label: "Webhooks", href: `${base}?fane=utviklere` },
               { key: "abonnement", label: t("Abonnement"), href: `${base}?fane=abonnement` },
             ]}
@@ -148,15 +177,72 @@ export default async function CompanyAdminPage({ params, searchParams }: Props) 
                           <span className="inline-flex items-center gap-1">
                             <Eye className="size-3.5" /> {t("{n} visninger", { n: j.views })}
                           </span>
-                          <span className="inline-flex items-center gap-1">
-                            <MousePointerClick className="size-3.5" /> {t("{n} søknadsklikk", { n: j.applyClicks })}
-                          </span>
+                          {j.applyMode === "vis" ? (
+                            <Link href={`${base}?fane=sokere&stilling=${j.id}`} className="inline-flex items-center gap-1 hover:text-ice">
+                              <Users className="size-3.5" /> {t("{n} søkere", { n: applicationCounts.get(j.id)?.total ?? 0 })}
+                              {(applicationCounts.get(j.id)?.fresh ?? 0) > 0 && <span className="text-success">({t("{n} nye", { n: applicationCounts.get(j.id)?.fresh ?? 0 })})</span>}
+                            </Link>
+                          ) : (
+                            <span className="inline-flex items-center gap-1">
+                              <MousePointerClick className="size-3.5" /> {t("{n} søknadsklikk", { n: j.applyClicks })}
+                            </span>
+                          )}
                         </p>
                       </div>
                       <JobActions jobId={j.id} status={j.status} />
                     </li>
                   ))}
                 </ul>
+              )}
+            </section>
+          )}
+
+          {tab === "sokere" && (
+            <section>
+              {jobs.length > 1 && (
+                <nav aria-label={t("Velg stilling")} className="mb-5 flex flex-wrap gap-2">
+                  {[{ id: "", title: t("Alle stillinger") }, ...jobs.filter((j) => j.applyMode === "vis")].map((j) => {
+                    const active = (query.stilling ?? "") === j.id;
+                    return (
+                      <Link
+                        key={j.id || "alle"}
+                        href={j.id ? `${base}?fane=sokere&stilling=${j.id}` : `${base}?fane=sokere`}
+                        aria-current={active ? "page" : undefined}
+                        className={`rounded-full px-3.5 py-1.5 text-sm font-medium ${active ? "bg-primary text-on-primary" : "glass-chip hover:bg-fill-2"}`}
+                      >
+                        {j.title}
+                        {j.id && (applicationCounts.get(j.id)?.total ?? 0) > 0 && <span className="opacity-70"> · {applicationCounts.get(j.id)?.total}</span>}
+                      </Link>
+                    );
+                  })}
+                </nav>
+              )}
+              {applicants.length === 0 ? (
+                <EmptyState icon={<Inbox className="size-5" />} title={t("Ingen søkere ennå")}>
+                  {t("Velg «Med Vis-profilen» under «Hvordan skal folk søke?» på en stilling. Da søker folk med profilen og prosjektene sine, og alle søkerne havner her i samme format.")}
+                </EmptyState>
+              ) : (
+                <>
+                  {!business && (
+                    <div className="mb-5">
+                      <Upsell companyId={company.id} price={monthly} canBuy={canManage} t={t} feature="sokere" />
+                    </div>
+                  )}
+                  <ApplicantBoard
+                    base={base}
+                    canManage={business}
+                    showJob={!query.stilling}
+                    applicants={applicants.map((a) => ({
+                      id: a.id,
+                      status: a.status,
+                      createdAt: a.createdAt,
+                      job: a.job,
+                      candidate: a.candidate,
+                      usedTech: a.usedTech,
+                      highlights: a.highlights.map((h) => ({ id: h.id, title: h.title, cover: h.cover })),
+                    }))}
+                  />
+                </>
               )}
             </section>
           )}
@@ -186,11 +272,33 @@ export default async function CompanyAdminPage({ params, searchParams }: Props) 
                       </option>
                     ))}
                   </select>
+                  <label className="flex h-10 cursor-pointer items-center gap-2 rounded-full bg-fill px-4 text-sm inset-ring inset-ring-line">
+                    <input type="checkbox" name="student" value="1" defaultChecked={filters.student} className="accent-[var(--sea)]" /> {t("Studenter")}
+                  </label>
                   <button type="submit" className="h-10 rounded-full bg-primary px-5 text-sm font-semibold text-on-primary">
                     {t("Søk")}
                   </button>
                 </form>
-                {lists.length === 0 && (
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                  {savedSearches.length > 0 && (
+                    <ul className="flex flex-wrap gap-2" aria-label={t("Lagrede søk")}>
+                      {savedSearches.map((s) => (
+                        <SavedSearchChip key={s.id} id={s.id} name={s.name} href={searchHref(base, s.filters, s.id)} fresh={s.fresh} notify={s.notify} active={query.sok === s.id} />
+                      ))}
+                    </ul>
+                  )}
+                  {hasFilters && !savedSearches.some((s) => s.id === query.sok) && (
+                    <SaveSearchButton
+                      companyId={company.id}
+                      suggestion={describeFilters(filters, t).slice(0, 80)}
+                      filters={{ q: filters.q || undefined, location: filters.location, openTo: filters.openTo, field: filters.field, student: filters.student }}
+                    />
+                  )}
+                  {!hasFilters && savedSearches.length === 0 && (
+                    <p className="text-sm text-mist">{t("Tips: søk etter f.eks. «React» i Bergen og lagre søket. Da får dere e-post når nye kandidater passer.")}</p>
+                  )}
+                </div>
+                {lists.length === 0 && !hasFilters && (
                   <p className="mt-4 text-sm text-mist">
                     {t("Tips: lag en liste under")}{" "}
                     <Link href={`${base}?fane=lister`} className="text-ice hover:underline">
@@ -204,29 +312,58 @@ export default async function CompanyAdminPage({ params, searchParams }: Props) 
                     {t("Bare folk som selv har slått på «Synlig for bedrifter» vises her.")}
                   </EmptyState>
                 ) : (
-                  <ul className="mt-6 divide-y divide-line overflow-hidden rounded-[22px] glass-card">
-                    {candidates.map((c) => (
-                      <li key={c.id} className="flex flex-wrap items-center gap-4 px-5 py-4">
-                        <Avatar name={c.name} image={c.image} size={44} />
-                        <div className="min-w-0 flex-1">
-                          <Link href={`/@${c.username}`} className="font-semibold hover:text-ice">
-                            {c.name}
-                          </Link>
-                          <p className="text-sm text-mist">{[c.headline, c.location, t("{n} prosjekter", { n: c.projects })].filter(Boolean).join(" · ")}</p>
-                          {c.skills.length > 0 && <p className="mt-1 truncate text-xs text-mist">{c.skills.slice(0, 8).join(" · ")}</p>}
-                          {(c.openTo as OpenTo[]).length > 0 && (
-                            <p className="mt-1 text-xs text-success">
-                              {t("Åpen for")} {(c.openTo as OpenTo[]).map((o) => t(OPEN_TO_LABELS[o]).toLowerCase()).join(", ")}
+                  <CompareProvider base={base}>
+                    <ul className="mt-6 divide-y divide-line overflow-hidden rounded-[22px] glass-card">
+                      {candidates.map((c) => (
+                        <li key={c.id} className="flex flex-wrap items-start gap-4 px-5 py-4">
+                          <Avatar name={c.name} image={c.image} size={44} />
+                          <div className="min-w-0 flex-1">
+                            <Link href={`/@${c.username}`} className="font-semibold hover:text-ice">
+                              {c.name}
+                            </Link>
+                            <p className="text-sm text-mist">
+                              {[
+                                c.headline,
+                                c.location,
+                                c.studyProgram && (c.graduationYear ? t("{program}, ferdig {year}", { program: c.studyProgram, year: c.graduationYear }) : c.studyProgram),
+                                t("{n} prosjekter", { n: c.projects }),
+                              ]
+                                .filter(Boolean)
+                                .join(" · ")}
                             </p>
+                            <UsedTech tech={c.usedTech} max={6} className="mt-2" />
+                            {c.skills.length > 0 && (
+                              <p className="mt-1.5 truncate text-xs text-mist">
+                                {t("CV")}: {c.skills.slice(0, 8).join(" · ")}
+                              </p>
+                            )}
+                            {(c.openTo as OpenTo[]).length > 0 && (
+                              <p className="mt-1 text-xs text-success">
+                                {t("Åpen for")} {(c.openTo as OpenTo[]).map((o) => t(OPEN_TO_LABELS[o]).toLowerCase()).join(", ")}
+                              </p>
+                            )}
+                          </div>
+                          {c.showcase.length > 0 && (
+                            <div className="hidden w-60 shrink-0 grid-cols-3 gap-1.5 sm:grid" aria-label={t("Prosjektene til {name}", { name: c.name })}>
+                              {c.showcase.map((p) => (
+                                <Link key={p.id} href={`/prosjekt/${p.id}`} title={p.title} className="block aspect-[4/3] overflow-hidden rounded-lg bg-fill-2">
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  {p.cover && <img src={p.cover} alt={p.title} className="size-full object-cover" />}
+                                </Link>
+                              ))}
+                            </div>
                           )}
-                        </div>
-                        <div className="flex gap-2">
-                          <AddToList userId={c.id} lists={lists} memberOf={memberships.get(c.id) ?? []} />
-                          <ContactCandidate companyId={company.id} userId={c.id} name={c.name} />
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
+                          <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto sm:flex-col sm:items-end">
+                            <div className="flex gap-2">
+                              <AddToList userId={c.id} lists={lists} memberOf={memberships.get(c.id) ?? []} />
+                              <ContactCandidate companyId={company.id} userId={c.id} name={c.name} />
+                            </div>
+                            <CompareToggle userId={c.id} />
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </CompareProvider>
                 )}
               </section>
             ))}
@@ -290,6 +427,54 @@ export default async function CompanyAdminPage({ params, searchParams }: Props) 
               </section>
             ))}
 
+          {tab === "utfordringer" &&
+            (!business && challenges.length === 0 ? (
+              <Upsell companyId={company.id} price={monthly} canBuy={canManage} t={t} feature="utfordringer" />
+            ) : (
+              <section>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <p className="max-w-2xl text-sm text-mist">
+                    {t("Legg ut en liten oppgave, og la folk svare med et prosjekt. Fungerer som et lite hackathon, og passer perfekt for sommerjobb og internship.")}
+                  </p>
+                  {canManage && business && (
+                    <ButtonLink href={`${base}/utfordring/ny`} size="sm">
+                      <Plus className="size-4" /> {t("Ny utfordring")}
+                    </ButtonLink>
+                  )}
+                </div>
+                {challenges.length === 0 ? (
+                  <EmptyState className="mt-6" icon={<Trophy className="size-5" />} title={t("Ingen utfordringer ennå")}>
+                    {t("F.eks. «Lag en landingsside for en sykkelbutikk» eller «Visualiser bysykkel-data for Oslo». Den vises under Utfordringer og på bedriftssiden.")}
+                  </EmptyState>
+                ) : (
+                  <ul className="mt-6 divide-y divide-line overflow-hidden rounded-[22px] glass-card">
+                    {challenges.map((c) => (
+                      <li key={c.id} className="flex flex-wrap items-center gap-4 px-5 py-4">
+                        <div className="min-w-0 flex-1">
+                          <Link href={`/utfordringer/${c.id}`} className="font-semibold hover:text-ice">
+                            {c.title}
+                          </Link>
+                          <p className="mt-0.5 flex flex-wrap items-center gap-x-3 text-sm text-mist">
+                            <span className={c.status === "published" ? "text-success" : c.status === "draft" ? "text-warn" : ""}>
+                              {c.status === "published" ? t("Publisert") : c.status === "draft" ? t("Utkast") : t("Lukket")}
+                            </span>
+                            <span>{t(c.entries === 1 ? "1 svar" : "{n} svar", { n: c.entries })}</span>
+                            {c.deadline && <span>{t("Frist {date}", { date: formatDate(`${c.deadline}T12:00:00`, locale) })}</span>}
+                            {canManage && (
+                              <Link href={`${base}/utfordring/${c.id}`} className="text-ice hover:underline">
+                                {t("Rediger")}
+                              </Link>
+                            )}
+                          </p>
+                        </div>
+                        {canManage && <ChallengeActions id={c.id} status={c.status} />}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            ))}
+
           {tab === "profil" &&
             (canManage ? (
               <CompanyForm
@@ -304,6 +489,40 @@ export default async function CompanyAdminPage({ params, searchParams }: Props) 
 
           {tab === "medlemmer" && (
             <section className="space-y-6">
+              <div>
+                <h2 className="text-lg font-semibold">{t("Team på bedriftssiden")}</h2>
+                <p className="mt-1 max-w-2xl text-sm text-mist">
+                  {t("Folk som jobber hos dere, med prosjektene sine på bedriftssiden. Utviklere stoler mer på kollegaer enn på reklame. Å stå i teamet gir ingen tilgang til å administrere bedriften.")}
+                </p>
+              </div>
+              {canManage && <AddEmployee companyId={company.id} />}
+              {team.filter((m) => !m.admin).length > 0 ? (
+                <ul className="divide-y divide-line overflow-hidden rounded-[22px] glass-card">
+                  {team
+                    .filter((m) => !m.admin)
+                    .map((m) => (
+                      <li key={m.userId} className="flex items-center gap-4 px-5 py-3">
+                        <Avatar name={m.name} image={m.image} size={36} />
+                        <div className="min-w-0 flex-1">
+                          <Link href={`/@${m.username}`} className="font-medium hover:text-ice">
+                            {m.name}
+                          </Link>
+                          <p className="text-sm text-mist">{m.title ?? m.headline ?? `@${m.username}`}</p>
+                        </div>
+                        {canManage && <RemoveEmployee companyId={company.id} userId={m.userId} />}
+                      </li>
+                    ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-mist">{t("Ingen i teamet ennå. Medlemmene under vises også på bedriftssiden.")}</p>
+              )}
+
+              <div className="pt-4">
+                <h2 className="text-lg font-semibold">{t("Medlemmer")}</h2>
+                <p className="mt-1 max-w-2xl text-sm text-mist">
+                  {t("Kan legge ut stillinger, se søkere og bruke kandidatsøket. Eier og administratorer kan også endre bedriftsprofilen og abonnementet.")}
+                </p>
+              </div>
               {canManage && <AddMember companyId={company.id} />}
               <ul className="divide-y divide-line overflow-hidden rounded-[22px] glass-card">
                 {members.map((m) => (

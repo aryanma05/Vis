@@ -72,7 +72,14 @@ export async function getProfileVisitors(userId: string, days = 30) {
 export async function setProfileFlags(userId: string, flags: { hideVisits?: boolean; hideBranding?: boolean; visibleToCompanies?: boolean }) {
   const set: Partial<typeof profile.$inferInsert> = {};
   if (flags.hideVisits !== undefined) set.hideVisits = flags.hideVisits;
-  if (flags.visibleToCompanies !== undefined) set.visibleToCompanies = flags.visibleToCompanies;
+  if (flags.visibleToCompanies !== undefined) {
+    set.visibleToCompanies = flags.visibleToCompanies;
+    // Lagrede søk hos bedrifter varsler om dem som har blitt synlige siden sist.
+    if (flags.visibleToCompanies) {
+      const [row] = await db.select({ on: profile.visibleToCompanies }).from(profile).where(eq(profile.userId, userId)).limit(1);
+      if (!row?.on) set.visibleSince = new Date();
+    }
+  }
   if (flags.hideBranding !== undefined) {
     if (flags.hideBranding && !(await isPro(userId))) throw new UserFacingError("Å skjule Vis-merket krever Pro.");
     set.hideBranding = flags.hideBranding;

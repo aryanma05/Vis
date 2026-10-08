@@ -19,6 +19,8 @@ export const WEBHOOK_EVENTS = {
   "job.published": "En stilling er publisert",
   "job.closed": "En stilling er lukket",
   "job.application_click": "Noen trykket «Søk på stillingen»",
+  "job.application": "Noen søkte med Vis-profilen",
+  "job.application_status": "En søknad fikk ny status",
 } as const;
 export type WebhookEvent = keyof typeof WEBHOOK_EVENTS;
 

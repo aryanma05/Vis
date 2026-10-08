@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AtSign, Bell, Heart, Lightbulb, Mail, MessageCircle, Reply, Settings, Sparkles, Star, UserPlus, Users } from "lucide-react";
+import { AtSign, Bell, Briefcase, Building2, Heart, Lightbulb, Mail, MessageCircle, Reply, Settings, Sparkles, Star, Trophy, UserPlus, Users } from "lucide-react";
 import Avatar from "@/components/Avatar";
 import { EmptyState } from "@/components/ui/misc";
 import { Tabs } from "@/components/ui/tabs";
 import { timeAgo } from "@/lib/format";
-import { CONTACT_REASON_LABELS } from "@/lib/constants";
+import { APPLICATION_STATUS_LABELS, CONTACT_REASON_LABELS, type ApplicationStatus } from "@/lib/constants";
 import type { T } from "@/lib/i18n";
 import { getLocale, getT } from "@/lib/i18n/server";
 import { listNotifications, type NotificationItem } from "@/lib/notifications";
@@ -42,6 +42,28 @@ function describe(n: NotificationItem, t: T) {
       return { Icon: Users, tone: "text-success", text: <>{t("la deg til som medlem i")} {project}</> };
     case "featured":
       return { Icon: Sparkles, tone: "text-warn", text: <>{t("valgte ut")} {project}. {t("Det vises nå på forsiden.")}</> };
+    case "application": {
+      const job = <b className="font-semibold text-fg">{n.data.jobTitle ?? t("en stilling")}</b>;
+      if (n.data.event === "status") {
+        const status = t(APPLICATION_STATUS_LABELS[(n.data.status ?? "ny") as ApplicationStatus]);
+        return {
+          Icon: Briefcase,
+          tone: n.data.status === "avslag" ? "text-mist" : "text-success",
+          text: (
+            <>
+              {t("har oppdatert søknaden din på")} {job}: <b className="font-semibold text-fg">{status}</b>
+            </>
+          ),
+        };
+      }
+      return { Icon: Briefcase, tone: "text-ice", text: <>{t("søkte på")} {job} {t("med Vis-profilen")}</> };
+    }
+    case "employee":
+      return { Icon: Building2, tone: "text-success", text: <>{t("la deg til i teamet på bedriftssiden. Prosjektene dine vises der nå.")}</> };
+    case "challenge":
+      return n.data.event === "highlight"
+        ? { Icon: Trophy, tone: "text-warn", text: <>{t("fremhevet svaret ditt på utfordringen")} <b className="font-semibold text-fg">{n.data.challengeTitle}</b></> }
+        : { Icon: Trophy, tone: "text-ice", text: <>{t("svarte på utfordringen")} <b className="font-semibold text-fg">{n.data.challengeTitle}</b></> };
     case "reaction": {
       const Icon = n.reaction === "Nyttig" ? Lightbulb : n.reaction === "Inspirerende" ? Star : Heart;
       return {
@@ -59,9 +81,21 @@ function describe(n: NotificationItem, t: T) {
 
 function href(n: NotificationItem) {
   if (n.type === "contact" && n.contactId) return `/kontakt/${n.contactId}`;
+  if (n.type === "application") return n.data.event === "status" ? "/soknader" : `/bedrift/${n.data.companySlug}/admin/soker/${n.data.applicationId}`;
+  if (n.type === "employee") return `/bedrift/${n.data.companySlug}`;
+  if (n.type === "challenge") return `/utfordringer/${n.data.challengeId}`;
   if (n.type === "follow" || !n.project) return `/@${n.actor.username}`;
   if (n.commentId) return `/prosjekt/${n.project.id}#kommentar-${n.commentId}`;
   return `/prosjekt/${n.project.id}`;
+}
+
+// Statusendringer, team og fremhevede svar kommer fra bedriften, ikke fra personen som trykket.
+function actorName(n: NotificationItem, t: T) {
+  if (n.type === "featured") return t("Redaksjonen");
+  if ((n.type === "application" && n.data.event === "status") || n.type === "employee" || (n.type === "challenge" && n.data.event === "highlight")) {
+    return n.data.companyName ?? n.actor.name;
+  }
+  return n.actor.name;
 }
 
 function dayLabel(date: Date) {
@@ -118,7 +152,7 @@ export default async function NotificationsPage({ searchParams }: { searchParams
 
         {notifications.length === 0 ? (
           <EmptyState className="mt-10" icon={<Bell className="size-5" />} title={unreadOnly ? t("Ingen uleste varsler") : t("Ingen varsler ennå")}>
-            {t("Når noen kommenterer, reagerer, nevner deg, følger deg eller vil komme i kontakt, dukker det opp her.")}
+            {t("Når noen kommenterer, reagerer, nevner deg, følger deg, vil komme i kontakt eller svarer på en søknad, dukker det opp her.")}
           </EmptyState>
         ) : (
           groups.map((group) => (
@@ -138,7 +172,7 @@ export default async function NotificationsPage({ searchParams }: { searchParams
                         </span>
                         <div className="min-w-0 flex-1">
                           <p className="text-[15px] leading-6 text-fg/85">
-                            <b className="font-semibold text-fg">{n.type === "featured" ? t("Redaksjonen") : n.actor.name}</b> {text}
+                            <b className="font-semibold text-fg">{actorName(n, t)}</b> {text}
                           </p>
                           {n.excerpt && <p className="mt-1 line-clamp-2 text-sm text-mist">«{n.excerpt}»</p>}
                           <p className="mt-1 text-xs text-mist/70" suppressHydrationWarning>

@@ -214,6 +214,11 @@ export const profile = pgTable("profile", {
   hideVisits: boolean("hide_visits").notNull().default(false),
   // Kan finnes av bedrifter i kandidatsøket (Bedrift-planen). Av til personen slår det på.
   visibleToCompanies: boolean("visible_to_companies").notNull().default(false),
+  // Når «Synlig for bedrifter» sist ble slått på (lagrede søk varsler om nye kandidater).
+  visibleSince: timestamp("visible_since", { withTimezone: true }),
+  // Studenter: studieretning og året man er ferdig, så bedrifter finner dem til sommerjobb og internship.
+  studyProgram: text("study_program"),
+  graduationYear: integer("graduation_year"),
   // Pro: skjul «Laget med Vis» på CV-en og i innbyggingskortene.
   hideBranding: boolean("hide_branding").notNull().default(false),
   updatedAt: updatedAt(),
@@ -474,6 +479,21 @@ export const comment = pgTable(
   ],
 );
 
+// Ekstra detaljer i et varsel. Navn og titler lagres som de var da varselet ble laget.
+export type NotificationData = {
+  reaction?: ReactionType;
+  contactId?: string;
+  event?: "new" | "status" | "entry" | "highlight";
+  applicationId?: string;
+  status?: string;
+  jobId?: string;
+  jobTitle?: string;
+  challengeId?: string;
+  challengeTitle?: string;
+  companyName?: string;
+  companySlug?: string;
+};
+
 export const notificationType = pgEnum("notification_type", [
   "comment",
   "reply",
@@ -483,6 +503,12 @@ export const notificationType = pgEnum("notification_type", [
   "contact",
   "featured",
   "member",
+  // Søknader: ny søknad (til bedriften) og endret status (til kandidaten).
+  "application",
+  // Lagt til i teamet på en bedriftsside.
+  "employee",
+  // Utfordringer: nytt svar (til bedriften) og svaret ble fremhevet (til den som svarte).
+  "challenge",
 ]);
 
 export const notification = pgTable(
@@ -500,7 +526,7 @@ export const notification = pgTable(
     projectId: uuid("project_id").references(() => project.id, { onDelete: "cascade" }),
     commentId: uuid("comment_id").references(() => comment.id, { onDelete: "cascade" }),
     // Ekstra detaljer, f.eks. hvilken reaksjon det gjelder.
-    data: jsonb("data").$type<{ reaction?: ReactionType; contactId?: string }>(),
+    data: jsonb("data").$type<NotificationData>(),
     readAt: timestamp("read_at", { withTimezone: true }),
     createdAt: createdAt(),
   },
@@ -919,6 +945,8 @@ export const job = pgTable(
     type: text("type").notNull().default("fulltid"),
     applyUrl: text("apply_url"),
     applyEmail: text("apply_email"),
+    // «vis»: søk med Vis-profilen, søknadene kommer inn under Søkere. «ekstern»: lenke eller e-post.
+    applyMode: text("apply_mode").notNull().default("ekstern"),
     deadline: date("deadline"),
     tags: jsonb("tags").$type<string[]>().notNull().default([]),
     status: jobStatus("status").notNull().default("draft"),
@@ -958,6 +986,125 @@ export const talentListMember = pgTable(
     addedAt: timestamp("added_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.listId, t.userId] })],
+);
+
+/* -------------------------------------------------------------------------- */
+/*  Søknader, lagrede søk, team og utfordringer                               */
+/* -------------------------------------------------------------------------- */
+
+// Søknadsoversikten: Ny → Intervju → Tilbud → Avslag. «trukket» = kandidaten trakk søknaden.
+export const applicationStatus = pgEnum("application_status", ["ny", "intervju", "tilbud", "avslag", "trukket"]);
+
+// «Søk med Vis-profilen». Kandidaten deler profilen, e-postadressen og opptil tre
+// prosjekter som viser at de passer. Slettes automatisk et år etter siste endring.
+export const jobApplication = pgTable(
+  "job_application",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    jobId: uuid("job_id")
+      .notNull()
+      .references(() => job.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    status: applicationStatus("status").notNull().default("ny"),
+    message: text("message"),
+    projectIds: jsonb("project_ids").$type<string[]>().notNull().default([]),
+    // Internt notat fra bedriften. Kandidaten ser det aldri.
+    note: text("note"),
+    statusChangedAt: timestamp("status_changed_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    uniqueIndex("job_application_job_user_uniq").on(t.jobId, t.userId),
+    index("job_application_job_idx").on(t.jobId, t.status),
+    index("job_application_user_idx").on(t.userId, t.createdAt.desc()),
+  ],
+);
+
+// Lagrede kandidatsøk (Bedrift). Bedriften får e-post når nye kandidater passer.
+export type SavedSearchFilters = { q?: string; location?: string | null; openTo?: OpenTo | null; field?: string | null; student?: boolean };
+export const savedSearch = pgTable(
+  "saved_search",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    companyId: uuid("company_id")
+      .notNull()
+      .references(() => company.id, { onDelete: "cascade" }),
+    createdById: text("created_by_id").references(() => user.id, { onDelete: "set null" }),
+    name: text("name").notNull(),
+    filters: jsonb("filters").$type<SavedSearchFilters>().notNull(),
+    notify: boolean("notify").notNull().default(true),
+    // «N nye siden sist» regnes fra lastSeenAt; e-postvarselet fra lastNotifiedAt.
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
+    lastNotifiedAt: timestamp("last_notified_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: createdAt(),
+  },
+  (t) => [index("saved_search_company_idx").on(t.companyId)],
+);
+
+// Folk som jobber i bedriften og vises på bedriftssiden med prosjektene sine, uten å
+// få tilgang til å administrere den (det er company_member).
+export const companyEmployee = pgTable(
+  "company_employee",
+  {
+    companyId: uuid("company_id")
+      .notNull()
+      .references(() => company.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    title: text("title"),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.companyId, t.userId] }), index("company_employee_user_idx").on(t.userId)],
+);
+
+export const challengeStatus = pgEnum("challenge_status", ["draft", "published", "closed"]);
+
+// Utfordringer: bedriften legger ut en liten oppgave, og folk svarer med et prosjekt på Vis.
+export const challenge = pgTable(
+  "challenge",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    companyId: uuid("company_id")
+      .notNull()
+      .references(() => company.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    // Markdown.
+    description: text("description").notNull().default(""),
+    // Hva man får, f.eks. «Intervju og gavekort på 2 000 kr».
+    reward: text("reward"),
+    tags: jsonb("tags").$type<string[]>().notNull().default([]),
+    deadline: date("deadline"),
+    status: challengeStatus("status").notNull().default("draft"),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index("challenge_company_idx").on(t.companyId, t.createdAt.desc()), index("challenge_list_idx").on(t.status, t.publishedAt.desc())],
+);
+
+export const challengeEntry = pgTable(
+  "challenge_entry",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    challengeId: uuid("challenge_id")
+      .notNull()
+      .references(() => challenge.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => project.id, { onDelete: "cascade" }),
+    note: text("note"),
+    // Fremhevet av bedriften (vises først, og den som svarte får beskjed).
+    highlighted: boolean("highlighted").notNull().default(false),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex("challenge_entry_user_uniq").on(t.challengeId, t.userId), index("challenge_entry_challenge_idx").on(t.challengeId, t.createdAt)],
 );
 
 /* -------------------------------------------------------------------------- */

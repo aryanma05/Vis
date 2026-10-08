@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, asc, count, desc, eq, ilike, inArray, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, ilike, inArray, isNotNull, or, sql, type SQL } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { requireBusiness, requireCompanyRole } from "@/lib/companies";
 import { FIELDS, OPEN_TO, type FieldKey, type OpenTo } from "@/lib/constants";
@@ -9,14 +9,26 @@ import { UserFacingError } from "@/lib/result";
 import { profilePath, siteUrl } from "@/lib/site";
 import { outer } from "@/lib/sql";
 
-const { cvSkill, profile, project, talentList, talentListMember, user } = schema;
+const { cvSkill, profile, project, projectImage, projectTag, tag, talentList, talentListMember, user } = schema;
 
 // Kandidatsøk for bedrifter med Bedrift-abonnement. Bare folk som selv har slått på
 // «Synlig for bedrifter» kommer med, og bare det som allerede står offentlig på profilen.
 
-export type CandidateFilters = { q?: string; location?: string | null; openTo?: OpenTo | null; field?: FieldKey | null };
+// `student`: har studieretning eller ferdig-år på profilen, eller er åpen for sommerjobb/internship.
+export type CandidateFilters = { q?: string; location?: string | null; openTo?: OpenTo | null; field?: FieldKey | null; student?: boolean };
 
-const candidateColumns = {
+// Teknologiene personen faktisk har brukt: taggene på de publiserte prosjektene, med antall.
+// Sier mer enn en liste med ferdigheter, fordi hvert tall peker på et prosjekt man kan se.
+export const usedTechSql = (userId: SQL | typeof user.id) => sql<{ name: string; n: number }[]>`coalesce((
+  select json_agg(json_build_object('name', x.name, 'n', x.n) order by x.n desc, x.name) from (
+    select ${tag.name} as name, count(*)::int as n from ${projectTag}
+    join ${project} on ${project.id} = ${projectTag.projectId}
+    join ${tag} on ${tag.id} = ${projectTag.tagId}
+    where ${project.ownerId} = ${userId} and ${project.status} = 'published' and ${project.removedAt} is null
+    group by ${tag.name} order by n desc, ${tag.name} limit 8
+  ) x), '[]'::json)`;
+
+export const candidateColumns = {
   id: user.id,
   name: user.name,
   username: user.username,
@@ -24,14 +36,36 @@ const candidateColumns = {
   headline: profile.headline,
   location: profile.location,
   openTo: profile.openTo,
+  studyProgram: profile.studyProgram,
+  graduationYear: profile.graduationYear,
   skills: sql<string[]>`coalesce((select array_agg(${cvSkill.name} order by ${cvSkill.position}) from ${cvSkill} where ${cvSkill.userId} = ${outer(user.id)}), '{}')`,
   projects: sql<number>`(select count(*)::int from ${project} where ${project.ownerId} = ${outer(user.id)} and ${project.status} = 'published' and ${project.removedAt} is null)`,
+  usedTech: usedTechSql(outer(user.id)),
 };
 
-export async function searchCandidates(viewerId: string, companyId: string, filters: CandidateFilters, limit = 50) {
-  await requireCompanyRole(viewerId, companyId);
-  await requireBusiness(companyId);
+export type ShowcaseProject = { id: string; title: string; role: string | null; cover: string | null };
 
+// Opptil `perUser` prosjekter per person (festede først, så nyeste), med forsidebilde.
+// Brukes i kandidatsøket og søkeroversikten: «se hva de har laget» før man leser mer.
+export async function loadShowcase(userIds: string[], perUser = 3) {
+  const map = new Map<string, ShowcaseProject[]>();
+  if (userIds.length === 0) return map;
+  const rows = await db.execute<{ id: string; owner_id: string; title: string; role: string | null; cover: string | null }>(sql`
+    select id, owner_id, title, role, cover from (
+      select p.id, p.owner_id, p.title, p.role,
+        (select i.url from ${projectImage} i where i.project_id = p.id order by i.position, i.created_at limit 1) as cover,
+        row_number() over (partition by p.owner_id order by p.pinned desc, p.published_at desc nulls last) as rn
+      from ${project} p
+      where p.owner_id in (${sql.join(userIds.map((id) => sql`${id}`), sql`, `)})
+        and p.status = 'published' and p.removed_at is null
+    ) x where rn <= ${perUser}
+    order by owner_id, rn`);
+  for (const r of rows) map.set(r.owner_id, [...(map.get(r.owner_id) ?? []), { id: r.id, title: r.title, role: r.role, cover: r.cover }]);
+  return map;
+}
+
+// Vilkårene for et kandidatsøk. Deles med lagrede søk (lib/saved-searches.ts).
+export function candidateConditions(filters: CandidateFilters): SQL[] {
   const conditions: SQL[] = [eq(profile.visibleToCompanies, true), sql`coalesce(${user.banned}, false) = false`];
   const q = filters.q?.trim();
   if (q) {
@@ -59,14 +93,38 @@ export async function searchCandidates(viewerId: string, companyId: string, filt
       )!,
     );
   }
+  if (filters.student) {
+    conditions.push(
+      or(isNotNull(profile.studyProgram), isNotNull(profile.graduationYear), sql`${profile.openTo} @> ${JSON.stringify(["sommerjobb"])}::jsonb`)!,
+    );
+  }
+  return conditions;
+}
 
-  return db
+export async function searchCandidates(viewerId: string, companyId: string, filters: CandidateFilters, limit = 50) {
+  await requireCompanyRole(viewerId, companyId);
+  await requireBusiness(companyId);
+
+  const rows = await db
     .select(candidateColumns)
     .from(user)
     .innerJoin(profile, eq(profile.userId, user.id))
-    .where(and(...conditions))
+    .where(and(...candidateConditions(filters)))
     .orderBy(desc(candidateColumns.projects), asc(user.name))
     .limit(Math.min(limit, 100));
+  const showcase = await loadShowcase(rows.map((r) => r.id));
+  return rows.map((r) => ({ ...r, showcase: showcase.get(r.id) ?? [] }));
+}
+
+// Kandidater som passer et søk og ble synlige etter `since` (nye siden sist).
+export async function newCandidatesSince(filters: CandidateFilters, since: Date, limit = 20) {
+  return db
+    .select({ id: user.id, name: user.name, username: user.username, headline: profile.headline, location: profile.location })
+    .from(user)
+    .innerJoin(profile, eq(profile.userId, user.id))
+    .where(and(...candidateConditions(filters), gt(profile.visibleSince, since)))
+    .orderBy(desc(profile.visibleSince))
+    .limit(limit);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -186,4 +244,68 @@ export async function talentListCsv(viewerId: string, listId: string) {
   ]);
   // BOM så Excel leser æ, ø og å riktig.
   return { name: list.name, csv: `﻿${[header, ...rows].map((r) => r.map(csvCell).join(";")).join("\r\n")}\r\n` };
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Sammenligning                                                             */
+/* -------------------------------------------------------------------------- */
+
+export const MAX_COMPARE = 4;
+
+// Opptil fire kandidater side om side. Bedriften kan sammenligne dem som er synlige for
+// bedrifter, og dem som har søkt hos dem (søknaden deler profilen).
+export async function compareCandidates(viewerId: string, companyId: string, userIds: string[]) {
+  await requireCompanyRole(viewerId, companyId);
+  await requireBusiness(companyId);
+  const ids = [...new Set(userIds)].filter((id) => /^[\w-]{1,64}$/.test(id)).slice(0, MAX_COMPARE);
+  if (ids.length === 0) return [];
+
+  const { cvEducation, cvExperience, job, jobApplication } = schema;
+  const applied = sql<boolean>`exists (select 1 from ${jobApplication} join ${job} on ${job.id} = ${jobApplication.jobId}
+    where ${jobApplication.userId} = ${user.id} and ${job.companyId} = ${companyId} and ${jobApplication.status} <> 'trukket')`;
+  const rows = await db
+    .select(candidateColumns)
+    .from(user)
+    .innerJoin(profile, eq(profile.userId, user.id))
+    .where(and(inArray(user.id, ids), sql`coalesce(${user.banned}, false) = false`, or(eq(profile.visibleToCompanies, true), applied)));
+
+  const found = rows.map((r) => r.id);
+  const [showcase, experience, education, applications] = await Promise.all([
+    loadShowcase(found),
+    found.length
+      ? db
+          .select({ userId: cvExperience.userId, title: cvExperience.title, organization: cvExperience.organization, startDate: cvExperience.startDate, endDate: cvExperience.endDate })
+          .from(cvExperience)
+          .where(inArray(cvExperience.userId, found))
+          .orderBy(asc(cvExperience.position))
+      : [],
+    found.length
+      ? db
+          .select({ userId: cvEducation.userId, institution: cvEducation.institution, degree: cvEducation.degree, fieldOfStudy: cvEducation.fieldOfStudy, endDate: cvEducation.endDate })
+          .from(cvEducation)
+          .where(inArray(cvEducation.userId, found))
+          .orderBy(asc(cvEducation.position))
+      : [],
+    found.length
+      ? db
+          .select({ userId: jobApplication.userId, id: jobApplication.id, status: jobApplication.status, message: jobApplication.message, jobTitle: job.title })
+          .from(jobApplication)
+          .innerJoin(job, eq(job.id, jobApplication.jobId))
+          .where(and(inArray(jobApplication.userId, found), eq(job.companyId, companyId), sql`${jobApplication.status} <> 'trukket'`))
+          .orderBy(desc(jobApplication.createdAt))
+      : [],
+  ]);
+
+  // Samme rekkefølge som de ble valgt i.
+  return ids
+    .map((id) => rows.find((r) => r.id === id))
+    .filter((r) => r !== undefined)
+    .map((r) => ({
+      ...r,
+      openTo: (r.openTo ?? []) as OpenTo[],
+      showcase: showcase.get(r.id) ?? [],
+      experience: experience.filter((e) => e.userId === r.id).slice(0, 3),
+      education: education.filter((e) => e.userId === r.id).slice(0, 2),
+      application: applications.find((a) => a.userId === r.id) ?? null,
+    }));
 }

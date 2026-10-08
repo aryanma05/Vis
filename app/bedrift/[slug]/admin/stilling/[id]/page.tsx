@@ -44,6 +44,8 @@ export default async function EditJobPage({ params }: { params: Promise<{ slug: 
               applyEmail: job?.applyEmail ?? "",
               deadline: job?.deadline ?? "",
               tags: job?.tags ?? [],
+              // Nye stillinger bruker «Søk med Vis-profilen»; eksisterende beholder det de har.
+              applyMode: job ? (job.applyMode === "vis" ? "vis" : "ekstern") : "vis",
             }}
           />
         </div>

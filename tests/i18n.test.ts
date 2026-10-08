@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { describe, test } from "node:test";
 import {
   ACCENTS,
+  APPLICATION_STATUS_LABELS,
   CONTACT_REASON_LABELS,
   CV_TEMPLATE_LABELS,
   FIELDS,
@@ -99,6 +100,8 @@ function keysInLists() {
     ...all(read("components/ImageEditor.tsx"), /label: "([^"]+)"/g),
     ...all(between("app/innsikt/page.tsx", "const PERIOD_LABEL", ";"), /: "([^"]+)"/g),
     ...all(between("app/bedrift/[slug]/admin/page.tsx", "const ROLE_LABEL", "as const"), /: "([^"]+)"/g),
+    ...all(between("app/bedrift/[slug]/admin/page.tsx", "const UPSELL_TEXT", "as const"), /: "([^"]+)"/g),
+    ...Object.values(APPLICATION_STATUS_LABELS),
     ...all(between("components/moderation/ReportDialog.tsx", "const TITLES", "as const"), /: "([^"]+)"/g),
     ...all(between("app/varsler/page.tsx", "function dayLabel", "\n}"), /return "([^"]+)"/g),
   ];
@@ -111,6 +114,8 @@ function keysInMessages() {
   for (const file of ["app", "components", "lib"].flatMap((d) => sourceFiles(join(ROOT, d)))) {
     const text = readFileSync(file, "utf8");
     for (const m of text.matchAll(/UserFacingError\(([\s\S]*?)\);/g)) all(m[1], /"((?:[^"\\]|\\.)*)"/g).forEach((k) => keys.add(k));
+    // Egne feilklasser (class X extends UserFacingError) sender teksten via super(…).
+    for (const m of text.matchAll(/extends UserFacingError[\s\S]*?super\(([\s\S]*?)\);/g)) all(m[1], /"((?:[^"\\]|\\.)*)"/g).forEach((k) => keys.add(k));
     for (const m of text.matchAll(/\btoast(?:\.(?:success|error|info))?\(\s*"((?:[^"\\]|\\.)*)"/g)) keys.add(m[1]);
   }
   return keys;

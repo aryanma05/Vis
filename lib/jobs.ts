@@ -33,6 +33,7 @@ export type JobInput = {
   applyEmail?: string | null;
   deadline?: string | null;
   tags?: string[];
+  applyMode?: string;
 };
 
 function clean(input: JobInput) {
@@ -56,7 +57,15 @@ function clean(input: JobInput) {
     applyEmail,
     deadline,
     tags: [...new Set((input.tags ?? []).map((t) => t.trim().slice(0, 40)).filter(Boolean))].slice(0, 10),
+    applyMode: input.applyMode === "vis" ? "vis" : "ekstern",
   };
+}
+
+// Søk med Vis-profilen trenger ingen lenke; ellers må det være en lenke eller e-post.
+function assertApplyTarget(fields: ReturnType<typeof clean>) {
+  if (fields.applyMode !== "vis" && !fields.applyUrl && !fields.applyEmail) {
+    throw new UserFacingError("Legg inn en søknadslenke eller e-post, eller la folk søke med Vis-profilen.");
+  }
 }
 
 // Sendes til bedriftens webhooks etter at svaret er sendt til brukeren.
@@ -85,7 +94,7 @@ async function assertCanPublish(companyId: string, exceptJobId?: string) {
 export async function createJob(userId: string, companyId: string, input: JobInput, publish: boolean) {
   await requireCompanyRole(userId, companyId);
   const fields = clean(input);
-  if (!fields.applyUrl && !fields.applyEmail) throw new UserFacingError("Legg inn en søknadslenke eller e-post.");
+  assertApplyTarget(fields);
   await enforce("jobPost", companyId);
   if (publish) await assertCanPublish(companyId);
   const [row] = await db
@@ -101,7 +110,7 @@ export async function updateJob(userId: string, jobId: string, input: JobInput) 
   const row = await getJobRow(jobId);
   await requireCompanyRole(userId, row.companyId);
   const fields = clean(input);
-  if (!fields.applyUrl && !fields.applyEmail) throw new UserFacingError("Legg inn en søknadslenke eller e-post.");
+  assertApplyTarget(fields);
   await db.update(job).set(fields).where(eq(job.id, jobId));
   return row.companyId;
 }
@@ -146,6 +155,7 @@ const listColumns = {
   type: job.type,
   deadline: job.deadline,
   tags: job.tags,
+  applyMode: job.applyMode,
   publishedAt: job.publishedAt,
   company: { id: company.id, slug: company.slug, name: company.name, logoUrl: company.logoUrl, verifiedAt: company.verifiedAt },
 };
@@ -200,10 +210,11 @@ export async function countJobView(jobId: string) {
   await db.update(job).set({ views: sql`${job.views} + 1` }).where(and(eq(job.id, jobId), eq(job.status, "published")));
 }
 
-// Teller et klikk på «Søk» og gir adressen brukeren skal videre til.
+// Teller et klikk på «Søk» og gir adressen brukeren skal videre til. Stillinger med
+// «Søk med Vis-profilen» har søknadsskjemaet på selve stillingssiden.
 export async function applyTarget(jobId: string) {
   const row = await getJob(jobId);
-  if (!row || !row.isOpen) return null;
+  if (!row || !row.isOpen || row.applyMode === "vis") return null;
   await db.update(job).set({ applyClicks: sql`${job.applyClicks} + 1` }).where(eq(job.id, jobId));
   notifyHooks(row.companyId, "job.application_click", { id: row.id, title: row.title, status: row.status });
   if (row.applyUrl) return row.applyUrl;

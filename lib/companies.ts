@@ -1,14 +1,16 @@
 import "server-only";
 
 import { cache } from "react";
-import { and, asc, count, desc, eq, ilike, isNotNull, or, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, inArray, isNotNull, or, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { cancelAllSubscriptions, getCompanyPlan } from "@/lib/billing";
 import { log } from "@/lib/log";
-import { isUuid } from "@/lib/projects";
+import { notify } from "@/lib/notifications";
+import { getProjectCardsByOwners, isUuid } from "@/lib/projects";
 import { UserFacingError } from "@/lib/result";
+import { outer } from "@/lib/sql";
 
-const { company, companyMember, job, user } = schema;
+const { company, companyEmployee, companyMember, job, profile, project, projectTag, tag, user } = schema;
 
 export const COMPANY_SIZES = ["1–10", "11–50", "51–200", "201–1000", "1000+"] as const;
 export const MAX_COMPANIES_PER_USER = 5;
@@ -184,7 +186,8 @@ export async function listCompanyMembers(companyId: string) {
 // Bedriftskatalogen: bekreftede først, så de med flest åpne stillinger.
 export async function listCompanies({ q = "", limit = 60 }: { q?: string; limit?: number } = {}) {
   const like = `%${q.trim().replace(/[%_]/g, "")}%`;
-  const openJobs = sql<number>`(select count(*)::int from ${job} where ${job.companyId} = ${company.id} and ${job.status} = 'published' and (${job.deadline} is null or ${job.deadline} >= current_date))`;
+  // outer(): spørringen leser bare company, så Drizzle dropper tabellnavnet, og «id» pekte på job.id.
+  const openJobs = sql<number>`(select count(*)::int from ${job} where ${job.companyId} = ${outer(company.id)} and ${job.status} = 'published' and (${job.deadline} is null or ${job.deadline} >= current_date))`;
   return db
     .select({ id: company.id, slug: company.slug, name: company.name, logoUrl: company.logoUrl, location: company.location, verifiedAt: company.verifiedAt, openJobs })
     .from(company)
@@ -228,4 +231,105 @@ export async function removeCompanyMember(actorId: string, companyId: string, us
 export async function setCompanyVerified(adminId: string, companyId: string, verified: boolean) {
   await db.update(company).set({ verifiedAt: verified ? new Date() : null }).where(eq(company.id, companyId));
   log.info("admin.company-verify", { adminId, companyId, verified });
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Teamet på bedriftssiden                                                   */
+/* -------------------------------------------------------------------------- */
+
+// Folk som jobber i bedriften vises på bedriftssiden med prosjektene sine. Utviklere stoler
+// mer på kollegaer enn på reklame, og bedriften får en levende side uten å skrive noe selv.
+// Å stå i teamet gir ingen tilgang til å administrere bedriften (det er medlemmer).
+
+export const MAX_EMPLOYEES = 300;
+
+export async function addEmployee(actorId: string, companyId: string, username: string, title?: string | null) {
+  await requireCompanyRole(actorId, companyId, ["owner", "admin"]);
+  const [target] = await db
+    .select({ id: user.id, banned: user.banned })
+    .from(user)
+    .where(eq(user.username, username.replace(/^@/, "").trim().toLowerCase()))
+    .limit(1);
+  if (!target || target.banned) throw new UserFacingError("Fant ingen med det brukernavnet.");
+  const [{ n }] = await db.select({ n: count() }).from(companyEmployee).where(eq(companyEmployee.companyId, companyId));
+  if (n >= MAX_EMPLOYEES) throw new UserFacingError("Et team kan ha opptil {n} personer.", { n: MAX_EMPLOYEES });
+  const inserted = await db
+    .insert(companyEmployee)
+    .values({ companyId, userId: target.id, title: title?.trim().slice(0, 80) || null })
+    .onConflictDoNothing()
+    .returning();
+  if (inserted.length === 0) throw new UserFacingError("Personen er allerede i teamet.");
+  const [co] = await db.select({ name: company.name, slug: company.slug }).from(company).where(eq(company.id, companyId)).limit(1);
+  // Personen får vite det, og kan fjerne seg selv fra bedriftssiden.
+  await notify({ userId: target.id, actorId, type: "employee", data: { companyName: co?.name, companySlug: co?.slug } });
+  log.info("company.employee-add", { actorId, companyId, userId: target.id });
+}
+
+// Administratorer kan fjerne folk fra teamet, og alle kan fjerne seg selv.
+export async function removeEmployee(actorId: string, companyId: string, userId: string) {
+  if (actorId !== userId) await requireCompanyRole(actorId, companyId, ["owner", "admin"]);
+  await db.delete(companyEmployee).where(and(eq(companyEmployee.companyId, companyId), eq(companyEmployee.userId, userId)));
+}
+
+export async function isEmployee(userId: string | null | undefined, companyId: string) {
+  if (!userId) return false;
+  const [row] = await db
+    .select({ userId: companyEmployee.userId })
+    .from(companyEmployee)
+    .where(and(eq(companyEmployee.companyId, companyId), eq(companyEmployee.userId, userId)))
+    .limit(1);
+  return Boolean(row);
+}
+
+export type TeamMember = { userId: string; name: string; username: string; image: string | null; headline: string | null; title: string | null; admin: boolean };
+
+// Teamet: de som er lagt til i teamet, pluss medlemmene (administratorene).
+export async function listTeam(companyId: string): Promise<TeamMember[]> {
+  const [employees, members] = await Promise.all([
+    db
+      .select({ userId: user.id, name: user.name, username: user.username, image: user.image, headline: profile.headline, title: companyEmployee.title })
+      .from(companyEmployee)
+      .innerJoin(user, eq(user.id, companyEmployee.userId))
+      .leftJoin(profile, eq(profile.userId, user.id))
+      .where(and(eq(companyEmployee.companyId, companyId), sql`coalesce(${user.banned}, false) = false`))
+      .orderBy(asc(companyEmployee.createdAt)),
+    db
+      .select({ userId: user.id, name: user.name, username: user.username, image: user.image, headline: profile.headline })
+      .from(companyMember)
+      .innerJoin(user, eq(user.id, companyMember.userId))
+      .leftJoin(profile, eq(profile.userId, user.id))
+      .where(and(eq(companyMember.companyId, companyId), sql`coalesce(${user.banned}, false) = false`))
+      .orderBy(asc(companyMember.createdAt)),
+  ]);
+  const seen = new Set(employees.map((e) => e.userId));
+  return [
+    ...employees.map((e) => ({ ...e, admin: false })),
+    ...members.filter((m) => !seen.has(m.userId)).map((m) => ({ ...m, title: null, admin: true })),
+  ];
+}
+
+export async function getTeamProjects(team: TeamMember[], limit = 6) {
+  return getProjectCardsByOwners(team.map((m) => m.userId), limit);
+}
+
+// «Verktøy vi bruker»: teknologiene i teamets prosjekter og i stillingene, flest først.
+export async function getTeamTools(companyId: string, team: TeamMember[], limit = 16) {
+  const ids = team.map((m) => m.userId);
+  const counts = new Map<string, number>();
+  if (ids.length > 0) {
+    const rows = await db
+      .select({ name: tag.name, n: count() })
+      .from(projectTag)
+      .innerJoin(project, eq(project.id, projectTag.projectId))
+      .innerJoin(tag, eq(tag.id, projectTag.tagId))
+      .where(and(inArray(project.ownerId, ids), eq(project.status, "published"), sql`${project.removedAt} is null`))
+      .groupBy(tag.name);
+    for (const r of rows) counts.set(r.name, Number(r.n));
+  }
+  const jobs = await db.select({ tags: job.tags }).from(job).where(and(eq(job.companyId, companyId), eq(job.status, "published")));
+  for (const j of jobs) for (const t of j.tags) counts.set(t, (counts.get(t) ?? 0) + 1);
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "nb"))
+    .slice(0, limit)
+    .map(([name, n]) => ({ name, n }));
 }

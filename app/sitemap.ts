@@ -32,7 +32,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     db.selectDistinct({ slug: tag.slug }).from(tag).innerJoin(projectTag, eq(projectTag.tagId, tag.id)).limit(2000),
   ]);
 
-  const statics = ["", "/sok", "/partnere", "/om", "/retningslinjer", "/vilkar", "/personvern", "/register"].map((path) => ({
+  const statics = ["", "/sok", "/partnere", "/om", "/retningslinjer", "/vilkar", "/personvern", "/register", "/bedrifter", "/stillinger", "/utfordringer", "/priser"].map((path) => ({
     url: `${base}${path}`,
     changeFrequency: "weekly" as const,
     priority: path === "" ? 1 : 0.5,

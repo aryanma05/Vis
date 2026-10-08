@@ -14,7 +14,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const t = makeT(await getLocale());
   return {
     title: t("Priser"),
-    description: t("Vis er gratis for alle. Pro gir deg mer innsikt og eget domene, Bedrift gir stillingsannonser og kandidatsøk."),
+    description: t("Vis er gratis for alle. Pro gir deg mer innsikt og eget domene, Bedrift gir søkeroversikt, kandidatsøk og utfordringer."),
   };
 }
 
@@ -38,12 +38,13 @@ const PRO = [
   "Pro-merke på profilen",
 ];
 const BUSINESS = [
-  "Bedriftsside med logo og stillinger",
   "Ubegrenset med stillingsannonser (gratis: én om gangen)",
-  "Kandidatsøk blant folk som er synlige for bedrifter",
-  "Kandidatlister med notater og eksport til Excel",
-  "Ta kontakt med kandidater direkte",
-  "Statistikk på visninger og søknadsklikk",
+  "Søkeroversikt: Ny → Intervju → Tilbud → Avslag, og kandidaten får beskjed automatisk",
+  "Sammenlign kandidater side om side, med notater",
+  "Kandidatsøk med lagrede søk og varsel om nye kandidater",
+  "Utfordringer: la folk svare med et prosjekt",
+  "Teamets prosjekter og verktøy på bedriftssiden",
+  "Kandidatlister med eksport til Excel, kontakt direkte",
   "Opptil 25 medlemmer, webhooks og API",
 ];
 

@@ -122,6 +122,9 @@ export async function exportUserData(userId: string) {
       pet: profile.pet,
       cvTemplate: profile.cvTemplate,
       notificationPrefs: profile.notificationPrefs,
+      visibleToCompanies: profile.visibleToCompanies,
+      studyProgram: profile.studyProgram,
+      graduationYear: profile.graduationYear,
     })
     .from(profile)
     .where(eq(profile.userId, userId))
@@ -276,5 +279,30 @@ export async function exportUserData(userId: string) {
       .select({ key: userAchievement.key, tier: userAchievement.tier, unlockedAt: userAchievement.unlockedAt })
       .from(userAchievement)
       .where(eq(userAchievement.userId, userId)),
+    // Søknader med Vis-profilen. Bedriftens interne notat er deres og tas ikke med.
+    applications: await db
+      .select({
+        job: schema.job.title,
+        company: company.name,
+        status: schema.jobApplication.status,
+        message: schema.jobApplication.message,
+        projectIds: schema.jobApplication.projectIds,
+        createdAt: schema.jobApplication.createdAt,
+        statusChangedAt: schema.jobApplication.statusChangedAt,
+      })
+      .from(schema.jobApplication)
+      .innerJoin(schema.job, eq(schema.job.id, schema.jobApplication.jobId))
+      .innerJoin(company, eq(company.id, schema.job.companyId))
+      .where(eq(schema.jobApplication.userId, userId)),
+    challengeEntries: await db
+      .select({ challenge: schema.challenge.title, projectId: schema.challengeEntry.projectId, note: schema.challengeEntry.note, createdAt: schema.challengeEntry.createdAt })
+      .from(schema.challengeEntry)
+      .innerJoin(schema.challenge, eq(schema.challenge.id, schema.challengeEntry.challengeId))
+      .where(eq(schema.challengeEntry.userId, userId)),
+    teams: await db
+      .select({ company: company.name, title: schema.companyEmployee.title, since: schema.companyEmployee.createdAt })
+      .from(schema.companyEmployee)
+      .innerJoin(company, eq(company.id, schema.companyEmployee.companyId))
+      .where(eq(schema.companyEmployee.userId, userId)),
   };
 }

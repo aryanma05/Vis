@@ -90,8 +90,18 @@ function PrivacyNb({ blob, emailService, github, google, contact, stripe, analyt
             : "betaling for Pro og Bedrift er ikke satt opp ennå. Når det kommer, skjer betalingen hos Stripe, og vi lagrer bare hvilken plan du har – aldri kortnummeret ditt."}
         </li>
         <li>
-          <strong>Bedrifter:</strong> lager du en bedriftsside, lagrer vi bedriften, stillingene og hvem som er medlem. Vi teller
-          visninger og klikk på «Søk på stillingen», men ikke hvem som klikket.
+          <strong>Bedrifter:</strong> lager du en bedriftsside, lagrer vi bedriften, stillingene, utfordringene og hvem som er medlem
+          eller står i teamet. Vi teller visninger og klikk på «Søk på stillingen», men ikke hvem som klikket.
+        </li>
+        <li>
+          <strong>Søknader med Vis-profilen:</strong> søker du på en stilling med profilen din, lagrer vi søknaden: stillingen,
+          meldingen din, prosjektene du valgte og statusen bedriften setter (ny, intervju, tilbud eller avslag). Bedriften ser
+          profilen, prosjektene, meldingen og e-postadressen din, og kan skrive et internt notat. Du kan trekke søknaden når som
+          helst, og søknader som ikke er endret på et år slettes automatisk.
+        </li>
+        <li>
+          <strong>Utfordringer:</strong> svarer du på en utfordring fra en bedrift, lagrer vi hvilket prosjekt du svarte med og en
+          eventuell kommentar. Svaret vises offentlig på utfordringen, siden prosjektet ditt allerede er offentlig.
         </li>
         <li>
           <strong>To-trinns innlogging:</strong> slår du det på, lagrer vi nøkkelen til kode-appen og reservekodene dine kryptert.
@@ -130,7 +140,8 @@ function PrivacyNb({ blob, emailService, github, google, contact, stripe, analyt
           <strong>Bedrifter med Bedrift-abonnement:</strong> kan finne deg i kandidatsøket bare hvis du har slått på «Synlig for
           bedrifter» under Rediger profil (det er av som standard). De ser det samme som står på profilen din, og kan legge deg
           i egne kandidatlister med notater og eksportere listene. Slår du det av, forsvinner du fra søket. E-postadressen din
-          ser de aldri; tar de kontakt, skjer det gjennom «Kontakt».
+          ser de ikke fra kandidatsøket; tar de kontakt, skjer det gjennom «Kontakt». Den deles bare når du selv søker på en
+          stilling hos dem.
         </li>
         <li>
           <strong>Moderatorer:</strong> kan se rapporter og e-postadressen til kontoer når de behandler et brudd på
@@ -272,8 +283,19 @@ function PrivacyEn({ blob, emailService, github, google, contact, stripe, analyt
             : "payment for Pro and Business isn't set up yet. When it is, the payment will happen at Stripe, and we'll only store which plan you have – never your card number."}
         </li>
         <li>
-          <strong>Companies:</strong> if you create a company page, we store the company, the jobs and who&apos;s a member. We
-          count views and clicks on “Apply for the job”, but not who clicked.
+          <strong>Companies:</strong> if you create a company page, we store the company, the jobs, the challenges and who&apos;s a
+          member or listed on the team. We count views and clicks on “Apply for the job”, but not who clicked.
+        </li>
+        <li>
+          <strong>Applications with your Vis profile:</strong> if you apply for a job with your profile, we store the
+          application: the job, your message, the projects you picked and the status the company sets (new, interview, offer
+          or rejected). The company sees your profile, projects, message and email address, and can write an internal note.
+          You can withdraw the application at any time, and applications that haven&apos;t changed for a year are deleted
+          automatically.
+        </li>
+        <li>
+          <strong>Challenges:</strong> if you answer a challenge from a company, we store which project you answered with and
+          any comment. The entry is shown publicly on the challenge, since your project is already public.
         </li>
         <li>
           <strong>Two-step login:</strong> if you turn it on, we store the key for the code app and your backup codes
@@ -313,7 +335,8 @@ function PrivacyEn({ blob, emailService, github, google, contact, stripe, analyt
           <strong>Companies with a Business subscription:</strong> can only find you in candidate search if you&apos;ve turned
           on “Visible to companies” under Edit profile (it&apos;s off by default). They see the same as what&apos;s on your
           profile, and can add you to their own candidate lists with notes and export the lists. If you turn it off, you
-          disappear from search. They never see your email address; if they get in touch, it happens through “Contact”.
+          disappear from search. They don&apos;t see your email address from candidate search; if they get in touch, it happens
+          through “Contact”. It&apos;s only shared when you apply for a job with them yourself.
         </li>
         <li>
           <strong>Moderators:</strong> can see reports and the email address of accounts when they handle a breach of the
