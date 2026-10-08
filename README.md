@@ -44,8 +44,8 @@ prosjektene dine på én lenke (`/@brukernavn`), pluss en feed der man oppdager 
     funnet folk (maks fem åpne). Åpne utlysninger vises som «Trenger hjelp med» i visittkortet på
     profilen og på prosjektsiden, og eieren av et prosjekt under arbeid får en snarvei til å finne folk.
   - **Folk**: de som har krysset av for «Samarbeid» under «Åpen for», med hva de vil lage («Hva ser
-    du etter?»), ferdigheter og hva de jobber med nå. Ta kontakt med «Kontakt»-knappen, og vis eller
-    skjul deg rett fra siden (`lib/partners.ts`).
+    du etter?»), ferdigheter og hva de jobber med nå. Ta kontakt med «Kontakt»-knappen. Man kommer
+    med ved å krysse av for «Samarbeid» under «Åpen for» på profilen (`lib/partners.ts`).
 
   Søk på idé, rolle, ferdighet, sted og fagfelt i begge.
 - **Team på prosjekter**: legg til folk du har laget prosjektet med. De får et varsel, vises
@@ -106,7 +106,8 @@ med `DATABASE_URL=postgres://localhost:5432/vis`, eller en egen Neon-database/-b
 | `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | GitHub OAuth-app, for innlogging og repo-import | Nei, knappen skjules uten |
 | `GITHUB_TOKEN` | Token for offentlige GitHub-data: import fra brukernavn/repo-lenke og repo-info på prosjektsidene. Se «GitHub-import» under | Nei, men **påkrevd i produksjon** |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google OAuth-klient, for innlogging | Nei, knappen skjules uten |
-| `ADMIN_EMAILS` | Kommaseparerte e-postadresser som blir admin når kontoen lages | Nei |
+| `ADMIN_EMAILS` | Kommaseparerte e-postadresser som er admin når e-posten er bekreftet. I produksjon kreves også to-trinns innlogging | Nei |
+| `TRUSTED_IP_HEADER` | Headeren proxyen setter med klientens IP (f.eks. `cf-connecting-ip`), til grenser per IP. Se `docs/sikkerhet/PRODUKSJONSSJEKKLISTE.md` | Nei, men bør settes i produksjon |
 | `BLOB_READ_WRITE_TOKEN` | Vercel Blob. Uten den lagres bilder og CV-er i databasen (`/filer/...`) | Nei |
 | `BREVO_API_KEY` eller `RESEND_API_KEY`, og `EMAIL_FROM` | E-post for bekreftelse og nytt passord. Uten dem skrives e-postene til terminalen under utvikling, og i produksjon er e-postbekreftelse av | Nei |
 | `CONTACT_EMAIL` | Kontaktadresse som vises på /personvern | Nei |
@@ -215,6 +216,9 @@ components/               ProjectCard, ProjectCover, ImageEditor (beskjæring), 
 
 ## Drift og lansering
 
+- **Sikkerhet:** `SECURITY.md` (melde sårbarheter), `docs/sikkerhet/SIKKERHETSMODELL.md` (innlogging,
+  tilgang, filer, personvern), `docs/sikkerhet/PRODUKSJONSSJEKKLISTE.md` (før lansering),
+  `docs/sikkerhet/MILJOVARIABLER.md` og `docs/sikkerhet/HENDELSER.md` (når noe går galt).
 - **Sjekkliste:** `/admin?fane=system` viser hvilke miljøvariabler som mangler før lansering
   (verdiene vises aldri), og serveren skriver det samme i loggen når den starter (`lib/env.ts`).
 - **Feillogg:** feil fra serveren, Server Actions og nettleseren lagres i `error_event` og

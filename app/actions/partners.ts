@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { invalidInput, runAction } from "@/lib/action";
-import { setPartnerStatus } from "@/lib/partners";
 import {
   createPartnerPost,
   deletePartnerPost,
@@ -14,16 +13,6 @@ import {
 } from "@/lib/partner-posts";
 import { requireUserForAction } from "@/lib/session";
 import { partnerPostInput } from "@/lib/validation";
-
-// Vis eller skjul deg på partnersiden, og hva du vil lage (lagres som «Hva ser du etter?»).
-export async function setPartnerStatusAction(input: { listed: boolean; lookingFor?: string }) {
-  return runAction(async () => {
-    const user = await requireUserForAction();
-    await setPartnerStatus(user.id, Boolean(input?.listed), typeof input?.lookingFor === "string" ? input.lookingFor : undefined);
-    revalidatePath("/partnere");
-    revalidatePath(`/profil/${user.username}`);
-  }, "partners.status");
-}
 
 // Utlysningen vises på /partnere, på profilen og på prosjektet den peker på.
 function revalidatePost(username: string, postId?: string) {

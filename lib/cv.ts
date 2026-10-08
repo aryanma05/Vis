@@ -249,9 +249,10 @@ export async function applyCvImport(
         .where(and(eq(user.id, userId), sql`coalesce(trim(${user.name}), '') = ''`));
     }
 
+    // Innholdet ligger nå i CV-en, så utkastet trengs ikke lenger.
     await tx
       .update(cvImport)
-      .set({ status: "applied", appliedAt: new Date() })
+      .set({ status: "applied", appliedAt: new Date(), result: null })
       .where(eq(cvImport.id, importId));
   });
 }

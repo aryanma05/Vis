@@ -3,6 +3,7 @@ import "server-only";
 import { and, desc, eq, ilike, isNull, or, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { adminEmails } from "@/lib/auth";
+import { adminNeeds2fa, isAdminUser, type AdminCandidate } from "@/lib/auth-rules";
 import { log } from "@/lib/log";
 import { emailNotification, notify } from "@/lib/notifications";
 import { isUuid } from "@/lib/projects";
@@ -12,20 +13,27 @@ import { outer } from "@/lib/sql";
 
 const { comment, project, report, session, user } = schema;
 
-// Admin: rollen "admin" i databasen, eller e-posten står i ADMIN_EMAILS.
-export function isAdmin(u: { role?: string | null; email?: string | null } | null | undefined) {
-  if (!u) return false;
-  return u.role === "admin" || (u.email ? adminEmails.has(u.email.toLowerCase()) : false);
+// Admin: rollen "admin" i databasen, eller en bekreftet e-post som står i ADMIN_EMAILS.
+export function isAdmin(u: AdminCandidate | null | undefined) {
+  return isAdminUser(u, adminEmails);
 }
 
-export async function getAdmin(): Promise<CurrentUser | null> {
+// Admin som faktisk kan bruke admin-verktøyene: i produksjon også med to-trinns innlogging.
+export function isActiveAdmin(u: AdminCandidate | null | undefined) {
+  return isAdmin(u) && !adminNeeds2fa(u);
+}
+
+// Til /admin: hvem som er admin, og om to-trinns innlogging mangler.
+export async function getAdminGate(): Promise<{ admin: CurrentUser; needs2fa: boolean } | null> {
   const u = await getCurrentUser();
-  return isAdmin(u) ? u : null;
+  if (!u || !isAdmin(u)) return null;
+  return { admin: u, needs2fa: adminNeeds2fa(u) };
 }
 
 export async function requireAdminForAction() {
   const u = await getCurrentUser();
   if (!isAdmin(u)) throw new UserFacingError("Du har ikke tilgang til dette.");
+  if (adminNeeds2fa(u)) throw new UserFacingError("Slå på to-trinns innlogging under Konto for å bruke admin.");
   return u!;
 }
 
@@ -73,7 +81,7 @@ export async function adminDeleteComment(adminId: string, commentId: string) {
 // Stenger en konto: brukeren logges ut overalt og innholdet skjules for andre.
 export async function banUser(adminId: string, userId: string, reason: string, days?: number | null) {
   if (adminId === userId) throw new UserFacingError("Du kan ikke stenge din egen konto.");
-  const [target] = await db.select({ role: user.role, email: user.email }).from(user).where(eq(user.id, userId)).limit(1);
+  const [target] = await db.select({ role: user.role, email: user.email, emailVerified: user.emailVerified }).from(user).where(eq(user.id, userId)).limit(1);
   if (!target) throw new UserFacingError("Fant ikke brukeren.");
   if (isAdmin(target)) throw new UserFacingError("Du kan ikke stenge en annen admin.");
   await db

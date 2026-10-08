@@ -1,12 +1,12 @@
 import "server-only";
 
-import { eq, inArray, lte, ne, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, lte, ne, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { audit } from "@/lib/audit";
 import { getPlanState } from "@/lib/billing";
 import { RETENTION_OPTIONS } from "@/lib/company-labels";
 
-const { company, contactRequest, job, jobApplication, talentListMember } = schema;
+const { company, contactRequest, cvImport, job, jobApplication, talentListMember } = schema;
 
 // Personvern: sletter det som har passert lagringstiden (planlagt jobb, én gang i døgnet).
 //
@@ -15,7 +15,7 @@ const { company, contactRequest, job, jobApplication, talentListMember } = schem
 // eller 12 måneder; Gratis alltid 6). Datoen regnes ut på nytt hver natt, men kortes bare
 // ned, så en gjenåpnet stilling eller en endret innstilling forlenger aldri lagringen.
 
-export type RetentionResult = { applications: number; lists: number; contacts: number };
+export type RetentionResult = { applications: number; lists: number; contacts: number; cvDrafts: number };
 
 // Gratis har alltid 6 måneder.
 export const FREE_RETENTION_MONTHS = 6;
@@ -105,10 +105,22 @@ export async function purgeOldContacts() {
   return rows.length;
 }
 
+// Utkast fra CV-import (hele den tolkede CV-en) trengs bare mens brukeren ser over dem.
+// Raden beholdes (den teller mot grensen per døgn), men innholdet fjernes etter et døgn.
+export async function purgeCvImportDrafts() {
+  const rows = await db
+    .update(cvImport)
+    .set({ result: null })
+    .where(and(isNotNull(cvImport.result), lte(cvImport.createdAt, sql`now() - interval '1 day'`)))
+    .returning({ id: cvImport.id });
+  return rows.length;
+}
+
 export async function runRetention(): Promise<RetentionResult> {
   await recomputeExpiry();
   const applications = await purgeExpiredApplications();
   const lists = await purgeTalentLists();
   const contacts = await purgeOldContacts();
-  return { applications, lists, contacts };
+  const cvDrafts = await purgeCvImportDrafts();
+  return { applications, lists, contacts, cvDrafts };
 }

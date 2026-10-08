@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { Briefcase, Building2, Flag, FolderX, MessageSquareWarning, Search, ShieldCheck, UserX } from "lucide-react";
 import Avatar from "@/components/Avatar";
 import { BanButton, DeleteCommentButton, GrantPlanButton, RemoveProjectButton, ResolveButtons, VerifyCompanyButton } from "@/components/moderation/AdminActions";
+import { ButtonLink } from "@/components/ui/button";
 import { inputClass } from "@/components/ui/field";
 import { EmptyState } from "@/components/ui/misc";
 import { Tabs } from "@/components/ui/tabs";
-import { getAdmin, getModerationCounts, listCompaniesForAdmin, listUsers } from "@/lib/admin";
+import { getAdminGate, getModerationCounts, listCompaniesForAdmin, listUsers } from "@/lib/admin";
 import { getBillingSummary } from "@/lib/billing";
 import { REPORT_REASON_LABELS } from "@/lib/constants";
 import { checkEnv } from "@/lib/env";
@@ -17,8 +19,9 @@ import { getKeyMetrics } from "@/lib/metrics";
 import { timeAgo } from "@/lib/format";
 import { getProjectById } from "@/lib/projects";
 import { listReports } from "@/lib/reports";
+import { ipFromHeaders } from "@/lib/request-ip";
 import MetricsTab from "./MetricsTab";
-import SystemTab from "./SystemTab";
+import SystemTab, { type IpDiagnostics } from "./SystemTab";
 
 export const metadata: Metadata = { title: "Admin", robots: { index: false } };
 
@@ -30,9 +33,35 @@ type Props = { searchParams: Promise<{ fane?: string; status?: string; q?: strin
 const TYPE_ICON = { project: FolderX, comment: MessageSquareWarning, user: UserX, company: Building2, job: Briefcase } as const;
 const TYPE_LABEL = { project: "Prosjekt", comment: "Kommentar", user: "Profil", company: "Bedrift", job: "Stilling" } as const;
 
+const IP_HEADERS = ["x-forwarded-for", "cf-connecting-ip", "true-client-ip", "x-real-ip"];
+
+async function ipDiagnostics(): Promise<IpDiagnostics> {
+  const h = await headers();
+  const trusted = process.env.TRUSTED_IP_HEADER?.trim().toLowerCase() || null;
+  const names = trusted && !IP_HEADERS.includes(trusted) ? [...IP_HEADERS, trusted] : IP_HEADERS;
+  return { resolved: ipFromHeaders(h), trusted, headers: names.map((name) => ({ name, value: h.get(name) })) };
+}
+
 export default async function AdminPage({ searchParams }: Props) {
-  const admin = await getAdmin();
-  if (!admin) notFound();
+  const gate = await getAdminGate();
+  if (!gate) notFound();
+  if (gate.needs2fa) {
+    return (
+      <main className="px-5 pb-28 pt-10 md:pb-20 md:pl-28 md:pr-10 md:pt-14">
+        <div className="mx-auto max-w-xl">
+          <EmptyState
+            icon={<ShieldCheck className="size-5" />}
+            title="Slå på to-trinns innlogging"
+            action={<ButtonLink href="/profil/rediger/konto">Til Konto</ButtonLink>}
+          >
+            Admin kan se skjult innhold og stenge kontoer, så det krever to-trinns innlogging med en
+            app for engangskoder. Slå det på under Konto, og kom tilbake hit.
+          </EmptyState>
+        </div>
+      </main>
+    );
+  }
+  const { admin } = gate;
 
   const { fane, status, q, prosjekt } = await searchParams;
   const tab: Tab = (TABS as readonly string[]).includes(fane ?? "") ? (fane as Tab) : "rapporter";
@@ -108,7 +137,7 @@ export default async function AdminPage({ searchParams }: Props) {
         </div>
 
         {metrics && <MetricsTab metrics={metrics} billing={billing} />}
-        {errors && <SystemTab checks={checkEnv()} errors={errors} github={github} />}
+        {errors && <SystemTab checks={checkEnv()} errors={errors} github={github} ip={await ipDiagnostics()} />}
 
         {tab === "rapporter" ? (
           <>

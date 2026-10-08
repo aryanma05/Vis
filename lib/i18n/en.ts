@@ -2091,16 +2091,6 @@ export const EN: Record<string, string> = {
   "Ferdighet, idé eller navn": "Skill, idea or name",
   "Ingen her ennå": "No one here yet",
   "Prøv et annet søk eller fagfelt.": "Try a different search or field.",
-  "Bli den første: fortell hva du vil lage.": "Be the first: tell people what you want to make.",
-  "Vil du bli funnet?": "Want to be found?",
-  "Lag en profil og fortell hva du vil lage.": "Create a profile and tell people what you want to make.",
-  "Du står på listen": "You're on the list",
-  "Du er skjult fra partnersiden": "You're hidden from the partners page",
-  "Skjul meg": "Hide me",
-  "Hva vil du lage?": "What do you want to make?",
-  "Hva vil du lage? F.eks. «En app for turlag – ser etter en designer»": "What do you want to make? E.g. “An app for hiking clubs – looking for a designer”",
-  "Nå kan andre finne deg her": "Others can now find you here",
-  "Vis meg her": "Show me here",
 
   /* ------------------------------------------------------------------ */
   /*  Samarbeid: prosjekter som trenger hjelp                           */
@@ -2132,8 +2122,6 @@ export const EN: Record<string, string> = {
   "Legg ut en idé eller et påbegynt prosjekt og si hva du trenger hjelp med, eller bli med på noe andre lager.":
     "Post an idea or a project in progress and say what you need help with, or join something others are making.",
   "Dine prosjekter": "Your projects",
-  "Har du en idé eller et prosjekt som trenger folk? Legg det ut, så kan andre tilby seg å hjelpe.":
-    "Got an idea or a project that needs people? Post it, and others can offer to help.",
   "Ubesvarte forespørsler": "Unanswered requests",
   "Dine forespørsler": "Your requests",
   "Prosjekter eller folk": "Projects or people",
@@ -2143,8 +2131,8 @@ export const EN: Record<string, string> = {
   "Ingen prosjekter her ennå": "No projects here yet",
   "Bli den første: legg ut en idé eller noe du har begynt på, og si hva du trenger hjelp med.":
     "Be the first: post an idea or something you've started, and say what you need help with.",
-  "Trenger du folk, eller vil du bli med?": "Need people, or want to join in?",
-  "Lag en profil for å legge ut prosjekter, tilby hjelp og bli funnet av andre.": "Create a profile to post projects, offer help and be found by others.",
+  "Kryss av for «Samarbeid» under «Åpen for» på profilen din, så vises du her.":
+    "Tick “Collaboration” under “Open to” on your profile, and you'll show up here.",
   "Du er med": "You're in",
   "Ikke denne gangen": "Not this time",
   "Forespørsel sendt": "Request sent",
@@ -3178,4 +3166,21 @@ export const EN: Record<string, string> = {
   "Teksten kan ha maks {n} tegn.": "The text can be at most {n} characters.",
   "Dere kan ha opptil {n} maler.": "You can have up to {n} templates.",
   "Svartiden må være 7, 10, 14 eller 21 dager.": "The response time must be 7, 10, 14 or 21 days.",
+
+  /* ------------------------------------------------------------------ */
+  /*  Sikkerhet: innlogging, økter og CV-synlighet                       */
+  /* ------------------------------------------------------------------ */
+  "For mange innloggingsforsøk på denne kontoen. Vent et kvarter, eller bruk «Glemt passordet?».":
+    "Too many login attempts for this account. Wait 15 minutes, or use “Forgot password?”.",
+  "Vi har sendt mange e-poster til denne adressen. Vent en time og prøv igjen.": "We've sent a lot of emails to this address. Wait an hour and try again.",
+  "Sjekk feltene og prøv igjen.": "Check the fields and try again.",
+  "Slå på to-trinns innlogging under Konto for å bruke admin.": "Turn on two-step login under Account to use admin.",
+  "Bare du ser CV-dokumentet. En CV har ofte telefonnummer og adresse, så den vises ikke før du slår den på.":
+    "Only you can see the CV document. A CV often includes a phone number and address, so it isn't shown until you turn it on.",
+  Innlogginger: "Sessions",
+  "Har du logget inn på en maskin du ikke bruker lenger, kan du logge ut der herfra.": "If you've logged in on a device you no longer use, you can log out of it from here.",
+  "Du er bare logget inn her.": "You're only logged in here.",
+  "Logget inn her og på {n} andre enheter eller nettlesere.": "Logged in here and on {n} other devices or browsers.",
+  "Logg ut på andre enheter": "Log out other devices",
+  "Du er logget ut på alle andre enheter": "You're logged out on all other devices",
 };

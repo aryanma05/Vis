@@ -46,7 +46,14 @@ const ERRORS: Record<string, { message: string; field?: AuthField }> = {
   INVALID_TWO_FACTOR_COOKIE: { message: "Innloggingen tok for lang tid. Start på nytt." },
   ACCOUNT_TEMPORARILY_LOCKED: { message: "For mange feil koder. Kontoen er låst en liten stund. Prøv igjen senere." },
   TOO_MANY_ATTEMPTS_REQUEST_NEW_CODE: { message: "For mange forsøk. Start innloggingen på nytt." },
+  // Grenser per konto og e-postadresse (lib/auth-rules.ts), i tillegg til grensen per IP.
+  ACCOUNT_THROTTLED: { message: "For mange innloggingsforsøk på denne kontoen. Vent et kvarter, eller bruk «Glemt passordet?»." },
+  EMAIL_THROTTLED: { message: "Vi har sendt mange e-poster til denne adressen. Vent en time og prøv igjen." },
+  INVALID_REQUEST: { message: "Sjekk feltene og prøv igjen." },
 };
+
+// Grenser med egen melding, som ikke skal bli til «vent et minutt».
+const OWN_LIMITS = new Set(["ACCOUNT_THROTTLED", "EMAIL_THROTTLED", "ACCOUNT_TEMPORARILY_LOCKED"]);
 
 // Better Auth gir VALIDATION_ERROR med meldinger som "[body.email] Invalid email address".
 function validationError(message = ""): AuthErrorInfo | null {
@@ -61,6 +68,7 @@ function validationError(message = ""): AuthErrorInfo | null {
 // context "login": alle brukernavn-feil betyr for brukeren det samme, feil brukernavn eller passord.
 export function authError(error: AuthErrorLike, context?: "login"): AuthErrorInfo {
   if (!error) return { message: "Noe gikk galt. Prøv igjen." };
+  if (error.code && OWN_LIMITS.has(error.code)) return { ...ERRORS[error.code], code: error.code };
   if (error.status === 429) {
     return { message: "For mange forsøk på kort tid. Vent et minutt og prøv igjen.", code: "RATE_LIMITED" };
   }

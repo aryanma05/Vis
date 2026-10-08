@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { runAction } from "@/lib/action";
-import { isAdmin } from "@/lib/admin";
+import { isActiveAdmin } from "@/lib/admin";
 import { addComment, deleteComment, editComment } from "@/lib/comments";
 import { requireUserForAction } from "@/lib/session";
 
@@ -26,7 +26,7 @@ export async function editCommentAction(commentId: string, body: string) {
 export async function deleteCommentAction(commentId: string) {
   return runAction(async () => {
     const user = await requireUserForAction();
-    const projectId = await deleteComment(user.id, String(commentId), { isAdmin: isAdmin(user) });
+    const projectId = await deleteComment(user.id, String(commentId), { isAdmin: isActiveAdmin(user) });
     revalidatePath(`/prosjekt/${projectId}`);
   }, "comment.delete");
 }

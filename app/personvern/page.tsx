@@ -125,7 +125,7 @@ function PrivacyNb({ blob, emailService, github, google, contact, stripe, analyt
       <ul>
         <li>
           <strong>Alle:</strong> navn, brukernavn, profilbilde, profiltekst, publiserte prosjekter, kommentarer, reaksjoner,
-          hvem du følger og hvem som følger deg, og CV-en hvis du har gjort den synlig. Det samme kan hentes gjennom det åpne{" "}
+          hvem du følger og hvem som følger deg, det du har fylt inn i CV-en (erfaring, utdanning og ferdigheter), og CV-dokumentet (PDF eller bilde) hvis du har gjort det synlig. Et nytt CV-dokument er skjult til du gjør det synlig. Det samme kan hentes gjennom det åpne{" "}
           <Link href="/utviklere">API-et</Link> og i innbyggingskortene – aldri mer enn det som står på de offentlige sidene.
         </li>
         <li>
@@ -228,7 +228,7 @@ function PrivacyNb({ blob, emailService, github, google, contact, stripe, analyt
       <h2 id="underleverandorer">Hvor dataene ligger</h2>
       <ul>
         <li>Nettsiden kjører hos Render, og databasen ligger hos Neon, begge på servere i EU (Frankfurt).</li>
-        <li>{blob ? "Bilder og CV-filer lagres hos Vercel Blob." : "Bilder og CV-filer lagres i den samme databasen."}</li>
+        <li>{blob ? "Bilder lagres hos Vercel Blob. CV-filer lagres alltid i databasen, så en skjult CV ikke kan åpnes med en lenke." : "Bilder og CV-filer lagres i den samme databasen."}</li>
         {emailService && <li>E-poster sendes gjennom {emailService}.</li>}
         {stripe && <li>Betalinger håndteres av Stripe, som behandler kortopplysningene etter sine egne vilkår.</li>}
         {screenshots && (
@@ -390,7 +390,7 @@ function PrivacyEn({ blob, emailService, github, google, contact, stripe, analyt
       <ul>
         <li>
           <strong>Everyone:</strong> name, username, profile photo, profile text, published projects, comments, reactions, who
-          you follow and who follows you, and your CV if you&apos;ve made it visible. The same can be fetched through the open{" "}
+          you follow and who follows you, what you&apos;ve filled in on your CV (experience, education and skills), and the CV document (PDF or image) if you&apos;ve made it visible. A new CV document is hidden until you make it visible. The same can be fetched through the open{" "}
           <Link href="/utviklere">API</Link> and in the embed cards – never more than what&apos;s on the public pages.
         </li>
         <li>
@@ -496,7 +496,7 @@ function PrivacyEn({ blob, emailService, github, google, contact, stripe, analyt
       <h2 id="underleverandorer">Where the data is</h2>
       <ul>
         <li>The website runs at Render, and the database is at Neon, both on servers in the EU (Frankfurt).</li>
-        <li>{blob ? "Images and CV files are stored at Vercel Blob." : "Images and CV files are stored in the same database."}</li>
+        <li>{blob ? "Images are stored at Vercel Blob. CV files are always stored in the database, so a hidden CV can't be opened with a link." : "Images and CV files are stored in the same database."}</li>
         {emailService && <li>Emails are sent through {emailService}.</li>}
         {stripe && <li>Payments are handled by Stripe, which processes card details under its own terms.</li>}
         {screenshots && (

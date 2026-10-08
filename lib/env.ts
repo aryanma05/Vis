@@ -40,6 +40,17 @@ export function checkEnv(env: Env = process.env): EnvCheck[] {
   }
   add("Grunnleggende", "BETTER_AUTH_URL", urlStatus, urlMessage);
 
+  // Grensene per IP (innlogging, API, registrering) er bare så gode som IP-adressen.
+  const ipHeader = env.TRUSTED_IP_HEADER?.trim();
+  add(
+    "Grunnleggende",
+    "TRUSTED_IP_HEADER",
+    ipHeader ? "ok" : prod && !env.VERCEL ? "warn" : "info",
+    ipHeader
+      ? `Klientens IP leses fra «${ipHeader}».`
+      : "Ikke satt. IP-adressen leses fra første verdi i X-Forwarded-For, som klienten kan forfalske bak noen proxyer. Se produksjonssjekklisten.",
+  );
+
   const admins = has(env, "ADMIN_EMAILS");
   add("Grunnleggende", "ADMIN_EMAILS", admins ? "ok" : "warn", admins ? "Admin-kontoer er satt." : "Ingen admin-e-poster. Noen må kunne moderere rapporter.");
 

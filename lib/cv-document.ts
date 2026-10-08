@@ -60,8 +60,10 @@ export async function uploadCvDocument(
   const head = new Uint8Array(await file.slice(0, 16).arrayBuffer());
   const folder = `cv/${userId}`;
   const [previous] = await db.select().from(cvDocument).where(eq(cvDocument.userId, userId)).limit(1);
-  // En ny CV arver synligheten til den forrige (ny CV er synlig som standard).
-  const options = { ownerId: userId, isPrivate: previous ? !previous.isPublic : false };
+  // En CV har ofte telefonnummer og adresse, så den første er skjult til eieren selv gjør
+  // den synlig. En ny CV arver synligheten til den forrige. Filene ligger alltid i databasen.
+  const isPublic = previous?.isPublic ?? false;
+  const options = { ownerId: userId, isPrivate: !isPublic, sensitive: true };
 
   let stored: StoredFile;
   let pages: CvPage[] = [];
@@ -90,11 +92,11 @@ export async function uploadCvDocument(
   };
   await db
     .insert(cvDocument)
-    .values({ userId, ...values })
+    .values({ userId, ...values, isPublic })
     .onConflictDoUpdate({ target: cvDocument.userId, set: values });
 
   if (previous) await deleteStoredFiles(allKeys(previous));
-  return { mimeType, url: stored.url };
+  return { mimeType, url: stored.url, isPublic };
 }
 
 // Én side av en PDF, ferdig gjort om til bilde i nettleseren.
@@ -105,7 +107,7 @@ export async function addCvPage(userId: string, index: number, file: File, size:
     throw new UserFacingError("Vi viser maks {n} sider.", { n: MAX_CV_PAGES });
   }
 
-  const stored = await storeImage(file, `cv/${userId}`, { ownerId: userId, isPrivate: !row.isPublic });
+  const stored = await storeImage(file, `cv/${userId}`, { ownerId: userId, isPrivate: !row.isPublic, sensitive: true });
   const page = { url: stored.url, key: stored.key, width: clampSize(size.width), height: clampSize(size.height) };
 
   const pages = [...row.pages];

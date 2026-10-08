@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, inArray } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db, schema } from "@/db";
 import { cancelAllSubscriptions } from "@/lib/billing";
@@ -33,6 +33,7 @@ const {
   projectTag,
   projectUpdate,
   reaction,
+  session,
   subscription,
   tag,
   talentList,
@@ -94,9 +95,13 @@ export async function getAccountInfo(userId: string) {
     .where(eq(user.id, userId))
     .limit(1);
   if (!row) return null;
-  const providers = await db.select({ provider: account.providerId }).from(account).where(eq(account.userId, userId));
+  const [providers, [{ sessions }]] = await Promise.all([
+    db.select({ provider: account.providerId }).from(account).where(eq(account.userId, userId)),
+    // Innlogginger som fortsatt gjelder (denne og andre enheter).
+    db.select({ sessions: count() }).from(session).where(and(eq(session.userId, userId), gt(session.expiresAt, new Date()))),
+  ]);
   const linked = new Set(providers.map((p) => p.provider));
-  return { ...row, hasPassword: linked.has("credential"), github: linked.has("github"), google: linked.has("google") };
+  return { ...row, sessions, hasPassword: linked.has("credential"), github: linked.has("github"), google: linked.has("google") };
 }
 
 // Alt vi har lagret om brukeren, som JSON (retten til innsyn og dataportabilitet i GDPR).

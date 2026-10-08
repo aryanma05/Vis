@@ -2,14 +2,16 @@ import "server-only";
 
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { APIError } from "better-auth/api";
+import { APIError, createAuthMiddleware } from "better-auth/api";
 import { nextCookies } from "better-auth/next-js";
 import { admin, emailOTP, twoFactor, username } from "better-auth/plugins";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { deleteAllFilesOfUser, prepareAccountDeletion } from "@/lib/account";
+import { authThrottleFor, checkAuthBody, isBlockedAuthPath } from "@/lib/auth-rules";
 import { log } from "@/lib/log";
 import { canSendEmail, resetPasswordEmail, sendEmail, verificationCodeEmail } from "@/lib/mailer";
+import { hit, RULES } from "@/lib/rate-limit";
 import {
   isValidUsername,
   toUsernameBase,
@@ -23,8 +25,8 @@ const googleConfigured = Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOO
 // Koden i e-posten virker så lenge.
 export const EMAIL_CODE_MINUTES = 10;
 
-// E-poster som automatisk får admin-rollen (kommaseparert). Admin kan se rapporter
-// og moderere innhold på /admin.
+// E-poster som er admin (kommaseparert), når e-posten er bekreftet (se isAdminUser i
+// lib/auth-rules.ts). Admin kan se rapporter og moderere innhold på /admin.
 export const adminEmails = new Set(
   (process.env.ADMIN_EMAILS ?? "")
     .split(",")
@@ -63,6 +65,27 @@ async function sendAuthEmail(email: Parameters<typeof sendEmail>[0]) {
     throw new APIError("BAD_GATEWAY", { code: "EMAIL_SEND_FAILED", message: "Kunne ikke sende e-posten." });
   }
 }
+
+// Kjøres før hvert kall til Better Auth (både fra nettleseren og fra serveren selv).
+const guard = createAuthMiddleware(async (ctx) => {
+  if (isBlockedAuthPath(ctx.path)) throw new APIError("NOT_FOUND");
+
+  const invalid = checkAuthBody(ctx.path, ctx.body);
+  if (invalid) throw new APIError("BAD_REQUEST", { code: "INVALID_REQUEST", message: invalid });
+
+  const throttle = authThrottleFor(ctx.path, ctx.body);
+  if (throttle) {
+    const rule = RULES[throttle.rule];
+    const result = await hit(`${throttle.rule}:${throttle.key}`, rule);
+    if (!result.ok) {
+      log.warn("auth.throttled", { rule: throttle.rule, path: ctx.path });
+      throw new APIError("TOO_MANY_REQUESTS", {
+        code: throttle.rule === "loginAccount" ? "ACCOUNT_THROTTLED" : "EMAIL_THROTTLED",
+        message: rule.message,
+      });
+    }
+  }
+});
 
 const vercelUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined;
 
@@ -188,12 +211,14 @@ export const auth = betterAuth({
       "/two-factor/*": { window: 60, max: 10 },
     },
   },
+  hooks: { before: guard },
   databaseHooks: {
     user: {
       create: {
+        // Admin-rollen settes ikke her: ADMIN_EMAILS gjelder først når e-posten er bekreftet
+        // (se isAdmin i lib/admin.ts), så en uverifisert konto aldri får rollen lagret.
         async before(data) {
-          const role = adminEmails.has(data.email.toLowerCase()) ? { role: "admin" } : {};
-          if (data.username) return { data: { ...data, ...role } };
+          if (data.username) return { data };
           const source =
             (data.displayUsername as string | undefined) ||
             data.email.split("@")[0] ||
@@ -202,7 +227,6 @@ export const auth = betterAuth({
           return {
             data: {
               ...data,
-              ...role,
               username: generated,
               displayUsername: data.displayUsername ?? generated,
             },
