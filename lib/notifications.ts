@@ -21,6 +21,7 @@ export const DEFAULT_NOTIFICATION_PREFS: Required<NotificationPrefs> = {
   follow: false,
   digest: true,
   contact: true,
+  companyDigest: true,
 };
 
 export function resolvePrefs(prefs: NotificationPrefs | null | undefined): Required<NotificationPrefs> {
@@ -68,12 +69,15 @@ export async function notify(input: NotifyInput, tx: Tx | typeof db = db) {
   });
 }
 
+// Varseltyper som ikke får den generelle e-posten under.
+const NO_GENERIC_EMAIL = ["reaction", "contact", "application", "employee", "challenge", "company_invite", "company_access", "interview", "talent"] as const satisfies readonly NotificationKind[];
+
 // E-post om et nytt varsel, hvis mottakeren har slått det på. Kalles etter at
 // transaksjonen er ferdig, så en treg e-posttjeneste ikke holder på databasen.
 export async function emailNotification(input: NotifyInput & { excerpt?: string | null }) {
-  // Reaksjoner sendes ikke på e-post. Kontaktforespørsler, søknader, team og utfordringer har
-  // sine egne e-poster (lib/contact.ts, lib/applications.ts, lib/companies.ts, lib/challenges.ts).
-  if (input.userId === input.actorId || ["reaction", "contact", "application", "employee", "challenge"].includes(input.type)) return;
+  // Reaksjoner sendes ikke på e-post. Kontaktforespørsler, søknader, team, utfordringer,
+  // invitasjoner, tilgang, intervjuer og kandidatlister har sine egne e-poster (eller ingen).
+  if (input.userId === input.actorId || (NO_GENERIC_EMAIL as readonly NotificationKind[]).includes(input.type)) return;
   if (!emailProviderConfigured && process.env.NODE_ENV === "production") return;
 
   try {
@@ -117,7 +121,7 @@ export async function emailNotification(input: NotifyInput & { excerpt?: string 
         button: "Se prosjektet",
         path: input.projectId ? projectPath(input.projectId) : "/",
       },
-    }[input.type as Exclude<NotificationKind, "reaction" | "contact" | "application" | "employee" | "challenge">];
+    }[input.type as Exclude<NotificationKind, (typeof NO_GENERIC_EMAIL)[number]>];
     if (!content) return;
 
     sendEmailInBackground(

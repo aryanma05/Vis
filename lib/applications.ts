@@ -1,10 +1,10 @@
 import "server-only";
 
-import { after } from "next/server";
-import { and, asc, count, desc, eq, inArray, lt, ne, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { hasBusiness } from "@/lib/billing";
 import { requireBusiness, requireCompanyRole } from "@/lib/companies";
+import { later } from "@/lib/later";
 import { APPLICATION_STAGES, APPLICATION_STATUS_LABELS, type ApplicationStage, type ApplicationStatus, type OpenTo } from "@/lib/constants";
 import { log } from "@/lib/log";
 import { emailProviderConfigured, notificationEmail, sendEmailInBackground } from "@/lib/mailer";
@@ -29,15 +29,6 @@ export const MESSAGE_MAX = 3000;
 export const RETENTION_MONTHS = 12;
 
 type Applicant = { id: string; name: string; username: string; email: string; emailVerified?: boolean | null };
-
-// Kjører etter at svaret er sendt til brukeren (e-post og webhooks skal aldri gjøre det tregt).
-function later(fn: () => Promise<unknown> | void) {
-  try {
-    after(fn);
-  } catch {
-    void fn();
-  }
-}
 
 async function loadJob(jobId: string) {
   if (!isUuid(jobId)) throw new UserFacingError("Fant ikke stillingen.");
@@ -417,11 +408,3 @@ async function webhookPayload(applicationId: string) {
 // Kan bedriften flytte søkere og skrive notater? (Bedrift-planen.)
 export const canManageApplicants = (companyId: string) => hasBusiness(companyId);
 
-// Personvern: søknader som ikke er endret på et år, slettes (planlagt jobb).
-export async function deleteOldApplications() {
-  const deleted = await db
-    .delete(jobApplication)
-    .where(lt(jobApplication.updatedAt, sql`now() - make_interval(months => ${RETENTION_MONTHS})`))
-    .returning({ id: jobApplication.id });
-  return deleted.length;
-}

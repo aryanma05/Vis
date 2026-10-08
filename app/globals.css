@@ -431,6 +431,13 @@ body::before {
   animation: loading-bar 1.1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
+/* Linjer som tegnes opp (Sparkline: pathLength=1 og stroke-dasharray: 1). */
+@keyframes draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+}
+
 .fade-up {
   animation: rise 0.7s var(--ease-out-expo) both;
 }

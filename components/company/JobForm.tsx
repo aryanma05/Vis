@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
-import { createJobAction, updateJobAction } from "@/app/actions/companies";
+import { createJobAction, updateJobAction } from "@/app/actions/jobs";
 import { useLocale, useT } from "@/components/LocaleProvider";
 import MarkdownEditor from "@/components/MarkdownEditor";
 import TagInput from "@/components/TagInput";

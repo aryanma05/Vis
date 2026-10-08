@@ -9,9 +9,8 @@ import MarkdownEditor from "@/components/MarkdownEditor";
 import { Button } from "@/components/ui/button";
 import { Field, inputClass, labelClass } from "@/components/ui/field";
 import { toast } from "@/components/ui/toast";
+import { COMPANY_SIZES } from "@/lib/company-labels";
 import { prepareImage } from "@/lib/prepare-image";
-
-const SIZES = ["1–10", "11–50", "51–200", "201–1000", "1000+"];
 
 export type CompanyValues = { name: string; website: string; location: string; size: string; about: string };
 
@@ -123,7 +122,7 @@ export default function CompanyForm({
           {t("Størrelse")} <span className="font-normal text-mist">({t("valgfritt")})</span>
         </legend>
         <div className="flex flex-wrap gap-2">
-          {SIZES.map((s) => (
+          {COMPANY_SIZES.map((s) => (
             <button
               key={s}
               type="button"

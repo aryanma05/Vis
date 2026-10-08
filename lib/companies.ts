@@ -4,6 +4,8 @@ import { cache } from "react";
 import { and, asc, count, desc, eq, ilike, inArray, isNotNull, or, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { cancelAllSubscriptions, getCompanyPlan } from "@/lib/billing";
+import { COMPANY_SIZES } from "@/lib/company-labels";
+import { COMPANY_ROLES, type CompanyRole } from "@/lib/company-permissions";
 import { log } from "@/lib/log";
 import { notify } from "@/lib/notifications";
 import { getProjectCardsByOwners, isUuid } from "@/lib/projects";
@@ -12,11 +14,10 @@ import { outer } from "@/lib/sql";
 
 const { company, companyEmployee, companyMember, job, profile, project, projectTag, tag, user } = schema;
 
-export const COMPANY_SIZES = ["1–10", "11–50", "51–200", "201–1000", "1000+"] as const;
 export const MAX_COMPANIES_PER_USER = 5;
 export const MAX_MEMBERS = 25;
 
-export type CompanyRole = "owner" | "admin" | "member";
+export type { CompanyRole };
 export type CompanyInput = {
   name: string;
   slug?: string;
@@ -137,7 +138,7 @@ export const getMembership = cache(async (userId: string | null | undefined, com
   return row?.role ?? null;
 });
 
-export async function requireCompanyRole(userId: string, companyId: string, roles: CompanyRole[] = ["owner", "admin", "member"]) {
+export async function requireCompanyRole(userId: string, companyId: string, roles: readonly CompanyRole[] = COMPANY_ROLES) {
   const role = await getMembership(userId, companyId);
   if (!role || !roles.includes(role)) throw new UserFacingError("Du har ikke tilgang til denne bedriften.");
   return role;

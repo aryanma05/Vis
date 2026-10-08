@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createContext, useContext, useState, useTransition, type ReactNode } from "react";
 import { Bell, BellOff, Bookmark, Columns3, X } from "lucide-react";
-import { createSavedSearchAction, deleteSavedSearchAction, setSavedSearchNotifyAction } from "@/app/actions/companies";
+import { createSavedSearchAction, deleteSavedSearchAction, setSavedSearchNotifyAction } from "@/app/actions/talent";
 import { useT } from "@/components/LocaleProvider";
 import { Button, ButtonLink } from "@/components/ui/button";
 import Dialog from "@/components/ui/dialog";

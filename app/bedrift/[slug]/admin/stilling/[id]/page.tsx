@@ -19,7 +19,7 @@ export default async function EditJobPage({ params }: { params: Promise<{ slug: 
   if (!company || !(await getMembership(user.id, company.id))) notFound();
   const job = id === "ny" ? null : await getJob(id, { asMember: true });
   if (id !== "ny" && (!job || job.companyId !== company.id)) notFound();
-  const adminPath = `/bedrift/${company.slug}/admin`;
+  const adminPath = `/bedrift/${company.slug}/admin?fane=stillinger`;
 
   return (
     <main className="px-5 pb-28 pt-10 md:pb-20 md:pl-28 md:pr-10 md:pt-14">

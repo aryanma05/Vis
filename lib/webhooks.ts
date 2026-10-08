@@ -141,6 +141,17 @@ export async function listDeliveries(viewerId: string, webhookId: string) {
   return db.select().from(webhookDelivery).where(eq(webhookDelivery.webhookId, webhookId)).orderBy(desc(webhookDelivery.createdAt)).limit(20);
 }
 
+// Slår av webhooks personen la til, når de fjernes fra eller forlater bedriften. Gir antall.
+// P2 bygger videre (logg).
+export async function disableWebhooksCreatedBy(companyId: string, userId: string): Promise<number> {
+  const rows = await db
+    .update(companyWebhook)
+    .set({ active: false })
+    .where(and(eq(companyWebhook.companyId, companyId), eq(companyWebhook.createdById, userId), eq(companyWebhook.active, true)))
+    .returning({ id: companyWebhook.id });
+  return rows.length;
+}
+
 // Rydding: leveringer eldre enn 30 dager. Kjøres av og til fra deliver().
 async function pruneDeliveries() {
   await db.delete(webhookDelivery).where(lt(webhookDelivery.createdAt, sql`now() - interval '30 days'`));

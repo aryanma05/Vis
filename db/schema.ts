@@ -3,6 +3,7 @@ import {
   type AnyPgColumn,
   bigint,
   boolean,
+  check,
   customType,
   date,
   index,
@@ -181,6 +182,8 @@ export type NotificationPrefs = {
   digest?: boolean;
   // E-post når noen bruker «Kontakt meg» (standard på).
   contact?: boolean;
+  // Bedrift: daglig e-post om søkere som har ventet over 7 dager (standard på).
+  companyDigest?: boolean;
 };
 
 // Én rad per bruker, opprettes første gang profilen lagres.
@@ -483,7 +486,25 @@ export const comment = pgTable(
 export type NotificationData = {
   reaction?: ReactionType;
   contactId?: string;
-  event?: "new" | "status" | "entry" | "highlight";
+  event?:
+    | "new"
+    | "status"
+    | "entry"
+    | "highlight"
+    | "withdrawn"
+    | "job_closed"
+    | "mention"
+    | "invite"
+    | "accepted"
+    | "declined"
+    | "role"
+    | "removed"
+    | "left"
+    | "ownership"
+    | "booked"
+    | "cancelled"
+    | "company_cancelled"
+    | "saved";
   applicationId?: string;
   status?: string;
   jobId?: string;
@@ -492,6 +513,13 @@ export type NotificationData = {
   challengeTitle?: string;
   companyName?: string;
   companySlug?: string;
+  // Invitasjoner og tilgang (company_invite / company_access).
+  inviteId?: string;
+  inviteKind?: "member" | "employee" | "owner";
+  role?: "owner" | "admin" | "member" | "reviewer";
+  // Intervju: tidspunktet (ISO) og hvilken tid det gjelder.
+  slotId?: string;
+  startsAt?: string;
 };
 
 export const notificationType = pgEnum("notification_type", [
@@ -509,6 +537,14 @@ export const notificationType = pgEnum("notification_type", [
   "employee",
   // Utfordringer: nytt svar (til bedriften) og svaret ble fremhevet (til den som svarte).
   "challenge",
+  // Invitasjon til en bedrift (tilgang, teamet eller eierskap).
+  "company_invite",
+  // Endringer i tilgang: godtatt/avslått, ny rolle, fjernet, forlot, ny eier.
+  "company_access",
+  // Intervju: booket eller avlyst (til verten og kandidaten).
+  "interview",
+  // En bedrift lagret profilen i en kandidatliste.
+  "talent",
 ]);
 
 export const notification = pgTable(
@@ -623,7 +659,7 @@ export const profileViewDay = pgTable(
 /*  Moderering                                                                */
 /* -------------------------------------------------------------------------- */
 
-export const reportTarget = pgEnum("report_target", ["project", "comment", "user"]);
+export const reportTarget = pgEnum("report_target", ["project", "comment", "user", "company", "job"]);
 export const reportReason = pgEnum("report_reason", REPORT_REASONS);
 export const reportStatus = pgEnum("report_status", ["open", "resolved", "dismissed"]);
 
@@ -892,6 +928,13 @@ export const customDomain = pgTable("custom_domain", {
 /*  Bedrift                                                                   */
 /* -------------------------------------------------------------------------- */
 
+// Egne tall i «Slik regner vi» (Spart med Vis). Mangler et felt, brukes standarden i lib/roi.ts.
+export type RoiSettings = { hourlyCost?: number; salary?: number; agencyFee?: number; adPrice?: number };
+// Ett steg i «Slik ansetter vi» på bedriftssiden.
+export type HiringStep = { title: string; text?: string | null };
+// Detaljer i aktivitetsloggen: bare id-er, tall, statuser og ja/nei, aldri fritekst.
+export type AuditMeta = Record<string, string | number | boolean | null>;
+
 export const company = pgTable("company", {
   id: uuid("id").primaryKey().defaultRandom(),
   slug: text("slug").notNull().unique(),
@@ -902,14 +945,36 @@ export const company = pgTable("company", {
   location: text("location"),
   // «1–10», «11–50», «51–200», «201–1000», «1000+».
   size: text("size"),
-  // Bekreftet av admin (vises med hake).
+  // Bekreftet av admin eller med e-post på domenet (vises med hake).
   verifiedAt: timestamp("verified_at", { withTimezone: true }),
+  // Domenet bedriften ble bekreftet med (selvbetjent), f.eks. «fjordkode.no».
+  verifiedDomain: text("verified_domain"),
   createdById: text("created_by_id").references(() => user.id, { onDelete: "set null" }),
+  // «Krev tofaktor» (Bedrift): alle uten tofaktor stenges ute fra nesten alt.
+  require2fa: boolean("require_2fa").notNull().default(false),
+  // Databehandleravtalen: når, av hvem og hvilken versjon (lib/company-access.ts).
+  termsAcceptedAt: timestamp("terms_accepted_at", { withTimezone: true }),
+  termsAcceptedById: text("terms_accepted_by_id").references(() => user.id, { onDelete: "set null" }),
+  termsVersion: text("terms_version"),
+  // Hvor lenge søknader beholdes etter at stillingen er lukket (3, 6 eller 12; Gratis: 6).
+  retentionMonths: integer("retention_months").notNull().default(6),
+  // «Takk for søknaden» sendes automatisk, med svartid i dager.
+  autoReply: boolean("auto_reply").notNull().default(true),
+  responseDays: integer("response_days").notNull().default(14),
+  roiSettings: jsonb("roi_settings").$type<RoiSettings>(),
+  // Bedriftssiden: «Hva vi tilbyr» og «Slik ansetter vi».
+  perks: jsonb("perks").$type<string[]>().notNull().default([]),
+  hiringProcess: jsonb("hiring_process").$type<HiringStep[]>().notNull().default([]),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });
 
-export const companyRole = pgEnum("company_role", ["owner", "admin", "member"]);
+// Eier, administrator, rekrutterer (member) og vurderer (reviewer). Se lib/company-permissions.ts.
+export const companyRole = pgEnum("company_role", ["owner", "admin", "member", "reviewer"]);
+export const companyInviteKind = pgEnum("company_invite_kind", ["member", "employee", "owner"]);
+export const companyInviteStatus = pgEnum("company_invite_status", ["pending", "accepted", "declined", "revoked", "expired"]);
+export const messageTemplateKind = pgEnum("message_template_kind", ["takk", "intervju", "tilbud", "avslag", "generell"]);
+export const reviewRecommendation = pgEnum("review_recommendation", ["ja", "kanskje", "nei"]);
 
 export const companyMember = pgTable(
   "company_member",
@@ -921,6 +986,9 @@ export const companyMember = pgTable(
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
     role: companyRole("role").notNull().default("member"),
+    // Vises i teamet på bedriftssiden (valgt av personen selv; eieren som laget siden: på).
+    showOnPage: boolean("show_on_page").notNull().default(false),
+    invitedById: text("invited_by_id").references(() => user.id, { onDelete: "set null" }),
     createdAt: createdAt(),
   },
   (t) => [primaryKey({ columns: [t.companyId, t.userId] }), index("company_member_user_idx").on(t.userId)],
@@ -952,11 +1020,30 @@ export const job = pgTable(
     status: jobStatus("status").notNull().default("draft"),
     views: integer("views").notNull().default(0),
     applyClicks: integer("apply_clicks").notNull().default(0),
+    // Erstatter en betalt annonse (f.eks. FINN). Teller med i «Spart med Vis».
+    replacedPaidAd: boolean("replaced_paid_ad").notNull().default(false),
+    // Kriteriene i vurderingskortet (3–6). Tom = DEFAULT_CRITERIA.
+    scorecardCriteria: jsonb("scorecard_criteria").$type<string[]>().notNull().default([]),
     publishedAt: timestamp("published_at", { withTimezone: true }),
+    // Settes når stillingen lukkes, nullstilles når den publiseres igjen (lagringstid).
+    closedAt: timestamp("closed_at", { withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
   (t) => [index("job_company_idx").on(t.companyId, t.createdAt.desc()), index("job_list_idx").on(t.status, t.publishedAt.desc())],
+);
+
+// Visninger av en stilling per dag (Oslo-tid), til grafene under Oversikt.
+export const jobViewDay = pgTable(
+  "job_view_day",
+  {
+    jobId: uuid("job_id")
+      .notNull()
+      .references(() => job.id, { onDelete: "cascade" }),
+    day: date("day").notNull(),
+    views: integer("views").notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.jobId, t.day] })],
 );
 
 // Kandidatlister for bedrifter (Bedrift-planen), f.eks. «Sommerjobb 2027».
@@ -983,9 +1070,14 @@ export const talentListMember = pgTable(
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
     note: text("note"),
+    addedById: text("added_by_id").references(() => user.id, { onDelete: "set null" }),
     addedAt: timestamp("added_at", { withTimezone: true }).notNull().defaultNow(),
+    // Personvern: fjernes fra listen etter 12 måneder.
+    expiresAt: timestamp("expires_at", { withTimezone: true })
+      .notNull()
+      .default(sql`now() + interval '12 months'`),
   },
-  (t) => [primaryKey({ columns: [t.listId, t.userId] })],
+  (t) => [primaryKey({ columns: [t.listId, t.userId] }), index("talent_list_member_expires_idx").on(t.expiresAt)],
 );
 
 /* -------------------------------------------------------------------------- */
@@ -996,7 +1088,7 @@ export const talentListMember = pgTable(
 export const applicationStatus = pgEnum("application_status", ["ny", "intervju", "tilbud", "avslag", "trukket"]);
 
 // «Søk med Vis-profilen». Kandidaten deler profilen, e-postadressen og opptil tre
-// prosjekter som viser at de passer. Slettes automatisk et år etter siste endring.
+// prosjekter som viser at de passer. Slettes automatisk ved expiresAt (lib/retention.ts).
 export const jobApplication = pgTable(
   "job_application",
   {
@@ -1010,9 +1102,18 @@ export const jobApplication = pgTable(
     status: applicationStatus("status").notNull().default("ny"),
     message: text("message"),
     projectIds: jsonb("project_ids").$type<string[]>().notNull().default([]),
-    // Internt notat fra bedriften. Kandidaten ser det aldri.
+    // UTGÅTT: flyttet til application_note i 0011. Leses og skrives ikke; fjernes i 0012.
     note: text("note"),
     statusChangedAt: timestamp("status_changed_at", { withTimezone: true }).notNull().defaultNow(),
+    // Når søknaden slettes. Regnes ut fra stillingen hver natt, og forlenges aldri.
+    expiresAt: timestamp("expires_at", { withTimezone: true })
+      .notNull()
+      .default(sql`now() + interval '12 months'`),
+    // Første gang søknaden ble flyttet ut av Ny (svartid).
+    firstResponseAt: timestamp("first_response_at", { withTimezone: true }),
+    // «Marker som ansatt», og om dere ellers ville brukt et byrå.
+    hiredAt: timestamp("hired_at", { withTimezone: true }),
+    agencyAvoided: boolean("agency_avoided").notNull().default(false),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -1020,6 +1121,7 @@ export const jobApplication = pgTable(
     uniqueIndex("job_application_job_user_uniq").on(t.jobId, t.userId),
     index("job_application_job_idx").on(t.jobId, t.status),
     index("job_application_user_idx").on(t.userId, t.createdAt.desc()),
+    index("job_application_expires_idx").on(t.expiresAt),
   ],
 );
 
@@ -1056,6 +1158,7 @@ export const companyEmployee = pgTable(
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
     title: text("title"),
+    invitedById: text("invited_by_id").references(() => user.id, { onDelete: "set null" }),
     createdAt: createdAt(),
   },
   (t) => [primaryKey({ columns: [t.companyId, t.userId] }), index("company_employee_user_idx").on(t.userId)],
@@ -1108,6 +1211,174 @@ export const challengeEntry = pgTable(
 );
 
 /* -------------------------------------------------------------------------- */
+/*  Bedrift: tilgang, aktivitetslogg, maler, samarbeid og intervju            */
+/* -------------------------------------------------------------------------- */
+
+// Invitasjoner til en bedrift: tilgang til admin (member), teamet på siden (employee) eller
+// eierskap (owner). Ingen får tilgang eller vises før de har sagt ja. Til e-post lagres bare
+// sha256 av lenken; invitasjonen gjelder i 7 dager og kan brukes én gang.
+export const companyInvite = pgTable(
+  "company_invite",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    companyId: uuid("company_id")
+      .notNull()
+      .references(() => company.id, { onDelete: "cascade" }),
+    kind: companyInviteKind("kind").notNull(),
+    // Bare for kind=member.
+    role: companyRole("role"),
+    // Bare for kind=employee.
+    title: text("title"),
+    invitedUserId: text("invited_user_id").references(() => user.id, { onDelete: "cascade" }),
+    // Med små bokstaver; bare for invitasjoner på e-post.
+    email: text("email"),
+    // sha256 (hex) av lenken; bare for invitasjoner på e-post.
+    tokenHash: text("token_hash").unique(),
+    invitedById: text("invited_by_id").references(() => user.id, { onDelete: "set null" }),
+    status: companyInviteStatus("status").notNull().default("pending"),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    respondedAt: timestamp("responded_at", { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index("company_invite_company_idx").on(t.companyId, t.status),
+    index("company_invite_user_idx").on(t.invitedUserId),
+    index("company_invite_email_idx").on(t.email),
+    uniqueIndex("company_invite_pending_user_uniq")
+      .on(t.companyId, t.kind, t.invitedUserId)
+      .where(sql`status = 'pending' and invited_user_id is not null`),
+    uniqueIndex("company_invite_pending_email_uniq")
+      .on(t.companyId, t.kind, t.email)
+      .where(sql`status = 'pending' and email is not null`),
+    check("company_invite_target_chk", sql`(invited_user_id is null) <> (email is null)`),
+  ],
+);
+
+// Aktivitetsloggen (lib/audit.ts): hvem gjorde hva, og med hvem sine data. Bare nye rader,
+// aldri endringer. Slettes etter 24 måneder.
+export const companyAudit = pgTable(
+  "company_audit",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    companyId: uuid("company_id")
+      .notNull()
+      .references(() => company.id, { onDelete: "cascade" }),
+    actorId: text("actor_id").references(() => user.id, { onDelete: "set null" }),
+    // AuditAction (lib/company-labels.ts).
+    action: text("action").notNull(),
+    // application, user, job, list, webhook, invite, company, template eller interview.
+    targetType: text("target_type"),
+    targetId: text("target_id"),
+    // Hvem sine data det gjelder (kandidaten eller medlemmet).
+    subjectUserId: text("subject_user_id").references(() => user.id, { onDelete: "set null" }),
+    // Øyeblikksbilde uten personopplysninger (tittelen på stillingen, navnet på listen).
+    label: text("label"),
+    meta: jsonb("meta").$type<AuditMeta>().notNull().default({}),
+    createdAt: createdAt(),
+  },
+  (t) => [index("company_audit_company_idx").on(t.companyId, t.createdAt.desc()), index("company_audit_subject_idx").on(t.subjectUserId)],
+);
+
+// Kandidaten har blokkert bedriften: den finner dem aldri igjen og kan ikke ta kontakt.
+export const companyBlock = pgTable(
+  "company_block",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    companyId: uuid("company_id")
+      .notNull()
+      .references(() => company.id, { onDelete: "cascade" }),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.companyId] }), index("company_block_company_idx").on(t.companyId)],
+);
+
+// Svarmaler (Bedrift): takk, intervju, tilbud, avslag og generell, med flettefelt.
+export const companyMessageTemplate = pgTable(
+  "company_message_template",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    companyId: uuid("company_id")
+      .notNull()
+      .references(() => company.id, { onDelete: "cascade" }),
+    kind: messageTemplateKind("kind").notNull(),
+    name: text("name").notNull(),
+    subject: text("subject").notNull(),
+    body: text("body").notNull(),
+    createdById: text("created_by_id").references(() => user.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index("company_message_template_company_idx").on(t.companyId, t.kind)],
+);
+
+// Notater på en søker, ett per rad, med forfatter og @nevninger. Kandidaten kan be om innsyn.
+export const applicationNote = pgTable(
+  "application_note",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    applicationId: uuid("application_id")
+      .notNull()
+      .references(() => jobApplication.id, { onDelete: "cascade" }),
+    authorId: text("author_id").references(() => user.id, { onDelete: "set null" }),
+    body: text("body").notNull(),
+    mentionIds: jsonb("mention_ids").$type<string[]>().notNull().default([]),
+    createdAt: createdAt(),
+    editedAt: timestamp("edited_at", { withTimezone: true }),
+  },
+  (t) => [index("application_note_application_idx").on(t.applicationId, t.createdAt)],
+);
+
+// Vurderingskort: 1–4 per kriterium og en anbefaling. Man ser kollegenes først når man har levert selv.
+export const applicationReview = pgTable(
+  "application_review",
+  {
+    applicationId: uuid("application_id")
+      .notNull()
+      .references(() => jobApplication.id, { onDelete: "cascade" }),
+    reviewerId: text("reviewer_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    scores: jsonb("scores").$type<Record<string, number>>().notNull(),
+    recommendation: reviewRecommendation("recommendation").notNull(),
+    comment: text("comment"),
+    submittedAt: timestamp("submitted_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [primaryKey({ columns: [t.applicationId, t.reviewerId] })],
+);
+
+// Intervjutider kandidaten kan booke selv. application_id er satt når tiden er booket.
+export const interviewSlot = pgTable(
+  "interview_slot",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    companyId: uuid("company_id")
+      .notNull()
+      .references(() => company.id, { onDelete: "cascade" }),
+    jobId: uuid("job_id")
+      .notNull()
+      .references(() => job.id, { onDelete: "cascade" }),
+    hostId: text("host_id").references(() => user.id, { onDelete: "set null" }),
+    startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
+    durationMin: integer("duration_min").notNull().default(45),
+    location: text("location"),
+    meetingUrl: text("meeting_url"),
+    applicationId: uuid("application_id").references(() => jobApplication.id, { onDelete: "set null" }),
+    bookedAt: timestamp("booked_at", { withTimezone: true }),
+    reminderSentAt: timestamp("reminder_sent_at", { withTimezone: true }),
+    createdById: text("created_by_id").references(() => user.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index("interview_slot_job_idx").on(t.jobId, t.startsAt),
+    index("interview_slot_company_idx").on(t.companyId, t.startsAt),
+    uniqueIndex("interview_slot_application_uniq").on(t.applicationId).where(sql`application_id is not null`),
+  ],
+);
+
+/* -------------------------------------------------------------------------- */
 /*  Utviklere: API-nøkler og webhooks                                         */
 /* -------------------------------------------------------------------------- */
 
@@ -1143,6 +1414,10 @@ export const companyWebhook = pgTable(
     secret: text("secret").notNull(),
     events: jsonb("events").$type<string[]>().notNull().default([]),
     active: boolean("active").notNull().default(true),
+    // Slås av når den som laget den fjernes fra bedriften.
+    createdById: text("created_by_id").references(() => user.id, { onDelete: "set null" }),
+    // Uten dette fjernes kandidaten og meldingen fra det som sendes.
+    includePersonalData: boolean("include_personal_data").notNull().default(false),
     lastStatus: integer("last_status"),
     lastDeliveryAt: timestamp("last_delivery_at", { withTimezone: true }),
     createdAt: createdAt(),

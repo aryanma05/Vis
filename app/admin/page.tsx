@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Flag, FolderX, MessageSquareWarning, Search, ShieldCheck, UserX } from "lucide-react";
+import { Briefcase, Building2, Flag, FolderX, MessageSquareWarning, Search, ShieldCheck, UserX } from "lucide-react";
 import Avatar from "@/components/Avatar";
 import { BanButton, DeleteCommentButton, GrantPlanButton, RemoveProjectButton, ResolveButtons, VerifyCompanyButton } from "@/components/moderation/AdminActions";
 import { inputClass } from "@/components/ui/field";
@@ -27,8 +27,8 @@ type Tab = (typeof TABS)[number];
 
 type Props = { searchParams: Promise<{ fane?: string; status?: string; q?: string; prosjekt?: string }> };
 
-const TYPE_ICON = { project: FolderX, comment: MessageSquareWarning, user: UserX } as const;
-const TYPE_LABEL = { project: "Prosjekt", comment: "Kommentar", user: "Profil" } as const;
+const TYPE_ICON = { project: FolderX, comment: MessageSquareWarning, user: UserX, company: Building2, job: Briefcase } as const;
+const TYPE_LABEL = { project: "Prosjekt", comment: "Kommentar", user: "Profil", company: "Bedrift", job: "Stilling" } as const;
 
 export default async function AdminPage({ searchParams }: Props) {
   const admin = await getAdmin();
