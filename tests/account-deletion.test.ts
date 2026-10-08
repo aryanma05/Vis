@@ -24,11 +24,11 @@ describe("sletting av konto med abonnement og bedrifter", { skip }, () => {
     const { db, schema } = await import("@/db");
     const { and, eq } = await import("drizzle-orm");
     for (const id of [alone, colleague]) {
-      await db.insert(schema.user).values({ id, name: "Test", email: `${id}@test.no`, username: id.slice(0, 30) });
+      await db.insert(schema.user).values({ id, name: "Test", email: `${id}@test.no`, emailVerified: true, username: id.slice(0, 30) });
     }
     const { createCompany, releaseCompaniesOf } = await import("@/lib/companies");
-    const solo = await createCompany(alone, { name: `Solo ${alone.slice(-6)}` });
-    const shared = await createCompany(alone, { name: `Delt ${alone.slice(-6)}` });
+    const solo = await createCompany(alone, { name: `Solo ${alone.slice(-6)}`, acceptTerms: true });
+    const shared = await createCompany(alone, { name: `Delt ${alone.slice(-6)}`, acceptTerms: true });
     await db.insert(schema.companyMember).values({ companyId: shared.id, userId: colleague, role: "member" });
 
     await releaseCompaniesOf(alone);

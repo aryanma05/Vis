@@ -23,7 +23,7 @@ function TermsNb({ contact }: { contact?: string }) {
       eyebrow="Juridisk"
       title="Vilkår for bruk"
       intro="Kort fortalt: innholdet ditt er ditt, du er ansvarlig for det du legger ut, og vi gjør vårt beste for at Vis er trygt og tilgjengelig."
-      updated="4. oktober 2026"
+      updated="8. oktober 2026"
     >
       <h2>1. Om tjenesten</h2>
       <p>
@@ -86,18 +86,40 @@ function TermsNb({ contact }: { contact?: string }) {
         <li>Feiler en betaling, prøver Stripe igjen noen dager. Lykkes det ikke, går kontoen tilbake til Gratis.</li>
       </ul>
 
-      <h2>6. Bedrifter og stillingsannonser</h2>
-      <ul>
-        <li>Den som lager en bedriftsside, må ha rett til å representere bedriften.</li>
+      <h2 id="bedrifter">6. Regler for bedrifter</h2>
+      <p>
+        Bedriftssider, stillinger, søknader og kandidatsøk handler om andres personopplysninger. Derfor gjelder disse reglene
+        for alle som bruker Vis på vegne av en bedrift:
+      </p>
+      <ol>
         <li>
-          Stillingsannonser skal være ekte, ledige stillinger, og følge likestillings- og diskrimineringsloven. Vi kan fjerne
-          annonser som ikke gjør det.
+          Den som lager en bedriftsside, må ha rett til å representere bedriften. Å utgi seg for å være en annen bedrift fører
+          til at siden slettes.
         </li>
         <li>
-          Kandidatsøket og kontakt med kandidater skal bare brukes til rekruttering. Det er ikke lov å videreselge eller
-          publisere opplysninger om kandidater, eller sende masseutsendelser.
+          Bedriften er behandlingsansvarlig for søknader, lister, notater, vurderinger og meldinger, og Vis er databehandler
+          etter <Link href="/vilkar/databehandleravtale">databehandleravtalen</Link>. Avtalen må være godtatt før dere
+          publiserer stillinger eller bruker kandidatsøket.
         </li>
-      </ul>
+        <li>
+          Opplysninger om kandidater skal bare brukes til bedriftens egen rekruttering. De skal ikke selges videre, publiseres
+          eller deles utenfor dem som ansetter.
+        </li>
+        <li>
+          Ikke spør om, noter eller vurder graviditet eller familieplaner, religion, etnisitet, funksjonsnedsettelse, helse
+          utover det stillingen krever, seksuell orientering eller kjønnsidentitet, alder, politisk syn eller
+          fagforeningsmedlemskap (likestillings- og diskrimineringsloven § 30, arbeidsmiljøloven §§ 13-1 og 13-4).
+          Stillingsannonser skal være ekte, ledige stillinger.
+        </li>
+        <li>Skriv notater som om kandidaten skal lese dem. De kan be om innsyn.</li>
+        <li>Svar alle som søker.</li>
+        <li>Slett eksporterte filer når prosessen er over, og senest når lagringstiden er ute.</li>
+        <li>
+          Gi tilgang bare til dem som trenger den, og fjern den når folk slutter. Alt som skjer med kandidatdata, logges.
+        </li>
+        <li>Ingen masseutsendelser. Vis begrenser hvor mange kandidater en bedrift kan kontakte.</li>
+        <li>Brudd kan føre til stengt kandidatsøk, fjernede annonser eller at bedriftssiden slettes.</li>
+      </ol>
 
       <h2>7. API og innbygging</h2>
       <p>
@@ -159,7 +181,7 @@ function TermsEn({ contact }: { contact?: string }) {
           </p>
         </>
       }
-      updated="4 October 2026"
+      updated="8 October 2026"
     >
       <h2>1. About the service</h2>
       <p>
@@ -224,18 +246,37 @@ function TermsEn({ contact }: { contact?: string }) {
         <li>If a payment fails, Stripe tries again for a few days. If it doesn&apos;t succeed, the account goes back to Free.</li>
       </ul>
 
-      <h2>6. Companies and job ads</h2>
-      <ul>
-        <li>Whoever creates a company page must have the right to represent the company.</li>
+      <h2 id="bedrifter">6. Rules for companies</h2>
+      <p>
+        Company pages, jobs, applications and candidate search all involve other people&apos;s personal data. That&apos;s why
+        these rules apply to everyone who uses Vis on behalf of a company:
+      </p>
+      <ol>
         <li>
-          Job ads must be real, open positions, and follow the Norwegian Equality and Anti-Discrimination Act. We may remove
-          ads that don&apos;t.
+          Whoever creates a company page must have the right to represent the company. Pretending to be another company leads
+          to the page being deleted.
         </li>
         <li>
-          Candidate search and contact with candidates may only be used for recruitment. It&apos;s not allowed to resell or publish
-          information about candidates, or to send mass mailings.
+          The company is the controller of applications, lists, notes, reviews and messages, and Vis is the processor under the{" "}
+          <Link href="/vilkar/databehandleravtale">data processing agreement</Link>. The agreement must be accepted before you
+          publish jobs or use candidate search.
         </li>
-      </ul>
+        <li>
+          Information about candidates may only be used for the company&apos;s own recruitment. It must not be resold, published
+          or shared outside the people doing the hiring.
+        </li>
+        <li>
+          Don&apos;t ask about, note or assess pregnancy or family plans, religion, ethnicity, disability, health beyond what the
+          job requires, sexual orientation or gender identity, age, political views or union membership (Equality and
+          Anti-Discrimination Act § 30, Working Environment Act §§ 13-1 and 13-4). Job ads must be real, open positions.
+        </li>
+        <li>Write notes as if the candidate will read them. They can ask for access.</li>
+        <li>Answer everyone who applies.</li>
+        <li>Delete exported files when the process is over, and no later than when the retention period ends.</li>
+        <li>Only give access to those who need it, and remove it when people leave. Everything that happens to candidate data is logged.</li>
+        <li>No mass mailings. Vis limits how many candidates a company can contact.</li>
+        <li>Breaches can lead to closed candidate search, removed ads or the company page being deleted.</li>
+      </ol>
 
       <h2>7. API and embedding</h2>
       <p>

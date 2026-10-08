@@ -1,25 +1,32 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Download, Eye, Lock, MousePointerClick, Plus } from "lucide-react";
-import CheckoutButton from "@/app/priser/CheckoutButton";
-import Avatar from "@/components/Avatar";
-import { AddMember, AddToList, ContactCandidate, JobActions, NewTalentList, RemoveMember, TalentListTools } from "@/components/company/AdminTools";
-import CompanyForm from "@/components/company/CompanyForm";
-import { Webhooks } from "@/components/developers/DeveloperTools";
-import { ButtonLink } from "@/components/ui/button";
-import { EmptyState } from "@/components/ui/misc";
+import type { ReactNode } from "react";
+import { ArrowLeft } from "lucide-react";
+import AdminHero from "@/components/company/AdminHero";
+import TwoFactorGate from "@/components/company/TwoFactorGate";
 import { Tabs } from "@/components/ui/tabs";
 import { getCompanyPlan, getDisplayPrices } from "@/lib/billing";
-import { getCompanyBySlug, getMembership, listCompanyMembers } from "@/lib/companies";
-import { FIELD_KEYS, FIELDS, OPEN_TO, OPEN_TO_LABELS, type FieldKey, type OpenTo } from "@/lib/constants";
-import { formatDate } from "@/lib/format";
-import type { Locale, T } from "@/lib/i18n";
+import { getCompanyBySlug } from "@/lib/companies";
+import { getCompanyGate } from "@/lib/company-access";
+import { ADMIN_TAB_LABELS } from "@/lib/company-labels";
+import { can } from "@/lib/company-permissions";
+import { getAdminBadges } from "@/lib/company-stats";
+import type { Locale } from "@/lib/i18n";
 import { getLocale, getT } from "@/lib/i18n/server";
-import { listCompanyJobs } from "@/lib/jobs";
 import { requireUser } from "@/lib/session";
-import { getTalentList, listMembershipsFor, listTalentLists, searchCandidates } from "@/lib/talent";
-import { listWebhooks, WEBHOOK_EVENTS } from "@/lib/webhooks";
+import AbonnementTab from "./_tabs/abonnement";
+import { ADMIN_TABS, TAB_ACTION, type AdminCtx, type AdminQuery, type AdminTab } from "./_tabs/context";
+import KandidaterTab from "./_tabs/kandidater";
+import ListerTab from "./_tabs/lister";
+import MedlemmerTab from "./_tabs/medlemmer";
+import OversiktTab from "./_tabs/oversikt";
+import PersonvernTab from "./_tabs/personvern";
+import ProfilTab from "./_tabs/profil";
+import SokereTab from "./_tabs/sokere";
+import StillingerTab from "./_tabs/stillinger";
+import UtfordringerTab from "./_tabs/utfordringer";
+import UtviklereTab from "./_tabs/utviklere";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getT())("Administrer bedrift"), robots: { index: false } };
@@ -29,67 +36,57 @@ export async function generateMetadata(): Promise<Metadata> {
 const formatPrice = (amount: number, locale: Locale) =>
   locale === "en" ? `NOK ${amount.toLocaleString("en-GB")}` : `${amount.toLocaleString("nb-NO")} kr`;
 
-const TABS = ["stillinger", "kandidater", "lister", "profil", "medlemmer", "utviklere", "abonnement"] as const;
-type Tab = (typeof TABS)[number];
-type Props = {
-  params: Promise<{ slug: string }>;
-  searchParams: Promise<{ fane?: string; q?: string; sted?: string; apen?: string; fag?: string; liste?: string; avbrutt?: string }>;
+type Props = { params: Promise<{ slug: string }>; searchParams: Promise<AdminQuery> };
+
+const TAB_COMPONENTS: Record<AdminTab, (props: { ctx: AdminCtx }) => Promise<ReactNode>> = {
+  oversikt: OversiktTab,
+  stillinger: StillingerTab,
+  sokere: SokereTab,
+  kandidater: KandidaterTab,
+  lister: ListerTab,
+  utfordringer: UtfordringerTab,
+  profil: ProfilTab,
+  medlemmer: MedlemmerTab,
+  personvern: PersonvernTab,
+  utviklere: UtviklereTab,
+  abonnement: AbonnementTab,
 };
 
-const ROLE_LABEL = { owner: "Eier", admin: "Administrator", member: "Medlem" } as const;
-
-function Upsell({ companyId, price, canBuy, t }: { companyId: string; price: string; canBuy: boolean; t: T }) {
-  return (
-    <div className="rounded-[22px] glass-card p-6">
-      <p className="flex items-center gap-2 font-semibold">
-        <Lock className="size-4 text-mist" /> {t("Krever Bedrift")}
-      </p>
-      <p className="mt-2 max-w-xl text-sm text-mist">
-        {t("Søk blant folk som har valgt å være synlige for bedrifter, lag lister med notater, eksporter til Excel og ta kontakt direkte.")}{" "}
-        {t("{price} i måneden, ingen bindingstid.", { price })}
-      </p>
-      {canBuy && (
-        <div className="mt-4">
-          <CheckoutButton plan="business" companyId={companyId}>
-            {t("Start Bedrift")}
-          </CheckoutButton>
-        </div>
-      )}
-    </div>
-  );
-}
-
+// Skallet i administrasjonen: tilgang, toppen, fanene rollen har tilgang til, og fanen som er valgt.
+// Hver fane ligger i _tabs/ og henter sine egne data.
 export default async function CompanyAdminPage({ params, searchParams }: Props) {
   const user = await requireUser();
   const [{ slug }, query, t, locale] = await Promise.all([params, searchParams, getT(), getLocale()]);
   const company = await getCompanyBySlug(slug);
   if (!company) notFound();
-  const role = await getMembership(user.id, company.id);
-  if (!role) notFound();
+  const gate = await getCompanyGate(user.id, company.id);
+  if (!gate) notFound();
+  const { role } = gate;
 
-  const tab: Tab = (TABS as readonly string[]).includes(query.fane ?? "") ? (query.fane as Tab) : "stillinger";
-  const canManage = role === "owner" || role === "admin";
-  const [plan, prices] = await Promise.all([getCompanyPlan(company.id), getDisplayPrices()]);
+  const tabs = ADMIN_TABS.filter((key) => can(role, TAB_ACTION[key]));
+  const tab: AdminTab = (tabs as string[]).includes(query.fane ?? "") ? (query.fane as AdminTab) : "oversikt";
+  const [plan, prices, badges] = await Promise.all([getCompanyPlan(company.id), getDisplayPrices(), getAdminBadges(company.id)]);
   const business = plan.plan === "business";
   const base = `/bedrift/${company.slug}/admin`;
-  const monthly = formatPrice(prices["business:month"].amount, locale);
-
-  const filters = {
-    q: query.q?.slice(0, 100) ?? "",
-    location: query.sted?.slice(0, 60) ?? null,
-    openTo: OPEN_TO.includes(query.apen as OpenTo) ? (query.apen as OpenTo) : null,
-    field: FIELD_KEYS.includes(query.fag as FieldKey) ? (query.fag as FieldKey) : null,
+  const ctx: AdminCtx = {
+    user,
+    company,
+    role,
+    plan,
+    business,
+    base,
+    monthly: formatPrice(prices["business:month"].amount, locale),
+    canBuy: can(role, "company.billing"),
+    t,
+    locale,
+    query,
   };
-
-  const [jobs, lists, candidates, list, members, hooks] = await Promise.all([
-    tab === "stillinger" ? listCompanyJobs(company.id, { includeAll: true }) : [],
-    tab === "kandidater" || tab === "lister" ? listTalentLists(user.id, company.id) : [],
-    tab === "kandidater" && business ? searchCandidates(user.id, company.id, filters) : [],
-    tab === "lister" && query.liste ? getTalentList(user.id, query.liste).catch(() => null) : null,
-    tab === "medlemmer" ? listCompanyMembers(company.id) : [],
-    tab === "utviklere" ? listWebhooks(user.id, company.id) : [],
-  ]);
-  const memberships = tab === "kandidater" ? await listMembershipsFor(company.id, candidates.map((c) => c.id)) : new Map<string, string[]>();
+  const count = (key: AdminTab) => {
+    if (key === "sokere") return badges.freshApplicants || null;
+    if (key === "medlemmer" && can(role, "members.invite")) return badges.pendingInvites || null;
+    return null;
+  };
+  const Tab = TAB_COMPONENTS[tab];
 
   return (
     <main className="px-5 pb-28 pt-10 md:pb-20 md:pl-28 md:pr-10 md:pt-14">
@@ -97,287 +94,17 @@ export default async function CompanyAdminPage({ params, searchParams }: Props) 
         <Link href={`/bedrift/${company.slug}`} className="inline-flex items-center gap-2 text-sm text-mist hover:text-fg">
           <ArrowLeft className="size-4" /> {company.name}
         </Link>
-        <div className="mt-4 flex flex-wrap items-end justify-between gap-4">
-          <h1 className="text-4xl font-bold tracking-tight">{t("Administrer")}</h1>
-          <span className={`rounded-full px-3 py-1 text-xs font-semibold ${business ? "bg-success/15 text-success" : "bg-fill text-mist"}`}>
-            {business ? t("Bedrift") : t("Gratis")}
-          </span>
-        </div>
+        <AdminHero company={company} role={role} business={business} base={base} badges={badges} t={t} />
 
         <div className="mt-8">
           <Tabs
             label={t("Bedrift")}
             active={tab}
-            items={[
-              { key: "stillinger", label: t("Stillinger"), href: base },
-              { key: "kandidater", label: t("Kandidater"), href: `${base}?fane=kandidater` },
-              { key: "lister", label: t("Lister"), href: `${base}?fane=lister` },
-              { key: "profil", label: t("Bedriftsprofil"), href: `${base}?fane=profil` },
-              { key: "medlemmer", label: t("Medlemmer"), href: `${base}?fane=medlemmer` },
-              { key: "utviklere", label: "Webhooks", href: `${base}?fane=utviklere` },
-              { key: "abonnement", label: t("Abonnement"), href: `${base}?fane=abonnement` },
-            ]}
+            items={tabs.map((key) => ({ key, label: t(ADMIN_TAB_LABELS[key]), href: key === "oversikt" ? base : `${base}?fane=${key}`, count: count(key) }))}
           />
         </div>
 
-        <div className="mt-8">
-          {tab === "stillinger" && (
-            <section>
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="text-sm text-mist">{business ? t("Ubegrenset med stillinger.") : t("Gratis: én aktiv stilling om gangen.")}</p>
-                <ButtonLink href={`${base}/stilling/ny`} size="sm">
-                  <Plus className="size-4" /> {t("Ny stilling")}
-                </ButtonLink>
-              </div>
-              {jobs.length === 0 ? (
-                <EmptyState className="mt-6" title={t("Ingen stillinger ennå")}>
-                  {t("Legg ut den første. Den vises på bedriftssiden og under Stillinger.")}
-                </EmptyState>
-              ) : (
-                <ul className="mt-6 divide-y divide-line overflow-hidden rounded-[22px] glass-card">
-                  {jobs.map((j) => (
-                    <li key={j.id} className="flex flex-wrap items-center gap-4 px-5 py-4">
-                      <div className="min-w-0 flex-1">
-                        <Link href={`${base}/stilling/${j.id}`} className="font-semibold hover:text-ice">
-                          {j.title}
-                        </Link>
-                        <p className="mt-0.5 flex flex-wrap items-center gap-x-3 text-sm text-mist">
-                          <span className={j.status === "published" ? "text-success" : j.status === "draft" ? "text-warn" : ""}>
-                            {j.status === "published" ? t("Publisert") : j.status === "draft" ? t("Utkast") : t("Lukket")}
-                          </span>
-                          <span className="inline-flex items-center gap-1">
-                            <Eye className="size-3.5" /> {t("{n} visninger", { n: j.views })}
-                          </span>
-                          <span className="inline-flex items-center gap-1">
-                            <MousePointerClick className="size-3.5" /> {t("{n} søknadsklikk", { n: j.applyClicks })}
-                          </span>
-                        </p>
-                      </div>
-                      <JobActions jobId={j.id} status={j.status} />
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
-          )}
-
-          {tab === "kandidater" &&
-            (!business ? (
-              <Upsell companyId={company.id} price={monthly} canBuy={canManage} t={t} />
-            ) : (
-              <section>
-                <form action={base} className="flex flex-wrap gap-2">
-                  <input type="hidden" name="fane" value="kandidater" />
-                  <input name="q" defaultValue={filters.q} placeholder={t("Ferdighet, rolle eller navn")} aria-label={t("Søk")} className="h-10 min-w-56 flex-1 rounded-full bg-fill px-4 outline-none inset-ring inset-ring-line focus:ring-2 focus:ring-sea/50" />
-                  <input name="sted" defaultValue={filters.location ?? ""} placeholder={t("Sted")} aria-label={t("Sted")} className="h-10 w-36 rounded-full bg-fill px-4 outline-none inset-ring inset-ring-line focus:ring-2 focus:ring-sea/50" />
-                  <select name="fag" defaultValue={filters.field ?? ""} aria-label={t("Fagfelt")} className="h-10 rounded-full bg-fill px-4 outline-none inset-ring inset-ring-line">
-                    <option value="">{t("Alle fagfelt")}</option>
-                    {FIELD_KEYS.map((k) => (
-                      <option key={k} value={k}>
-                        {t(FIELDS[k].label)}
-                      </option>
-                    ))}
-                  </select>
-                  <select name="apen" defaultValue={filters.openTo ?? ""} aria-label={t("Åpen for")} className="h-10 rounded-full bg-fill px-4 outline-none inset-ring inset-ring-line">
-                    <option value="">{t("Åpen for alt")}</option>
-                    {OPEN_TO.map((o) => (
-                      <option key={o} value={o}>
-                        {t(OPEN_TO_LABELS[o])}
-                      </option>
-                    ))}
-                  </select>
-                  <button type="submit" className="h-10 rounded-full bg-primary px-5 text-sm font-semibold text-on-primary">
-                    {t("Søk")}
-                  </button>
-                </form>
-                {lists.length === 0 && (
-                  <p className="mt-4 text-sm text-mist">
-                    {t("Tips: lag en liste under")}{" "}
-                    <Link href={`${base}?fane=lister`} className="text-ice hover:underline">
-                      {t("Lister")}
-                    </Link>{" "}
-                    {t("for å samle kandidater.")}
-                  </p>
-                )}
-                {candidates.length === 0 ? (
-                  <EmptyState className="mt-8" title={t("Ingen treff")}>
-                    {t("Bare folk som selv har slått på «Synlig for bedrifter» vises her.")}
-                  </EmptyState>
-                ) : (
-                  <ul className="mt-6 divide-y divide-line overflow-hidden rounded-[22px] glass-card">
-                    {candidates.map((c) => (
-                      <li key={c.id} className="flex flex-wrap items-center gap-4 px-5 py-4">
-                        <Avatar name={c.name} image={c.image} size={44} />
-                        <div className="min-w-0 flex-1">
-                          <Link href={`/@${c.username}`} className="font-semibold hover:text-ice">
-                            {c.name}
-                          </Link>
-                          <p className="text-sm text-mist">{[c.headline, c.location, t("{n} prosjekter", { n: c.projects })].filter(Boolean).join(" · ")}</p>
-                          {c.skills.length > 0 && <p className="mt-1 truncate text-xs text-mist">{c.skills.slice(0, 8).join(" · ")}</p>}
-                          {(c.openTo as OpenTo[]).length > 0 && (
-                            <p className="mt-1 text-xs text-success">
-                              {t("Åpen for")} {(c.openTo as OpenTo[]).map((o) => t(OPEN_TO_LABELS[o]).toLowerCase()).join(", ")}
-                            </p>
-                          )}
-                        </div>
-                        <div className="flex gap-2">
-                          <AddToList userId={c.id} lists={lists} memberOf={memberships.get(c.id) ?? []} />
-                          <ContactCandidate companyId={company.id} userId={c.id} name={c.name} />
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </section>
-            ))}
-
-          {tab === "lister" &&
-            (!business && lists.length === 0 ? (
-              <Upsell companyId={company.id} price={monthly} canBuy={canManage} t={t} />
-            ) : list ? (
-              <section>
-                <Link href={`${base}?fane=lister`} className="text-sm text-mist hover:text-fg">
-                  ← {t("Alle lister")}
-                </Link>
-                <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-                  <h2 className="text-2xl font-semibold">{list.name}</h2>
-                  <div className="flex gap-2">
-                    {business && (
-                      <a href={`/api/bedrift/liste/${list.id}/csv`} className="inline-flex items-center gap-1.5 rounded-full glass-chip px-3 py-1.5 text-sm font-medium">
-                        <Download className="size-4" /> {t("Last ned (Excel/CSV)")}
-                      </a>
-                    )}
-                    {canManage && <TalentListTools listId={list.id} />}
-                  </div>
-                </div>
-                {list.members.length === 0 ? (
-                  <p className="mt-6 text-mist">{t("Listen er tom. Legg til folk fra Kandidater.")}</p>
-                ) : (
-                  <ul className="mt-6 divide-y divide-line overflow-hidden rounded-[22px] glass-card">
-                    {list.members.map((m) => (
-                      <li key={m.id} className="flex items-center gap-4 px-5 py-3">
-                        <Avatar name={m.name} image={m.image} size={36} />
-                        <div className="min-w-0 flex-1">
-                          <Link href={`/@${m.username}`} className="font-medium hover:text-ice">
-                            {m.name}
-                          </Link>
-                          <p className="truncate text-sm text-mist">{[m.headline, m.location].filter(Boolean).join(" · ")}</p>
-                        </div>
-                        {business && <ContactCandidate companyId={company.id} userId={m.id} name={m.name} />}
-                        <TalentListTools listId={list.id} userId={m.id} />
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </section>
-            ) : (
-              <section className="space-y-6">
-                {business && <NewTalentList companyId={company.id} />}
-                {lists.length === 0 ? (
-                  <p className="text-mist">{t("Ingen lister ennå.")}</p>
-                ) : (
-                  <ul className="divide-y divide-line overflow-hidden rounded-[22px] glass-card">
-                    {lists.map((l) => (
-                      <li key={l.id}>
-                        <Link href={`${base}?fane=lister&liste=${l.id}`} className="flex items-center justify-between px-5 py-4 hover:bg-fill">
-                          <span className="font-medium">{l.name}</span>
-                          <span className="text-sm text-mist">{t("{n} personer", { n: l.members })}</span>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </section>
-            ))}
-
-          {tab === "profil" &&
-            (canManage ? (
-              <CompanyForm
-                companyId={company.id}
-                logoUrl={company.logoUrl}
-                canDelete={role === "owner"}
-                initial={{ name: company.name, website: company.website ?? "", location: company.location ?? "", size: company.size ?? "", about: company.about ?? "" }}
-              />
-            ) : (
-              <p className="text-mist">{t("Bare eier og administratorer kan endre bedriftsprofilen.")}</p>
-            ))}
-
-          {tab === "medlemmer" && (
-            <section className="space-y-6">
-              {canManage && <AddMember companyId={company.id} />}
-              <ul className="divide-y divide-line overflow-hidden rounded-[22px] glass-card">
-                {members.map((m) => (
-                  <li key={m.userId} className="flex items-center gap-4 px-5 py-3">
-                    <Avatar name={m.name} image={m.image} size={36} />
-                    <div className="min-w-0 flex-1">
-                      <Link href={`/@${m.username}`} className="font-medium hover:text-ice">
-                        {m.name}
-                      </Link>
-                      <p className="text-sm text-mist">{t(ROLE_LABEL[m.role])}</p>
-                    </div>
-                    {canManage && m.role !== "owner" && <RemoveMember companyId={company.id} userId={m.userId} />}
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-
-          {tab === "utviklere" &&
-            (!business && hooks.length === 0 ? (
-              <Upsell companyId={company.id} price={monthly} canBuy={canManage} t={t} />
-            ) : (
-              <section className="space-y-4">
-                <p className="max-w-2xl text-sm text-mist">
-                  {t("Vi sender en POST med JSON til adressen når noe skjer med stillingene deres, signert med")}{" "}
-                  <code className="font-mono">Vis-Signature</code>. {t("Se")}{" "}
-                  <Link href="/utviklere#webhooks" className="text-ice hover:underline">
-                    {t("dokumentasjonen")}
-                  </Link>
-                  .
-                </p>
-                <Webhooks companyId={company.id} hooks={hooks} events={WEBHOOK_EVENTS} canManage={canManage && business} />
-              </section>
-            ))}
-
-          {tab === "abonnement" && (
-            <section className="max-w-xl rounded-[22px] glass-card p-6">
-              {query.avbrutt && <p className="mb-4 text-sm text-mist">{t("Betalingen ble avbrutt. Ingenting er trukket.")}</p>}
-              <p className="text-lg font-semibold">{business ? t("Bedrift") : t("Gratis")}</p>
-              {plan.source === "stripe" && plan.renewsAt && (
-                <p className="mt-1 text-sm text-mist">
-                  {plan.cancelAtPeriodEnd
-                    ? t("Avsluttes {date}.", { date: formatDate(plan.renewsAt, locale) })
-                    : t("Fornyes {date}", { date: formatDate(plan.renewsAt, locale) })}
-                </p>
-              )}
-              {plan.source === "grant" && (
-                <p className="mt-1 text-sm text-mist">
-                  {plan.grantUntil ? t("Gitt av Vis til {date}.", { date: formatDate(plan.grantUntil, locale) }) : t("Gitt av Vis.")}
-                </p>
-              )}
-              {!business && (
-                <p className="mt-2 text-sm text-mist">
-                  {t("{price} i måneden: ubegrenset med stillinger, kandidatsøk, lister med eksport og direkte kontakt.", { price: monthly })}
-                </p>
-              )}
-              {canManage ? (
-                <div className="mt-5">
-                  {plan.source === "stripe" ? (
-                    <CheckoutButton portal companyId={company.id} variant="secondary">
-                      {t("Administrer betaling og fakturaer")}
-                    </CheckoutButton>
-                  ) : !business ? (
-                    <CheckoutButton plan="business" companyId={company.id}>
-                      {t("Start Bedrift")}
-                    </CheckoutButton>
-                  ) : null}
-                </div>
-              ) : (
-                <p className="mt-4 text-sm text-mist">{t("Bare eier og administratorer kan endre abonnementet.")}</p>
-              )}
-            </section>
-          )}
-        </div>
+        <div className="mt-8">{gate.needs2fa && tab !== "medlemmer" ? <TwoFactorGate /> : <Tab ctx={ctx} />}</div>
       </div>
     </main>
   );

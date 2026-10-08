@@ -43,9 +43,14 @@ export default async function JobsPage({ searchParams }: Props) {
             <p className="caption">{t("Jobb")}</p>
             <h1 className="display mt-3 text-[clamp(2.2rem,5vw,3.6rem)]">{t("Ledige stillinger")}</h1>
           </div>
-          <ButtonLink href="/bedrifter" variant="secondary">
-            {t("For bedrifter")}
-          </ButtonLink>
+          <div className="flex flex-wrap gap-2">
+            <ButtonLink href="/utfordringer" variant="secondary">
+              {t("Utfordringer")}
+            </ButtonLink>
+            <ButtonLink href="/bedrifter" variant="secondary">
+              {t("For bedrifter")}
+            </ButtonLink>
+          </div>
         </div>
 
         <form action="/stillinger" className="mt-8">

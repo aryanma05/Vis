@@ -2,13 +2,16 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowUpRight, BadgeCheck, Building2, CalendarClock, MapPin, Settings } from "lucide-react";
+import ApplyWithVis from "@/components/company/ApplyWithVis";
 import JobViewCounter from "@/components/company/JobViewCounter";
 import Markdown from "@/components/Markdown";
 import { ButtonLink } from "@/components/ui/button";
 import { Tag } from "@/components/ui/misc";
+import { getMyApplication, listOwnProjectsForPicker } from "@/lib/applications";
 import { getMembership } from "@/lib/companies";
 import { JOB_TYPE_LABELS, REMOTE_LABELS } from "@/lib/constants";
 import { getJob } from "@/lib/jobs";
+import { getOwnProfile } from "@/lib/profiles";
 import { getCurrentUser } from "@/lib/session";
 import { siteUrl } from "@/lib/site";
 import { dateLocale, makeT } from "@/lib/i18n";
@@ -39,6 +42,12 @@ export default async function JobPage({ params }: Props) {
   const role = preview ? await getMembership(viewer?.id, preview.companyId) : null;
   const job = role ? await getJob(id, { asMember: true }) : preview;
   if (!job) notFound();
+  const viaVis = job.applyMode === "vis";
+  const [existing, ownProjects, ownProfile] = await Promise.all([
+    viaVis ? getMyApplication(viewer?.id, job.id) : null,
+    viaVis && viewer && !role ? listOwnProjectsForPicker(viewer.id) : [],
+    viaVis && viewer && !role ? getOwnProfile(viewer.id) : null,
+  ]);
 
   // Strukturert data, så stillingen kan dukke opp i Google sitt jobbsøk.
   const jsonLd = job.isOpen
@@ -109,7 +118,22 @@ export default async function JobPage({ params }: Props) {
                 </dd>
               </div>
             </dl>
-            {job.isOpen && (
+            {job.isOpen && viaVis && !role && (
+              <ApplyWithVis
+                jobId={job.id}
+                jobTitle={job.title}
+                companyName={job.company.name}
+                viewer={viewer ? { name: viewer.name, username: viewer.username, image: viewer.image ?? null, headline: ownProfile?.headline ?? null } : null}
+                projects={ownProjects}
+                existing={existing}
+              />
+            )}
+            {job.isOpen && viaVis && role && (
+              <ButtonLink href={`/bedrift/${job.company.slug}/admin?fane=sokere&stilling=${job.id}`} className="mt-5 w-full">
+                {t("Se søkerne")}
+              </ButtonLink>
+            )}
+            {job.isOpen && !viaVis && (
               <a href={`/stillinger/${job.id}/sok`} rel="nofollow" className="mt-5 flex w-full items-center justify-center gap-1.5 rounded-full bg-primary px-5 py-2.5 font-semibold text-on-primary transition hover:opacity-90">
                 {t("Søk på stillingen")} <ArrowUpRight className="size-4" />
               </a>

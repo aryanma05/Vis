@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { BarChart3, Bookmark, Building2, FileText, LogOut, Settings, Shield, Sparkles, UserCog, UserRound, UserPen } from "lucide-react";
+import { BarChart3, Bookmark, Briefcase, Building2, FileText, LogOut, MailPlus, Settings, Shield, Sparkles, UserCog, UserRound, UserPen } from "lucide-react";
 import Avatar from "@/components/Avatar";
 import { useT } from "@/components/LocaleProvider";
 import { openSettings } from "@/components/settings/settings-events";
@@ -43,6 +43,9 @@ export default function NavUserMenu({
       <MenuItem href="/samlinger" icon={<Bookmark className="size-4" />}>
         {t("Samlinger")}
       </MenuItem>
+      <MenuItem href="/soknader" icon={<Briefcase className="size-4" />}>
+        {t("Søknader")}
+      </MenuItem>
       <MenuItem href="/profil/rediger" icon={<UserPen className="size-4" />}>
         {t("Rediger profil")}
       </MenuItem>
@@ -54,6 +57,9 @@ export default function NavUserMenu({
       </MenuItem>
       <MenuItem href="/bedrifter" icon={<Building2 className="size-4" />}>
         {t("Bedrifter")}
+      </MenuItem>
+      <MenuItem href="/invitasjoner" icon={<MailPlus className="size-4" />}>
+        {t("Invitasjoner")}
       </MenuItem>
       <MenuItem href="/priser" icon={<Sparkles className="size-4" />}>
         Pro

@@ -12,6 +12,7 @@ type JobRow = {
   type: string;
   deadline: string | null;
   tags: string[];
+  applyMode?: string;
   publishedAt: Date | null;
   company: { slug: string; name: string; logoUrl: string | null; verifiedAt: Date | null };
 };
@@ -61,7 +62,10 @@ export default async function JobList({ jobs, showCompany = true }: { jobs: JobR
                 </span>
               )}
             </span>
-            <span className="shrink-0 text-xs text-mist">{deadlineLabel(j.deadline, locale)}</span>
+            <span className="flex shrink-0 flex-col items-end gap-1.5 text-xs text-mist">
+              {deadlineLabel(j.deadline, locale)}
+              {j.applyMode === "vis" && <span className="rounded-full bg-sea/15 px-2 py-0.5 font-medium text-ice">{t("Søk med Vis")}</span>}
+            </span>
           </Link>
         </li>
       ))}

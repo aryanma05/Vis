@@ -10,7 +10,7 @@ import { enforce } from "@/lib/rate-limit";
 import { UserFacingError } from "@/lib/result";
 import { siteHost } from "@/lib/site";
 
-const { customDomain, profile, profileVisit, user } = schema;
+const { customDomain, profile, profileVisit, talentListMember, user } = schema;
 
 /* -------------------------------------------------------------------------- */
 /*  Hvem har sett profilen                                                    */
@@ -69,16 +69,28 @@ export async function getProfileVisitors(userId: string, days = 30) {
 /*  Personvern- og Pro-innstillinger                                          */
 /* -------------------------------------------------------------------------- */
 
+// Slås «Synlig for bedrifter» av, slettes personen fra alle kandidatlister med en gang
+// (ikke bare skjult), og bedriftene får ikke vite det.
 export async function setProfileFlags(userId: string, flags: { hideVisits?: boolean; hideBranding?: boolean; visibleToCompanies?: boolean }) {
   const set: Partial<typeof profile.$inferInsert> = {};
   if (flags.hideVisits !== undefined) set.hideVisits = flags.hideVisits;
-  if (flags.visibleToCompanies !== undefined) set.visibleToCompanies = flags.visibleToCompanies;
+  if (flags.visibleToCompanies !== undefined) {
+    set.visibleToCompanies = flags.visibleToCompanies;
+    // Lagrede søk hos bedrifter varsler om dem som har blitt synlige siden sist.
+    if (flags.visibleToCompanies) {
+      const [row] = await db.select({ on: profile.visibleToCompanies }).from(profile).where(eq(profile.userId, userId)).limit(1);
+      if (!row?.on) set.visibleSince = new Date();
+    }
+  }
   if (flags.hideBranding !== undefined) {
     if (flags.hideBranding && !(await isPro(userId))) throw new UserFacingError("Å skjule Vis-merket krever Pro.");
     set.hideBranding = flags.hideBranding;
   }
   if (Object.keys(set).length === 0) return;
-  await db.insert(profile).values({ userId, ...set }).onConflictDoUpdate({ target: profile.userId, set });
+  await db.transaction(async (tx) => {
+    await tx.insert(profile).values({ userId, ...set }).onConflictDoUpdate({ target: profile.userId, set });
+    if (flags.visibleToCompanies === false) await tx.delete(talentListMember).where(eq(talentListMember.userId, userId));
+  });
 }
 
 // Skjult merke gjelder bare så lenge personen har Pro.

@@ -71,6 +71,20 @@
       "when": 1791225247786,
       "tag": "0009_profil_og_prestasjoner",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791310058265,
+      "tag": "0010_bedrift",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1791405744696,
+      "tag": "0011_bedrift_tilgang",
+      "breakpoints": true
     }
   ]
 }

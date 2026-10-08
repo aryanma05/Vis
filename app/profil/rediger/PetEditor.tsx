@@ -79,12 +79,12 @@ export default function PetEditor({
     <div className="grid gap-6 md:grid-cols-[200px_minmax(0,1fr)]">
       {/* Scenen: trykk på dyret for å hilse. */}
       <div className="flex flex-col items-center">
-        <div className="relative flex h-52 w-full items-end justify-center overflow-hidden rounded-[22px] bg-gradient-to-b from-fill to-fill-2 pb-4">
+        <div className="relative flex h-64 w-full items-end justify-center overflow-hidden rounded-[22px] bg-gradient-to-b from-fill to-fill-2 pb-4">
           <div aria-hidden="true" className="absolute inset-x-6 bottom-6 h-3 rounded-full bg-black/10 blur-md" />
           <Pet pet={value} size={150} />
         </div>
         <p className="mt-2 text-center text-xs text-mist">
-          {value.name ? t("Trykk på {name} for å hilse.", { name: value.name }) : t("Trykk på dyret for å hilse.")}
+          {value.name ? t("Trykk på {name} for triks, hold inne for å klappe.", { name: value.name }) : t("Trykk på dyret for triks, hold inne for å klappe.")}
         </p>
       </div>
 

@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { describe, test } from "node:test";
 import {
   ACCENTS,
+  APPLICATION_STATUS_LABELS,
   CONTACT_REASON_LABELS,
   CV_TEMPLATE_LABELS,
   FIELDS,
@@ -16,6 +17,20 @@ import {
   REPORT_REASON_LABELS,
 } from "@/lib/constants";
 import { ACHIEVEMENTS, TIER_NAMES } from "@/lib/achievement-defs";
+import {
+  ADMIN_TAB_LABELS,
+  AUDIT_ACTION_LABELS,
+  AUDIT_GROUP_LABELS,
+  DEFAULT_CRITERIA,
+  INVITE_KIND_LABELS,
+  INVITE_STATUS_LABELS,
+  PLAN_FEATURES,
+  RECOMMENDATION_LABELS,
+  ROLE_ACCESS,
+  ROLE_LABEL,
+  TEMPLATE_KIND_LABELS,
+  UPSELL_TEXT,
+} from "@/lib/company-labels";
 import { DEFAULT_LOCALE, localeCookie, translate } from "@/lib/i18n";
 import { BANNER_ARTS, BANNER_GRADIENTS, BANNER_PATTERNS, PET_ACCESSORIES, PET_COLORS, PET_SPECIES } from "@/lib/profile-style";
 import { EN } from "@/lib/i18n/en";
@@ -98,7 +113,20 @@ function keysInLists() {
     ...all(read("app/ny/page.tsx"), /(?:label|text): "([^"]+)"/g),
     ...all(read("components/ImageEditor.tsx"), /label: "([^"]+)"/g),
     ...all(between("app/innsikt/page.tsx", "const PERIOD_LABEL", ";"), /: "([^"]+)"/g),
-    ...all(between("app/bedrift/[slug]/admin/page.tsx", "const ROLE_LABEL", "as const"), /: "([^"]+)"/g),
+    ...Object.values(ROLE_LABEL),
+    ...Object.values(UPSELL_TEXT),
+    ...Object.values(ROLE_ACCESS).flatMap((items) => items.map((i) => i.label)),
+    ...Object.values(INVITE_STATUS_LABELS),
+    ...Object.values(INVITE_KIND_LABELS),
+    ...Object.values(AUDIT_ACTION_LABELS),
+    ...Object.values(AUDIT_GROUP_LABELS),
+    ...Object.values(TEMPLATE_KIND_LABELS),
+    ...Object.values(RECOMMENDATION_LABELS),
+    ...DEFAULT_CRITERIA,
+    ...Object.values(ADMIN_TAB_LABELS),
+    ...PLAN_FEATURES.free,
+    ...PLAN_FEATURES.business,
+    ...Object.values(APPLICATION_STATUS_LABELS),
     ...all(between("components/moderation/ReportDialog.tsx", "const TITLES", "as const"), /: "([^"]+)"/g),
     ...all(between("app/varsler/page.tsx", "function dayLabel", "\n}"), /return "([^"]+)"/g),
   ];
@@ -111,6 +139,8 @@ function keysInMessages() {
   for (const file of ["app", "components", "lib"].flatMap((d) => sourceFiles(join(ROOT, d)))) {
     const text = readFileSync(file, "utf8");
     for (const m of text.matchAll(/UserFacingError\(([\s\S]*?)\);/g)) all(m[1], /"((?:[^"\\]|\\.)*)"/g).forEach((k) => keys.add(k));
+    // Egne feilklasser (class X extends UserFacingError) sender teksten via super(…).
+    for (const m of text.matchAll(/extends UserFacingError[\s\S]*?super\(([\s\S]*?)\);/g)) all(m[1], /"((?:[^"\\]|\\.)*)"/g).forEach((k) => keys.add(k));
     for (const m of text.matchAll(/\btoast(?:\.(?:success|error|info))?\(\s*"((?:[^"\\]|\\.)*)"/g)) keys.add(m[1]);
   }
   return keys;

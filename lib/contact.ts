@@ -3,6 +3,10 @@ import "server-only";
 import { and, desc, eq, gte, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db, schema } from "@/db";
+import { audit } from "@/lib/audit";
+import { requireBusiness } from "@/lib/companies";
+import { requireCompanyPermission } from "@/lib/company-access";
+import { isBlocked } from "@/lib/company-privacy";
 import { CONTACT_REASON_LABELS, CONTACT_REASONS, type ContactReason } from "@/lib/constants";
 import { log } from "@/lib/log";
 import { contactEmail, emailProviderConfigured, sendEmailInBackground } from "@/lib/mailer";
@@ -16,11 +20,15 @@ const { company, contactRequest, profile, user } = schema;
 
 export const CONTACT_MIN = 20;
 export const CONTACT_MAX = 2000;
+// En bedrift kan sende samme kandidat én melding per 30 dager, uansett hvem i bedriften som sender.
+export const COMPANY_CONTACT_DAYS = 30;
 
 type Sender = { id: string; name: string; email: string; username: string; emailVerified?: boolean | null };
 
 // «Kontakt meg»: lagrer meldingen, varsler mottakeren og sender den på e-post med
 // avsenderens adresse som svaradresse. Mottakerens e-post deles aldri med avsenderen.
+// Med companyId sendes den på vegne av bedriften (Bedrift): krever rollen og avtalen,
+// telles per bedrift, og den som har blokkert bedriften får samme svar som om de var utilgjengelige.
 export async function sendContactRequest(
   sender: Sender,
   recipientId: string,
@@ -32,6 +40,11 @@ export async function sendContactRequest(
   if (message.length > CONTACT_MAX) throw new UserFacingError("Meldingen kan være maks {n} tegn.", { n: CONTACT_MAX });
   if (sender.id === recipientId) throw new UserFacingError("Du kan ikke kontakte deg selv.");
   if (sender.emailVerified === false) throw new UserFacingError("Bekreft e-postadressen din før du kontakter andre.");
+  const companyId = input.companyId ?? null;
+  if (companyId) {
+    await requireCompanyPermission(sender.id, companyId, "candidates.contact");
+    await requireBusiness(companyId);
+  }
 
   const [recipient] = await db
     .select({
@@ -48,36 +61,52 @@ export async function sendContactRequest(
     .where(eq(user.id, recipientId))
     .limit(1);
   // Bedrifter kan kontakte dem som er synlige for bedrifter; ellers må «Kontakt meg» være på.
-  const reachable = input.companyId ? recipient?.visibleToCompanies : recipient?.contactEnabled;
+  // Har personen blokkert bedriften, får bedriften det samme svaret (blokkeringen vises aldri).
+  const reachable = companyId ? recipient?.visibleToCompanies && !(await isBlocked(recipientId, companyId)) : recipient?.contactEnabled;
   if (!recipient || recipient.banned || !reachable) {
     throw new UserFacingError("Denne personen tar ikke imot meldinger akkurat nå.");
   }
-  const [from] = input.companyId
-    ? await db.select({ name: company.name }).from(company).where(eq(company.id, input.companyId)).limit(1)
+  const [from] = companyId
+    ? await db.select({ name: company.name, verifiedAt: company.verifiedAt }).from(company).where(eq(company.id, companyId)).limit(1)
     : [null];
 
-  // Én melding per uke til samme person, så ingen kan mase.
-  const [recent] = await db
-    .select({ id: contactRequest.id })
-    .from(contactRequest)
-    .where(
-      and(
-        eq(contactRequest.senderId, sender.id),
-        eq(contactRequest.recipientId, recipientId),
-        gte(contactRequest.createdAt, sql`now() - interval '7 days'`),
-      ),
-    )
-    .limit(1);
-  if (recent) throw new UserFacingError("Du har allerede sendt denne personen en melding den siste uken.");
+  // Bedrift: én melding per kandidat per 30 dager for hele bedriften. Ellers én per uke fra
+  // samme person, så ingen kan mase. Sjekkes før grensen telles, og igjen i transaksjonen.
+  const recentContact = async (q: Pick<typeof db, "select"> = db) => {
+    const [recent] = await q
+      .select({ id: contactRequest.id })
+      .from(contactRequest)
+      .where(
+        and(
+          companyId ? eq(contactRequest.companyId, companyId) : eq(contactRequest.senderId, sender.id),
+          eq(contactRequest.recipientId, recipientId),
+          gte(contactRequest.createdAt, sql`now() - make_interval(days => ${companyId ? COMPANY_CONTACT_DAYS : 7})`),
+        ),
+      )
+      .limit(1);
+    if (!recent) return;
+    throw new UserFacingError(
+      companyId ? "Noen i bedriften har allerede kontaktet denne personen de siste 30 dagene." : "Du har allerede sendt denne personen en melding den siste uken.",
+    );
+  };
+  await recentContact();
 
-  await enforce("contact", sender.id);
+  await enforce(companyId ? "companyContact" : "contact", companyId ?? sender.id);
 
   const created = await db.transaction(async (tx) => {
+    if (companyId) {
+      // Låst per bedrift og kandidat, så to i bedriften ikke kan sende samtidig.
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`contact:${companyId}:${recipientId}`}))`);
+      await recentContact(tx);
+    }
     const [row] = await tx
       .insert(contactRequest)
-      .values({ recipientId, senderId: sender.id, reason, message, companyId: input.companyId ?? null })
+      .values({ recipientId, senderId: sender.id, reason, message, companyId })
       .returning({ id: contactRequest.id });
     await notify({ userId: recipientId, actorId: sender.id, type: "contact", data: { contactId: row.id } }, tx);
+    if (companyId) {
+      await audit({ companyId, actorId: sender.id, action: "candidate.contacted", targetType: "user", targetId: recipientId, subjectUserId: recipientId, meta: { reason } }, tx);
+    }
     return row;
   });
 
@@ -92,10 +121,12 @@ export async function sendContactRequest(
         reason: CONTACT_REASON_LABELS[reason].toLowerCase(),
         message,
         path: profilePath(sender.username),
+        viaCompany: Boolean(from),
+        unverifiedCompany: Boolean(from && !from.verifiedAt),
       }),
     );
   }
-  log.info("contact.sent", { senderId: sender.id, recipientId, reason });
+  log.info("contact.sent", { senderId: sender.id, recipientId, reason, companyId });
   return created.id;
 }
 

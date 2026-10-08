@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
-import { createJobAction, updateJobAction } from "@/app/actions/companies";
+import { createJobAction, updateJobAction } from "@/app/actions/jobs";
 import { useLocale, useT } from "@/components/LocaleProvider";
 import MarkdownEditor from "@/components/MarkdownEditor";
 import TagInput from "@/components/TagInput";
@@ -21,6 +21,7 @@ export type JobValues = {
   applyEmail: string;
   deadline: string;
   tags: string[];
+  applyMode: "vis" | "ekstern";
 };
 
 const TEMPLATE = {
@@ -134,14 +135,38 @@ export default function JobForm({ companyId, jobId, initial, adminPath }: { comp
       <Field label={t("Teknologier og ferdigheter")} optional hint={t("Gjør stillingen lettere å finne.")} htmlFor="stilling-tagger">
         <TagInput id="stilling-tagger" name="tags" defaultValue={values.tags} />
       </Field>
-      <div className="grid gap-6 sm:grid-cols-2">
-        <Field label={t("Søknadslenke")} optional hint={t("Eller e-post under.")}>
-          <input className={inputClass} value={values.applyUrl} onChange={(e) => set("applyUrl", e.target.value)} placeholder="https://jobs.bedrift.no/123" />
-        </Field>
-        <Field label={t("Søknad på e-post")} optional>
-          <input className={inputClass} type="email" value={values.applyEmail} onChange={(e) => set("applyEmail", e.target.value)} placeholder={t("jobb@bedrift.no")} />
-        </Field>
-      </div>
+      <fieldset>
+        <legend className="mb-2 text-sm font-medium text-fg">{t("Hvordan skal folk søke?")}</legend>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {(
+            [
+              ["vis", "Med Vis-profilen", "Anbefalt. Søkerne sender profilen, prosjektene og en kort melding. Alle står i samme format under Søkere, og de får beskjed når dere flytter dem videre."],
+              ["ekstern", "Lenke eller e-post", "Søkerne sendes videre til deres eget rekrutteringssystem eller e-post."],
+            ] as const
+          ).map(([key, label, text]) => (
+            <label
+              key={key}
+              className={`flex cursor-pointer gap-3 rounded-2xl p-4 text-sm transition ${values.applyMode === key ? "bg-primary/10 ring-2 ring-sea" : "glass-chip hover:bg-fill-2"}`}
+            >
+              <input type="radio" name="applyMode" value={key} checked={values.applyMode === key} onChange={() => set("applyMode", key)} className="mt-1 accent-[var(--sea)]" />
+              <span>
+                <span className="block font-semibold text-fg">{t(label)}</span>
+                <span className="mt-1 block leading-5 text-mist">{t(text)}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      {values.applyMode === "ekstern" && (
+        <div className="grid gap-6 sm:grid-cols-2">
+          <Field label={t("Søknadslenke")} optional hint={t("Eller e-post under.")}>
+            <input className={inputClass} value={values.applyUrl} onChange={(e) => set("applyUrl", e.target.value)} placeholder="https://jobs.bedrift.no/123" />
+          </Field>
+          <Field label={t("Søknad på e-post")} optional>
+            <input className={inputClass} type="email" value={values.applyEmail} onChange={(e) => set("applyEmail", e.target.value)} placeholder={t("jobb@bedrift.no")} />
+          </Field>
+        </div>
+      )}
       <Field label={t("Søknadsfrist")} optional hint={t("Tom = løpende.")}>
         <input className={`${inputClass} w-auto`} type="date" value={values.deadline} onChange={(e) => set("deadline", e.target.value)} />
       </Field>

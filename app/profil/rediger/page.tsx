@@ -36,6 +36,8 @@ export default async function EditProfilePage() {
             readme: profile.readme ?? "",
             lookingFor: profile.lookingFor ?? "",
             openTo: profile.openTo,
+            studyProgram: profile.studyProgram ?? "",
+            graduationYear: profile.graduationYear ? String(profile.graduationYear) : "",
             accentColor: profile.accentColor,
             links: profile.links,
             customSections: profile.customSections,

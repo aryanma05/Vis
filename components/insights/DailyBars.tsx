@@ -19,12 +19,13 @@ function niceMax(max: number) {
 
 // Visninger per dag som søyler. Én serie, én akse; hold musen over (eller tab til) en
 // søyle for å se tallet. Tallene finnes også i tabellen under.
-export default function DailyBars({ title, days }: { title: string; days: Day[] }) {
+export default function DailyBars({ title, days, unit = "visninger" }: { title: string; days: Day[]; unit?: "visninger" | "søknader" }) {
   const id = useId();
   const t = useT();
   const nf = dateLocale(useLocale());
   const fmtDay = (iso: string, opts: Intl.DateTimeFormatOptions) => new Date(`${iso}T12:00:00`).toLocaleDateString(nf, opts);
   const [active, setActive] = useState<number | null>(null);
+  const label = (n: number | string) => (unit === "søknader" ? t("{n} søknader", { n }) : t("{n} visninger", { n }));
   const max = niceMax(Math.max(...days.map((d) => d.views), 0));
   const ticks = [0, max / 2, max];
   const total = days.reduce((n, d) => n + d.views, 0);
@@ -46,7 +47,7 @@ export default function DailyBars({ title, days }: { title: string; days: Day[] 
               <button
                 key={d.day}
                 type="button"
-                aria-label={`${fmtDay(d.day, { day: "numeric", month: "long" })}: ${t("{n} visninger", { n: d.views })}`}
+                aria-label={`${fmtDay(d.day, { day: "numeric", month: "long" })}: ${label(d.views)}`}
                 onMouseEnter={() => setActive(i)}
                 onFocus={() => setActive(i)}
                 onBlur={() => setActive(null)}
@@ -68,7 +69,7 @@ export default function DailyBars({ title, days }: { title: string; days: Day[] 
               className="pointer-events-none absolute -top-2 z-10 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-xl border border-line bg-surface px-3 py-2 text-xs shadow-lg"
               style={{ left: `${((active + 0.5) / days.length) * 100}%` }}
             >
-              <span className="block text-sm font-semibold text-fg">{t("{n} visninger", { n: days[active].views.toLocaleString(nf) })}</span>
+              <span className="block text-sm font-semibold text-fg">{label(days[active].views.toLocaleString(nf))}</span>
               <span className="text-mist">{fmtDay(days[active].day, { weekday: "long", day: "numeric", month: "long" })}</span>
             </div>
           )}

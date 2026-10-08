@@ -175,6 +175,13 @@ export const profileInput = z.object({
   customSections: z.array(customSection).max(8).default([]),
   accentColor: z.enum(ACCENT_KEYS).nullish().transform((v) => v ?? null),
   contactEnabled: z.boolean().default(false),
+  // Studenter: studieretning og året man er ferdig (til sommerjobb og internship).
+  studyProgram: optionalText(100),
+  graduationYear: z
+    .union([z.number(), z.string()])
+    .nullish()
+    .transform((v) => (v === "" || v == null ? null : Number(v)))
+    .refine((v) => v === null || (Number.isInteger(v) && v >= 1990 && v <= new Date().getFullYear() + 8), "Skriv et årstall, f.eks. 2027."),
   // Mangler feltet, røres ikke det som er lagret. null fjerner banneret / kjæledyret.
   banner: bannerConfig.nullish(),
   pet: petConfig.nullish(),
