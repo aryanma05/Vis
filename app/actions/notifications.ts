@@ -27,6 +27,7 @@ export async function setNotificationPrefsAction(prefs: {
   follow?: boolean;
   digest?: boolean;
   contact?: boolean;
+  partner?: boolean;
 }) {
   return runAction(async () => {
     const user = await requireUserForAction();
@@ -39,6 +40,7 @@ export async function setNotificationPrefsAction(prefs: {
         follow: Boolean(prefs.follow),
         digest: Boolean(prefs.digest),
         contact: Boolean(prefs.contact),
+        partner: Boolean(prefs.partner),
       }),
     );
   }, "notifications.prefs");

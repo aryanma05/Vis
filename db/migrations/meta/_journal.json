@@ -71,6 +71,13 @@
       "when": 1791225247786,
       "tag": "0009_profil_og_prestasjoner",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791476582105,
+      "tag": "0010_samarbeid",
+      "breakpoints": true
     }
   ]
 }

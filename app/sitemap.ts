@@ -4,18 +4,19 @@ import { db, schema } from "@/db";
 import { siteUrl } from "@/lib/site";
 import { outer } from "@/lib/sql";
 
-const { project, projectTag, tag, user } = schema;
+const { partnerPost, project, projectTag, tag, user } = schema;
 
 // Lages ved hver forespørsel, så nye profiler og prosjekter kommer med med én gang,
 // og bygget trenger ikke databasen.
 export const dynamic = "force-dynamic";
 
-// Alle offentlige sider søkemotorer bør finne: profiler, prosjekter og teknologier.
+// Alle offentlige sider søkemotorer bør finne: profiler, prosjekter, teknologier og
+// åpne prosjekter som trenger hjelp (/partnere).
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = siteUrl();
   const notBanned = sql`coalesce(${user.banned}, false) = false`;
 
-  const [profiles, projects, tags] = await Promise.all([
+  const [profiles, projects, tags, partnerPosts] = await Promise.all([
     db
       .select({ username: user.username, updatedAt: user.updatedAt })
       .from(user)
@@ -30,6 +31,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .orderBy(desc(project.updatedAt))
       .limit(20000),
     db.selectDistinct({ slug: tag.slug }).from(tag).innerJoin(projectTag, eq(projectTag.tagId, tag.id)).limit(2000),
+    db
+      .select({ id: partnerPost.id, updatedAt: partnerPost.updatedAt })
+      .from(partnerPost)
+      .innerJoin(user, eq(user.id, partnerPost.ownerId))
+      .where(and(isNull(partnerPost.closedAt), notBanned))
+      .orderBy(desc(partnerPost.updatedAt))
+      .limit(2000),
   ]);
 
   const statics = ["", "/sok", "/partnere", "/om", "/retningslinjer", "/vilkar", "/personvern", "/register"].map((path) => ({
@@ -43,5 +51,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...profiles.map((p) => ({ url: `${base}/@${p.username}`, lastModified: p.updatedAt, changeFrequency: "weekly" as const, priority: 0.8 })),
     ...projects.map((p) => ({ url: `${base}/prosjekt/${p.id}`, lastModified: p.updatedAt, changeFrequency: "monthly" as const, priority: 0.7 })),
     ...tags.map((t) => ({ url: `${base}/tag/${t.slug}`, changeFrequency: "weekly" as const, priority: 0.4 })),
+    ...partnerPosts.map((p) => ({ url: `${base}/partnere/${p.id}`, lastModified: p.updatedAt, changeFrequency: "weekly" as const, priority: 0.5 })),
   ];
 }

@@ -74,6 +74,42 @@ export const CONTACT_REASON_LABELS: Record<ContactReason, string> = {
   annet: "Noe annet",
 };
 
+// Samarbeid (/partnere): en idé eller et påbegynt prosjekt som trenger folk.
+export const PARTNER_STAGES = ["ide", "pabegynt"] as const;
+export type PartnerStage = (typeof PARTNER_STAGES)[number];
+export const PARTNER_STAGE_LABELS: Record<PartnerStage, string> = {
+  ide: "Idé",
+  pabegynt: "Påbegynt prosjekt",
+};
+
+// Hvor mye man vil bidra. Eieren velger hva som passer, den som vil hjelpe velger ett.
+export const COMMITMENTS = ["hele", "del", "moro"] as const;
+export type Commitment = (typeof COMMITMENTS)[number];
+export const COMMITMENT_LABELS: Record<Commitment, { label: string; description: string }> = {
+  hele: { label: "Fra start til slutt", description: "Bli med i teamet og bygg det ferdig sammen." },
+  del: { label: "En del av det", description: "Hjelp til med en avgrenset oppgave." },
+  moro: { label: "Bare for gøy", description: "Uforpliktende, når det passer." },
+};
+
+// Foreslås under «Hva trenger du hjelp med?». Man kan også skrive sine egne.
+export const PARTNER_NEED_SUGGESTIONS = [
+  "Design",
+  "Frontend",
+  "Backend",
+  "Mobilapp",
+  "Data og KI",
+  "Spillutvikling",
+  "Testing",
+  "Markedsføring",
+  "Tekst og innhold",
+  "Video og foto",
+  "Forretning",
+  "Prosjektledelse",
+];
+export const MAX_PARTNER_NEEDS = 8;
+// Åpne utlysninger per person, så listen ikke fylles av én.
+export const MAX_OPEN_PARTNER_POSTS = 5;
+
 // Fagfelt i søket. Treffer rollen på prosjektet, teknologiene og tittelen på profilen.
 export const FIELDS = {
   design: { label: "Design", words: ["design", "ux", "ui", "grafisk", "illustr", "figma"] },

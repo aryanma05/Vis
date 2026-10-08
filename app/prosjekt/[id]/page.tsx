@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { ArrowRight, ArrowUpRight, CalendarDays, Code2, Eye, ImagePlus, MessageCircle, Sparkles, UserRound } from "lucide-react";
+import { ArrowRight, ArrowUpRight, CalendarDays, Code2, Eye, HandHeart, ImagePlus, MessageCircle, Sparkles, UserRound } from "lucide-react";
 import Avatar from "@/components/Avatar";
 import Comments from "@/components/comments/Comments";
 import { GithubMark } from "@/components/icons";
 import Markdown from "@/components/Markdown";
+import { NeedChips } from "@/components/partners/PartnerPostTile";
 import ProjectCard from "@/components/ProjectCard";
 import ProjectCover from "@/components/ProjectCover";
 import ProjectGallery from "@/components/ProjectGallery";
@@ -28,6 +29,7 @@ import { countComments } from "@/lib/comments";
 import { PROGRESS_LABELS } from "@/lib/constants";
 import { formatYearMonth, timeAgo } from "@/lib/format";
 import { projectRepoName } from "@/lib/github";
+import { getOpenPostForProject } from "@/lib/partner-posts";
 import { listProjectUpdates } from "@/lib/project-updates";
 import { getMoreFromOwner, getProjectById, getRelatedProjects } from "@/lib/projects";
 import { getReactionSummary } from "@/lib/reactions";
@@ -73,13 +75,14 @@ export default async function ProjectPage({ params }: Props) {
   const project = await getProjectById(id, viewer?.id, { asAdmin: admin });
   if (!project) notFound();
 
-  const [reactions, following, more, related, commentTotal, updates] = await Promise.all([
+  const [reactions, following, more, related, commentTotal, updates, helpWanted] = await Promise.all([
     getReactionSummary(project.id, viewer?.id),
     isFollowing(viewer?.id, project.owner.id),
     getMoreFromOwner(project.owner.id, project.id, 3),
     getRelatedProjects(project.id, project.owner.id, project.tags.map((tag) => tag.slug), 3),
     countComments(project.id),
     listProjectUpdates(project.id),
+    getOpenPostForProject(project.id),
   ]);
 
   const date = formatYearMonth(project.projectDate, locale);
@@ -274,6 +277,38 @@ export default async function ProjectPage({ params }: Props) {
 
           {/* Repo-panelet gjør kolonnen høy, da blir den ikke stående fast (bunnen ville vært utenfor skjermen). */}
           <aside className={`space-y-6 lg:self-start ${repoName ? "" : "lg:sticky lg:top-8"}`}>
+            {/* Samarbeid: prosjektet trenger folk (/partnere), eller eieren kan be om hjelp. */}
+            {helpWanted ? (
+              <section className="rounded-[22px] bg-warn/10 p-5">
+                <p className="flex items-center gap-2 text-[13px] font-semibold text-warn">
+                  <HandHeart className="size-4" aria-hidden="true" /> {t("Trenger hjelp med")}
+                </p>
+                {helpWanted.needs.length > 0 && (
+                  <div className="mt-3">
+                    <NeedChips needs={helpWanted.needs} />
+                  </div>
+                )}
+                <ButtonLink href={project.isOwner ? `/partnere/${helpWanted.id}#foresporsler` : `/partnere/${helpWanted.id}`} size="sm" className="mt-4 w-full">
+                  {project.isOwner ? t("Se forespørslene") : t("Tilby hjelp")} <ArrowRight className="size-4" />
+                </ButtonLink>
+              </section>
+            ) : (
+              project.isOwner &&
+              inProgress &&
+              published && (
+                <Link
+                  href={`/partnere/ny?prosjekt=${project.id}`}
+                  className="flex items-center gap-3 rounded-[22px] glass-card p-4 text-sm transition hover:bg-card-hover"
+                >
+                  <HandHeart className="size-5 shrink-0 text-warn" aria-hidden="true" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-semibold">{t("Trenger du hjelp?")}</span>
+                    <span className="block text-mist">{t("Finn folk som vil være med på prosjektet.")}</span>
+                  </span>
+                  <ArrowRight className="size-4 shrink-0 text-mist" aria-hidden="true" />
+                </Link>
+              )
+            )}
             <section id="teamet" className="scroll-mt-24 rounded-[22px] glass-card p-5">
               <p className="caption">{t("Laget av")}</p>
               <div className="mt-4 flex items-center gap-3">

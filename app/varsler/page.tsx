@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AtSign, Bell, Heart, Lightbulb, Mail, MessageCircle, Reply, Settings, Sparkles, Star, UserPlus, Users } from "lucide-react";
+import { AtSign, Bell, Handshake, HandHeart, Heart, Lightbulb, Mail, MessageCircle, Reply, Settings, Sparkles, Star, UserPlus, Users } from "lucide-react";
 import Avatar from "@/components/Avatar";
 import { EmptyState } from "@/components/ui/misc";
 import { Tabs } from "@/components/ui/tabs";
@@ -42,6 +42,18 @@ function describe(n: NotificationItem, t: T) {
       return { Icon: Users, tone: "text-success", text: <>{t("la deg til som medlem i")} {project}</> };
     case "featured":
       return { Icon: Sparkles, tone: "text-warn", text: <>{t("valgte ut")} {project}. {t("Det vises nå på forsiden.")}</> };
+    case "partner_request":
+      return { Icon: HandHeart, tone: "text-warn", text: <>{t("vil hjelpe med")} <b className="font-semibold text-fg">{n.partnerPost?.title ?? t("et prosjekt")}</b></> };
+    case "partner_accepted":
+      return {
+        Icon: Handshake,
+        tone: "text-success",
+        text: (
+          <>
+            {t("sa ja til at du blir med på")} <b className="font-semibold text-fg">{n.partnerPost?.title ?? t("et prosjekt")}</b>
+          </>
+        ),
+      };
     case "reaction": {
       const Icon = n.reaction === "Nyttig" ? Lightbulb : n.reaction === "Inspirerende" ? Star : Heart;
       return {
@@ -59,6 +71,8 @@ function describe(n: NotificationItem, t: T) {
 
 function href(n: NotificationItem) {
   if (n.type === "contact" && n.contactId) return `/kontakt/${n.contactId}`;
+  if (n.type === "partner_request" && n.partnerPost) return `/partnere/${n.partnerPost.id}#foresporsler`;
+  if (n.type === "partner_accepted" && n.partnerPost) return `/partnere/${n.partnerPost.id}`;
   if (n.type === "follow" || !n.project) return `/@${n.actor.username}`;
   if (n.commentId) return `/prosjekt/${n.project.id}#kommentar-${n.commentId}`;
   return `/prosjekt/${n.project.id}`;
@@ -118,7 +132,7 @@ export default async function NotificationsPage({ searchParams }: { searchParams
 
         {notifications.length === 0 ? (
           <EmptyState className="mt-10" icon={<Bell className="size-5" />} title={unreadOnly ? t("Ingen uleste varsler") : t("Ingen varsler ennå")}>
-            {t("Når noen kommenterer, reagerer, nevner deg, følger deg eller vil komme i kontakt, dukker det opp her.")}
+            {t("Når noen kommenterer, reagerer, nevner deg, følger deg, vil komme i kontakt eller vil hjelpe med et prosjekt, dukker det opp her.")}
           </EmptyState>
         ) : (
           groups.map((group) => (

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { translate, type Locale, type Vars } from "@/lib/i18n";
-import { ACCENT_KEYS, MAX_PROJECT_MEMBERS, OPEN_TO, PROJECT_PROGRESS } from "@/lib/constants";
+import { ACCENT_KEYS, COMMITMENTS, MAX_PARTNER_NEEDS, MAX_PROJECT_MEMBERS, OPEN_TO, PARTNER_STAGES, PROJECT_PROGRESS } from "@/lib/constants";
 import {
   BANNER_ART_KEYS,
   BANNER_GRADIENT_KEYS,
@@ -181,6 +181,37 @@ export const profileInput = z.object({
 });
 
 export type ProfileInput = z.output<typeof profileInput>;
+
+// Samarbeid: «Hva trenger du hjelp med?» som liste eller kommaseparert tekst. Like ord
+// med ulik skrivemåte («design» og «Design») blir ett.
+const needList = z
+  .union([z.array(z.string()), z.string()])
+  .nullish()
+  .transform((v) => {
+    const seen = new Set<string>();
+    return (typeof v === "string" ? v.split(",") : (v ?? []))
+      .map((n) => n.trim().replace(/\s+/g, " "))
+      .filter((n) => n && !seen.has(n.toLowerCase()) && seen.add(n.toLowerCase()));
+  })
+  .refine((v) => v.length > 0, "Skriv minst én ting du trenger hjelp med.")
+  .refine((v) => v.length <= MAX_PARTNER_NEEDS, { message: "Maks {n} valg.", params: { n: MAX_PARTNER_NEEDS } })
+  .refine((v) => v.every((n) => n.length <= 40), "Hver ting kan ha maks 40 tegn.");
+
+export const partnerPostInput = z.object({
+  title: z.string().trim().min(1, "Gi prosjektet en tittel.").max(100),
+  description: z.string().trim().min(20, "Fortell litt mer, så folk skjønner hva prosjektet går ut på.").max(5000),
+  stage: z.enum(PARTNER_STAGES).default("ide"),
+  // Et av eierens egne prosjekter på Vis (sjekkes i lib/partner-posts.ts).
+  projectId: z.string().trim().max(40).nullish().transform(emptyToNull),
+  needs: needList,
+  commitments: z
+    .array(z.enum(COMMITMENTS))
+    .min(1, "Velg minst én måte folk kan hjelpe på.")
+    .max(COMMITMENTS.length)
+    .transform((v) => COMMITMENTS.filter((c) => v.includes(c))),
+});
+
+export type PartnerPostInput = z.output<typeof partnerPostInput>;
 
 // Formatet språkmodellen skal returnere, og som brukeren kan redigere før det lagres.
 export const parsedCv = z.object({

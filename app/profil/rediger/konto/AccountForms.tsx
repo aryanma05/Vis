@@ -114,7 +114,7 @@ export function ChangePassword() {
   );
 }
 
-type Prefs = { comment: boolean; reply: boolean; mention: boolean; follow: boolean; digest: boolean; contact: boolean };
+type Prefs = { comment: boolean; reply: boolean; mention: boolean; follow: boolean; digest: boolean; contact: boolean; partner: boolean };
 
 const NOTIFICATION_ROWS: { key: keyof Prefs; label: string; description: string }[] = [
   { key: "comment", label: "Kommentarer på prosjektene mine", description: "Når noen skriver en kommentar på et av prosjektene dine." },
@@ -122,6 +122,7 @@ const NOTIFICATION_ROWS: { key: keyof Prefs; label: string; description: string 
   { key: "mention", label: "Når noen nevner meg", description: "Når noen skriver @brukernavnet ditt i en kommentar." },
   { key: "follow", label: "Nye følgere", description: "Når noen begynner å følge deg." },
   { key: "contact", label: "Meldinger via «Kontakt meg»", description: "Meldingen sendes på e-post, så du kan svare direkte. Gjelder bare hvis knappen er på." },
+  { key: "partner", label: "Samarbeid", description: "Når noen vil hjelpe med et prosjekt du har lagt ut, eller sier ja til å få hjelp fra deg." },
   { key: "digest", label: "Ukesoppsummering", description: "Mandag morgen: hvem som har sett profilen din, nye følgere og nytt fra folk du følger." },
 ];
 
