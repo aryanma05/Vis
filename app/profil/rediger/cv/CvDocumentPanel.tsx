@@ -74,7 +74,7 @@ export default function CvDocumentPanel({
           stored.push(result.data);
         }
 
-        setDoc({ fileUrl: uploaded.data.url, fileName: file.name, mimeType: "application/pdf", pages: stored, isPublic: doc?.isPublic ?? true });
+        setDoc({ fileUrl: uploaded.data.url, fileName: file.name, mimeType: "application/pdf", pages: stored, isPublic: uploaded.data.isPublic });
         if (totalPages > pages.length) setError(t("Vi viser de {n} første sidene av {total}.", { n: pages.length, total: totalPages }));
       } else {
         setStatus(t("Gjør klar bildet …"));
@@ -87,7 +87,7 @@ export default function CvDocumentPanel({
         fd.append("height", String(size.height));
         const uploaded = await uploadCvDocumentAction(fd);
         if (!uploaded.ok) throw new Error(uploaded.error);
-        setDoc({ fileUrl: uploaded.data.url, fileName: file.name, mimeType: prepared.type, pages: [{ url: uploaded.data.url, ...size }], isPublic: doc?.isPublic ?? true });
+        setDoc({ fileUrl: uploaded.data.url, fileName: file.name, mimeType: prepared.type, pages: [{ url: uploaded.data.url, ...size }], isPublic: uploaded.data.isPublic });
       }
       toast.success("CV-en er lastet opp", isPdf ? { description: "Trykk «Fyll ut feltene» for å hente ut innholdet." } : undefined);
       router.refresh();
@@ -198,7 +198,11 @@ export default function CvDocumentPanel({
           checked={doc.isPublic}
           onChange={toggleVisibility}
           label={doc.isPublic ? t("Synlig på profilen") : t("Skjult for andre")}
-          description={t("Besøkende kan se og laste ned CV-dokumentet når det er synlig.")}
+          description={
+            doc.isPublic
+              ? t("Besøkende kan se og laste ned CV-dokumentet når det er synlig.")
+              : t("Bare du ser CV-dokumentet. En CV har ofte telefonnummer og adresse, så den vises ikke før du slår den på.")
+          }
         />
       </div>
 

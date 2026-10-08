@@ -57,14 +57,42 @@ function GithubStatusCard({ status }: { status: GithubStatus | null }) {
   );
 }
 
+// Hvilke IP-headere serveren får på denne forespørselen (adminens egen IP), så TRUSTED_IP_HEADER
+// kan settes riktig. Se docs/sikkerhet/PRODUKSJONSSJEKKLISTE.md.
+export type IpDiagnostics = { resolved: string; trusted: string | null; headers: { name: string; value: string | null }[] };
+
+function IpCard({ ip }: { ip: IpDiagnostics | null }) {
+  if (!ip) return null;
+  return (
+    <section>
+      <h2 className="text-lg font-semibold">Klientens IP-adresse</h2>
+      <p className="mt-1 text-sm text-mist">
+        Grensene per IP bruker <span className="font-mono">{ip.resolved}</span>
+        {ip.trusted ? ` (fra ${ip.trusted})` : " (første verdi i X-Forwarded-For)"}. Står det flere adresser i
+        X-Forwarded-For og din egen IP ikke er først, eller en annen header viser din IP alene, bør TRUSTED_IP_HEADER peke dit.
+      </p>
+      <dl className="mt-4 grid gap-2 rounded-[22px] glass-card p-5 text-sm">
+        {ip.headers.map((h) => (
+          <div key={h.name} className="flex flex-wrap gap-x-3">
+            <dt className="font-mono text-mist">{h.name}</dt>
+            <dd className="break-all font-mono">{h.value ?? "–"}</dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  );
+}
+
 export default function SystemTab({
   checks,
   errors,
   github = null,
+  ip = null,
 }: {
   checks: EnvCheck[];
   errors: Awaited<ReturnType<typeof getErrorSummary>>;
   github?: GithubStatus | null;
+  ip?: IpDiagnostics | null;
 }) {
   const groups = [...new Set(checks.map((c) => c.group))];
   const problems = checks.filter((c) => c.status === "error" || c.status === "warn").length;
@@ -72,6 +100,7 @@ export default function SystemTab({
   return (
     <div className="mt-8 space-y-10">
       <GithubStatusCard status={github} />
+      <IpCard ip={ip} />
 
       <section>
         <h2 className="text-lg font-semibold">Klar for lansering?</h2>

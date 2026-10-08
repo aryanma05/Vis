@@ -24,7 +24,7 @@ import ShareMenu from "@/components/social/ShareMenu";
 import { buttonClass, ButtonLink } from "@/components/ui/button";
 import { compactNumber, Tag } from "@/components/ui/misc";
 import ViewTracker from "@/components/ViewTracker";
-import { isAdmin } from "@/lib/admin";
+import { isActiveAdmin } from "@/lib/admin";
 import { countComments } from "@/lib/comments";
 import { PROGRESS_LABELS } from "@/lib/constants";
 import { formatYearMonth, timeAgo } from "@/lib/format";
@@ -71,7 +71,7 @@ export default async function ProjectPage({ params }: Props) {
   const { id } = await params;
   const [viewer, locale] = await Promise.all([getCurrentUser(), getLocale()]);
   const t = makeT(locale);
-  const admin = isAdmin(viewer);
+  const admin = isActiveAdmin(viewer);
   const project = await getProjectById(id, viewer?.id, { asAdmin: admin });
   if (!project) notFound();
 

@@ -25,7 +25,7 @@ import { requireUser } from "@/lib/session";
 import EditNav from "../EditNav";
 import { ProSettings, VisitPrivacy } from "./ProSettings";
 import TwoFactorSettings from "./TwoFactorSettings";
-import { ChangePassword, DeleteAccount, EmailStatus, NotificationSettings } from "./AccountForms";
+import { ChangePassword, DeleteAccount, EmailStatus, NotificationSettings, OtherSessions } from "./AccountForms";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: makeT(await getLocale())("Konto og varsler"), robots: { index: false } };
@@ -129,6 +129,10 @@ export default async function AccountPage() {
 
         <Section id="to-trinn" title={t("To-trinns innlogging")} description={t("Et ekstra lag med sikkerhet: en kode fra telefonen i tillegg til passordet.")}>
           <TwoFactorSettings enabled={Boolean(info.twoFactorEnabled)} hasPassword={info.hasPassword} />
+        </Section>
+
+        <Section title={t("Innlogginger")} description={t("Har du logget inn på en maskin du ikke bruker lenger, kan du logge ut der herfra.")}>
+          <OtherSessions count={info.sessions} />
         </Section>
 
         {(isGithubConfigured || isGoogleConfigured) && (

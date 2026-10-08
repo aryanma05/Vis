@@ -1,8 +1,9 @@
 import type { NextConfig } from "next";
+import { contentSecurityPolicy } from "./lib/csp";
 
-// Grunnleggende sikkerhetshodere på alle sider. (Ingen Content-Security-Policy ennå:
-// den må testes grundig mot Next sine inline-skript før den kan slås på.)
+// Sikkerhetshodere på alle sider. Hva Content-Security-Policy tillater og hvorfor: lib/csp.ts.
 const securityHeaders = [
+  { key: "Content-Security-Policy", value: contentSecurityPolicy() },
   // Nettleseren skal ikke gjette filtyper.
   { key: "X-Content-Type-Options", value: "nosniff" },
   // Andre nettsider får ikke vise Vis i en iframe (hindrer klikk-kapring).

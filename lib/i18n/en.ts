@@ -3166,4 +3166,21 @@ export const EN: Record<string, string> = {
   "Teksten kan ha maks {n} tegn.": "The text can be at most {n} characters.",
   "Dere kan ha opptil {n} maler.": "You can have up to {n} templates.",
   "Svartiden må være 7, 10, 14 eller 21 dager.": "The response time must be 7, 10, 14 or 21 days.",
+
+  /* ------------------------------------------------------------------ */
+  /*  Sikkerhet: innlogging, økter og CV-synlighet                       */
+  /* ------------------------------------------------------------------ */
+  "For mange innloggingsforsøk på denne kontoen. Vent et kvarter, eller bruk «Glemt passordet?».":
+    "Too many login attempts for this account. Wait 15 minutes, or use “Forgot password?”.",
+  "Vi har sendt mange e-poster til denne adressen. Vent en time og prøv igjen.": "We've sent a lot of emails to this address. Wait an hour and try again.",
+  "Sjekk feltene og prøv igjen.": "Check the fields and try again.",
+  "Slå på to-trinns innlogging under Konto for å bruke admin.": "Turn on two-step login under Account to use admin.",
+  "Bare du ser CV-dokumentet. En CV har ofte telefonnummer og adresse, så den vises ikke før du slår den på.":
+    "Only you can see the CV document. A CV often includes a phone number and address, so it isn't shown until you turn it on.",
+  Innlogginger: "Sessions",
+  "Har du logget inn på en maskin du ikke bruker lenger, kan du logge ut der herfra.": "If you've logged in on a device you no longer use, you can log out of it from here.",
+  "Du er bare logget inn her.": "You're only logged in here.",
+  "Logget inn her og på {n} andre enheter eller nettlesere.": "Logged in here and on {n} other devices or browsers.",
+  "Logg ut på andre enheter": "Log out other devices",
+  "Du er logget ut på alle andre enheter": "You're logged out on all other devices",
 };

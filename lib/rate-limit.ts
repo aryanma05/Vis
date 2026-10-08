@@ -19,6 +19,11 @@ export const RULES = {
   follow: { limit: 200, windowSeconds: 60 * 60, message: SLOW_DOWN },
   contact: { limit: 5, windowSeconds: 24 * 60 * 60, message: "Du har sendt mange henvendelser i dag. Prøv igjen i morgen." },
   clientError: { limit: 20, windowSeconds: 10 * 60, message: SLOW_DOWN },
+  // Per konto (hash av e-post/brukernavn, se lib/auth-rules.ts), uansett IP-adresse.
+  loginAccount: { limit: 10, windowSeconds: 15 * 60, message: "For mange innloggingsforsøk på denne kontoen. Vent et kvarter, eller bruk «Glemt passordet?»." },
+  authEmail: { limit: 6, windowSeconds: 60 * 60, message: "Vi har sendt mange e-poster til denne adressen. Vent en time og prøv igjen." },
+  // «Send ny kode» per IP-adresse (går utenom Better Auth sin egen grense, se app/actions/auth.ts).
+  authCode: { limit: 10, windowSeconds: 60 * 60, message: SLOW_DOWN },
   api: { limit: 120, windowSeconds: 60, message: "For mange forespørsler. Vent et minutt." },
   apiKey: { limit: 1200, windowSeconds: 60, message: "For mange forespørsler. Vent et minutt." },
   checkout: { limit: 10, windowSeconds: 60 * 60, message: SLOW_DOWN },

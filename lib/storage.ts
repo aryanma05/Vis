@@ -55,7 +55,10 @@ export type StoredFile = { url: string; key: string; contentType?: string };
 
 // ownerId: brukeren filen tilhører (slettes sammen med kontoen).
 // isPrivate: vises bare for eieren (gjelder filer lagret i databasen).
-export type StoreOptions = { ownerId: string; isPrivate?: boolean };
+// sensitive: lagres alltid i databasen, også når Vercel Blob er satt opp. Blob-filene er
+// offentlige for alle som har lenken, så filer som kan bli private (CV-er) må ligge der
+// tilgangen kan styres.
+export type StoreOptions = { ownerId: string; isPrivate?: boolean; sensitive?: boolean };
 
 type Sharp = (typeof import("sharp"))["default"];
 let sharpModule: Promise<Sharp | null> | null = null;
@@ -124,9 +127,9 @@ async function storeBytes(
   bytes: Uint8Array,
   type: string,
   name: string,
-  { ownerId, isPrivate = false }: StoreOptions,
+  { ownerId, isPrivate = false, sensitive = false }: StoreOptions,
 ): Promise<StoredFile> {
-  if (blobConfigured()) {
+  if (blobConfigured() && !sensitive && !isPrivate) {
     const blob = await put(name, Buffer.from(bytes), {
       access: "public",
       contentType: type,

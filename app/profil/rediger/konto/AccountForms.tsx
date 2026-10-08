@@ -114,6 +114,34 @@ export function ChangePassword() {
   );
 }
 
+// Logger ut overalt bortsett fra her, f.eks. etter innlogging på en lånt maskin.
+export function OtherSessions({ count }: { count: number }) {
+  const router = useRouter();
+  const t = useT();
+  const [pending, setPending] = useState(false);
+  const others = Math.max(0, count - 1);
+
+  async function revoke() {
+    setPending(true);
+    const { error } = await authClient.revokeOtherSessions();
+    setPending(false);
+    if (error) return toast.error(authErrorMessage(error));
+    toast.success("Du er logget ut på alle andre enheter");
+    router.refresh();
+  }
+
+  return (
+    <div className="flex max-w-md flex-wrap items-center justify-between gap-3">
+      <p className="text-sm text-mist">
+        {others === 0 ? t("Du er bare logget inn her.") : t("Logget inn her og på {n} andre enheter eller nettlesere.", { n: others })}
+      </p>
+      <Button variant="secondary" size="sm" onClick={revoke} loading={pending} disabled={others === 0}>
+        {t("Logg ut på andre enheter")}
+      </Button>
+    </div>
+  );
+}
+
 type Prefs = { comment: boolean; reply: boolean; mention: boolean; follow: boolean; digest: boolean; contact: boolean; partner: boolean; companyDigest: boolean };
 
 const NOTIFICATION_ROWS: { key: keyof Prefs; label: string; description: string }[] = [

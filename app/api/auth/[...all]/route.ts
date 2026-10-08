@@ -1,17 +1,18 @@
 import { toNextJsHandler } from "better-auth/next-js";
 import { auth } from "@/lib/auth";
+import { ipFromHeaders } from "@/lib/request-ip";
 
 const handler = toNextJsHandler(auth);
 
-// Render setter klientens IP først i X-Forwarded-For, fulgt av sine egne proxyer. Better Auth
-// stoler bare på headeren når den har én IP, og ellers deler alle besøkende samme
-// rate limit (så én person som prøver flere ganger kan stenge registreringen for alle).
-// På Render sender vi derfor bare den første IP-en videre.
+// Better Auth stoler bare på X-Forwarded-For når den har én IP, og ellers deler alle
+// besøkende samme rate limit (så én person som prøver flere ganger kan stenge registreringen
+// for alle). Bak Render står det flere IP-er der, så vi sender bare klientens IP videre,
+// funnet på samme måte som appens egne grenser (lib/request-ip.ts, inkl. TRUSTED_IP_HEADER).
 function withClientIp(request: Request) {
-  const forwarded = request.headers.get("x-forwarded-for");
-  if (!process.env.RENDER || !forwarded?.includes(",")) return request;
+  const ip = ipFromHeaders(request.headers);
+  if (ip === "lokal" || request.headers.get("x-forwarded-for") === ip) return request;
   const headers = new Headers(request.headers);
-  headers.set("x-forwarded-for", forwarded.split(",")[0].trim());
+  headers.set("x-forwarded-for", ip);
   return new Request(request, { headers });
 }
 

@@ -7,6 +7,8 @@ import { db, schema } from "@/db";
 import { runAction } from "@/lib/action";
 import { auth } from "@/lib/auth";
 import { authErrorMessage } from "@/lib/auth-errors";
+import { enforce } from "@/lib/rate-limit";
+import { clientIp } from "@/lib/request-ip";
 import { UserFacingError } from "@/lib/result";
 
 // Koden i e-posten må matches mot en e-postadresse. Logger man inn med brukernavn,
@@ -44,25 +46,23 @@ export async function verifyEmailCodeAction(identifier: string, code: string) {
   }, "auth.verify-code");
 }
 
-// Sender en ny kode. Maks én per halve minutt per adresse.
-const lastSent = new Map<string, number>();
-
+// Sender en ny kode. Maks én per halve minutt per adresse, og et fast antall per IP-adresse
+// og per e-postadresse (lib/auth-rules.ts). Server Actions går utenom Better Auth sin
+// egen grense per IP, så den settes her.
 export async function resendEmailCodeAction(identifier: string) {
   return runAction(async () => {
+    await enforce("authCode", await clientIp());
     const email = await resolveEmail(String(identifier ?? ""));
     // Svarer likt uansett om kontoen finnes, så ingen kan sjekke hvem som har konto.
     if (!email) return { sent: true };
 
-    const now = Date.now();
     const [recent] = await db
       .select({ createdAt: schema.verification.createdAt })
       .from(schema.verification)
       .where(eq(schema.verification.identifier, `email-verification-otp-${email}`))
       .orderBy(desc(schema.verification.createdAt))
       .limit(1);
-    const previous = Math.max(lastSent.get(email) ?? 0, recent?.createdAt.getTime() ?? 0);
-    if (now - previous < 30_000) throw new UserFacingError("Vent litt før du ber om en ny kode.");
-    lastSent.set(email, now);
+    if (recent && Date.now() - recent.createdAt.getTime() < 30_000) throw new UserFacingError("Vent litt før du ber om en ny kode.");
 
     try {
       await auth.api.sendVerificationOTP({ body: { email, type: "email-verification" }, headers: await headers() });

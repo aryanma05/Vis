@@ -39,8 +39,16 @@ describe("sjekk av oppsettet", () => {
       STRIPE_PRICE_PRO_MONTHLY: "price_1",
       STRIPE_PRICE_PRO_YEARLY: "price_2",
       STRIPE_PRICE_BUSINESS_MONTHLY: "price_3",
+      TRUSTED_IP_HEADER: "cf-connecting-ip",
     };
     assert.deepEqual(envProblems(env), []);
+  });
+
+  test("IP-headeren må settes i produksjon (unntatt på Vercel)", () => {
+    assert.equal(status({ NODE_ENV: "production" }, "TRUSTED_IP_HEADER"), "warn");
+    assert.equal(status({ NODE_ENV: "production", VERCEL: "1" }, "TRUSTED_IP_HEADER"), "info");
+    assert.equal(status({}, "TRUSTED_IP_HEADER"), "info");
+    assert.equal(status({ NODE_ENV: "production", TRUSTED_IP_HEADER: "true-client-ip" }, "TRUSTED_IP_HEADER"), "ok");
   });
 
   test("viser aldri verdiene", () => {
