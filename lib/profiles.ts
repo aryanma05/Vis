@@ -42,6 +42,8 @@ const profileColumns = {
   pet: profile.pet,
   cvTemplate: profile.cvTemplate,
   contactEnabled: profile.contactEnabled,
+  studyProgram: profile.studyProgram,
+  graduationYear: profile.graduationYear,
 };
 
 // Én oppslag per request, selv om både generateMetadata og siden spør.
@@ -142,6 +144,8 @@ export async function updateProfile(userId: string, input: ProfileInput) {
     customSections: input.customSections,
     accentColor: input.accentColor,
     contactEnabled: input.contactEnabled,
+    studyProgram: input.studyProgram,
+    graduationYear: input.graduationYear,
     // undefined = ikke med i skjemaet, da røres de ikke.
     ...(input.banner !== undefined ? { banner: input.banner } : {}),
     ...(input.pet !== undefined ? { pet: input.pet } : {}),

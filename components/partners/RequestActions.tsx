@@ -70,7 +70,7 @@ export function WithdrawRequest({ requestId, accepted }: { requestId: string; ac
   return (
     <>
       <Button size="xs" variant="ghost" onClick={() => setOpen(true)}>
-        {accepted ? t("Trekk meg") : t("Trekk tilbake")}
+        {accepted ? t("Trekk meg") : t("Trekk forespørselen")}
       </Button>
       <Dialog
         open={open}
@@ -84,7 +84,7 @@ export function WithdrawRequest({ requestId, accepted }: { requestId: string; ac
             {t("Avbryt")}
           </Button>
           <Button size="sm" variant="danger" loading={pending} onClick={withdraw}>
-            {accepted ? t("Trekk meg") : t("Trekk tilbake")}
+            {accepted ? t("Trekk meg") : t("Trekk forespørselen")}
           </Button>
         </div>
       </Dialog>

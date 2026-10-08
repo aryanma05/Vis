@@ -114,7 +114,7 @@ export function ChangePassword() {
   );
 }
 
-type Prefs = { comment: boolean; reply: boolean; mention: boolean; follow: boolean; digest: boolean; contact: boolean; partner: boolean };
+type Prefs = { comment: boolean; reply: boolean; mention: boolean; follow: boolean; digest: boolean; contact: boolean; partner: boolean; companyDigest: boolean };
 
 const NOTIFICATION_ROWS: { key: keyof Prefs; label: string; description: string }[] = [
   { key: "comment", label: "Kommentarer på prosjektene mine", description: "Når noen skriver en kommentar på et av prosjektene dine." },
@@ -126,7 +126,12 @@ const NOTIFICATION_ROWS: { key: keyof Prefs; label: string; description: string 
   { key: "digest", label: "Ukesoppsummering", description: "Mandag morgen: hvem som har sett profilen din, nye følgere og nytt fra folk du følger." },
 ];
 
-export function NotificationSettings({ initial, emailEnabled }: { initial: Prefs; emailEnabled: boolean }) {
+// Bare for dem som er med i en bedrift.
+const COMPANY_ROWS: { key: keyof Prefs; label: string; description: string }[] = [
+  { key: "companyDigest", label: "Søkere som venter", description: "Maks én e-post om dagen når søkere har ventet over 7 dager på svar (Bedrift)." },
+];
+
+export function NotificationSettings({ initial, emailEnabled, inCompany = false }: { initial: Prefs; emailEnabled: boolean; inCompany?: boolean }) {
   const t = useT();
   const [prefs, setPrefs] = useState(initial);
 
@@ -149,7 +154,7 @@ export function NotificationSettings({ initial, emailEnabled }: { initial: Prefs
           {t("E-post er ikke satt opp på serveren ennå, så du får bare varsler her inne.")}
         </p>
       )}
-      {NOTIFICATION_ROWS.map((r) => (
+      {[...NOTIFICATION_ROWS, ...(inCompany ? COMPANY_ROWS : [])].map((r) => (
         <Switch key={r.key} checked={prefs[r.key]} onChange={(v) => update(r.key, v)} label={t(r.label)} description={t(r.description)} />
       ))}
       <p className="text-xs text-mist/70">{t("Varslene under klokka i menyen kommer alltid, uansett hva du velger her.")}</p>

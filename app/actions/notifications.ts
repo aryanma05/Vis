@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { runAction } from "@/lib/action";
-import { markAllRead, markRead, resolvePrefs, setNotificationPrefs } from "@/lib/notifications";
+import { getNotificationPrefs, markAllRead, markRead, resolvePrefs, setNotificationPrefs } from "@/lib/notifications";
 import { requireUserForAction } from "@/lib/session";
 
 export async function markNotificationsReadAction() {
@@ -28,19 +28,23 @@ export async function setNotificationPrefsAction(prefs: {
   digest?: boolean;
   contact?: boolean;
   partner?: boolean;
+  companyDigest?: boolean;
 }) {
   return runAction(async () => {
     const user = await requireUserForAction();
+    // Sendes ikke companyDigest med (f.eks. for dem som ikke er i en bedrift), beholdes det som var.
+    const companyDigest = prefs?.companyDigest === undefined ? (await getNotificationPrefs(user.id)).companyDigest : Boolean(prefs.companyDigest);
     await setNotificationPrefs(
       user.id,
       resolvePrefs({
-        comment: Boolean(prefs.comment),
-        reply: Boolean(prefs.reply),
-        mention: Boolean(prefs.mention),
-        follow: Boolean(prefs.follow),
-        digest: Boolean(prefs.digest),
-        contact: Boolean(prefs.contact),
-        partner: Boolean(prefs.partner),
+        comment: Boolean(prefs?.comment),
+        reply: Boolean(prefs?.reply),
+        mention: Boolean(prefs?.mention),
+        follow: Boolean(prefs?.follow),
+        digest: Boolean(prefs?.digest),
+        contact: Boolean(prefs?.contact),
+        partner: Boolean(prefs?.partner),
+        companyDigest,
       }),
     );
   }, "notifications.prefs");

@@ -304,6 +304,19 @@ export async function getProjectCardsByIds(ids: string[]) {
   return toCards(rows);
 }
 
+// Nyeste offentlige prosjekter fra en gruppe personer (f.eks. teamet på en bedriftsside).
+export async function getProjectCardsByOwners(ownerIds: string[], limit = 6) {
+  if (ownerIds.length === 0) return [];
+  const rows = await db
+    .select(cardColumns)
+    .from(project)
+    .innerJoin(user, eq(user.id, project.ownerId))
+    .where(and(publicProject(), inArray(project.ownerId, ownerIds.slice(0, 500))))
+    .orderBy(desc(project.pinned), desc(project.publishedAt))
+    .limit(limit);
+  return toCards(rows);
+}
+
 // Valgt ut av redaksjonen, sist valgt først.
 export async function getFeaturedProjects(limit = 6) {
   const rows = await db

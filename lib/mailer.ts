@@ -214,6 +214,7 @@ export function notificationEmail({
   quote,
   path,
   button,
+  footer,
 }: {
   to: string;
   subject: string;
@@ -222,6 +223,8 @@ export function notificationEmail({
   quote?: string | null;
   path: string;
   button: string;
+  // Annen bunntekst, f.eks. for invitasjoner til folk som ikke har konto.
+  footer?: string;
 }): Email {
   const base = siteUrl();
   return buttonEmail({
@@ -232,11 +235,13 @@ export function notificationEmail({
     quote: quote ? (quote.length > 280 ? `${quote.slice(0, 277)}…` : quote) : null,
     button,
     url: `${base}${path}`,
-    footer: `Du får denne e-posten fordi du har slått på e-postvarsler på Vis. Skru dem av under Konto → Varsler: ${base}/profil/rediger/konto#varsler`,
+    footer: footer ?? `Du får denne e-posten fordi du har slått på e-postvarsler på Vis. Skru dem av under Konto → Varsler: ${base}/profil/rediger/konto#varsler`,
   });
 }
 
 // «Kontakt meg»: meldingen står i e-posten, og svar går rett til avsenderen.
+// viaCompany: sendt fra kandidatsøket på vegne av en bedrift. unverifiedCompany: bedriften er
+// ikke bekreftet, så mottakeren får en advarsel om å være forsiktig.
 export function contactEmail({
   to,
   senderName,
@@ -245,6 +250,8 @@ export function contactEmail({
   reason,
   message,
   path,
+  viaCompany = false,
+  unverifiedCompany = false,
 }: {
   to: string;
   senderName: string;
@@ -253,18 +260,34 @@ export function contactEmail({
   reason: string;
   message: string;
   path: string;
+  viaCompany?: boolean;
+  unverifiedCompany?: boolean;
 }): Email {
   const base = siteUrl();
+  const warning = unverifiedCompany
+    ? "Bedriften er ikke bekreftet av Vis. Vær forsiktig med å dele personopplysninger, passord eller betaling, og sjekk at de er den de sier."
+    : null;
   const email = buttonEmail({
     to,
     subject: `${senderName} vil komme i kontakt (${reason})`,
     heading: `${senderName} vil komme i kontakt`,
-    intro: `${senderName} (@${senderUsername}) sendte deg en melding om ${reason} via profilen din på Vis. Svar på denne e-posten for å svare direkte.`,
+    intro: viaCompany
+      ? `${senderName} fant deg fordi du er synlig for bedrifter på Vis, og sendte deg en melding om ${reason}. Svar på denne e-posten for å svare direkte.`
+      : `${senderName} (@${senderUsername}) sendte deg en melding om ${reason} via profilen din på Vis. Svar på denne e-posten for å svare direkte.`,
     quote: message.length > 1500 ? `${message.slice(0, 1497)}…` : message,
     button: "Se profilen deres",
     url: `${base}${path}`,
-    outro: "Vis deler ikke e-postadressen din før du svarer. Vil du ikke få flere slike meldinger, slå av «Kontakt meg» under Rediger profil.",
-    footer: `Du får denne e-posten fordi «Kontakt meg» er slått på for profilen din på Vis. Endre det her: ${base}/profil/rediger`,
+    outro: [
+      warning,
+      viaCompany
+        ? "Vis deler ikke e-postadressen din før du svarer. Vil du ikke høre fra denne bedriften igjen, kan du blokkere den under Konto → Bedrifter og deg."
+        : "Vis deler ikke e-postadressen din før du svarer. Vil du ikke få flere slike meldinger, slå av «Kontakt meg» under Rediger profil.",
+    ]
+      .filter(Boolean)
+      .join(" "),
+    footer: viaCompany
+      ? `Du får denne e-posten fordi du er synlig for bedrifter på Vis. Se hvilke bedrifter som har kontaktet deg, eller blokker dem, her: ${base}/profil/rediger/konto/bedrifter`
+      : `Du får denne e-posten fordi «Kontakt meg» er slått på for profilen din på Vis. Endre det her: ${base}/profil/rediger`,
   });
   return { ...email, replyTo: { email: senderEmail, name: senderName } };
 }

@@ -30,6 +30,10 @@ export default function GithubImporter({
 }) {
   const router = useRouter();
   const t = useT();
+  // Feilene fra serveren er allerede oversatt (runAction), så de sammenlignes med de samme
+  // meldingene oversatt her. Da virker knappen likt på norsk og engelsk.
+  const needsReconnect = (message: string) =>
+    [t("Koble til GitHub-kontoen din først."), t("GitHub-tilgangen har utløpt. Koble til GitHub på nytt.")].includes(message);
   const locale = useLocale();
   const [query, setQuery] = useState(linked ? "" : (suggestedLogin ?? ""));
   const [source, setSource] = useState<Source | null>(null);
@@ -140,7 +144,16 @@ export default function GithubImporter({
         </div>
       )}
 
-      {error && <p className="rounded-2xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">{t(error)}</p>}
+      {error && (
+        <div className="space-y-3 rounded-2xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
+          <p>{t(error)}</p>
+          {linked && canLink && needsReconnect(error) && (
+            <div className="w-full sm:w-auto">
+              <OAuthButton provider="github" mode="link" callbackURL="/ny?fra=github" label={t("Koble til GitHub på nytt")} />
+            </div>
+          )}
+        </div>
+      )}
 
       {loading && !repos && (
         <div className="space-y-2">

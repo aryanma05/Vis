@@ -290,13 +290,61 @@ function Accessory({ kind, species }: { kind: PetAccessory; species: PetSpecies 
   }
 }
 
-function Eyes({ species, look, blink }: { species: PetSpecies; look: { x: number; y: number }; blink: boolean }) {
+// Humøret styrer øynene: glad (^ ^), forelsket (hjerter), svimmel (spiraler),
+// søvnig (lukket) og overrasket (store øyne).
+export type PetMood = "normal" | "happy" | "love" | "dizzy" | "sleepy" | "surprised";
+
+function MoodEye({ cx, cy, mood, ink }: { cx: number; cy: number; mood: Exclude<PetMood, "normal" | "surprised">; ink: string }) {
+  switch (mood) {
+    case "happy":
+      return <path d={`M ${cx - 3.8} ${cy + 1.2} Q ${cx} ${cy - 4} ${cx + 3.8} ${cy + 1.2}`} stroke={ink} strokeWidth="2" strokeLinecap="round" fill="none" />;
+    case "sleepy":
+      return <path d={`M ${cx - 3.6} ${cy + 0.4} Q ${cx} ${cy + 2.6} ${cx + 3.6} ${cy + 0.4}`} stroke={ink} strokeWidth="1.8" strokeLinecap="round" fill="none" />;
+    case "love":
+      return (
+        <motion.path
+          d={`M ${cx} ${cy + 3.6} C ${cx - 6} ${cy - 0.6} ${cx - 3.4} ${cy - 5.6} ${cx} ${cy - 2.6} C ${cx + 3.4} ${cy - 5.6} ${cx + 6} ${cy - 0.6} ${cx} ${cy + 3.6} Z`}
+          fill="#ff4d6d"
+          animate={{ scale: [1, 1.18, 1] }}
+          transition={{ duration: 0.6, repeat: Infinity, ease: "easeInOut" }}
+          style={{ originX: `${cx}px`, originY: `${cy}px`, transformBox: "view-box" }}
+        />
+      );
+    case "dizzy":
+      return (
+        <motion.path
+          d={`M ${cx} ${cy} m -0.6 0 a 0.6 0.6 0 1 1 1.2 0 a 1.6 1.6 0 1 1 -3.2 0 a 2.6 2.6 0 1 1 5.2 0 a 3.6 3.6 0 1 1 -7.2 0`}
+          stroke={ink}
+          strokeWidth="1.3"
+          strokeLinecap="round"
+          fill="none"
+          animate={{ rotate: 360 }}
+          transition={{ duration: 0.9, repeat: Infinity, ease: "linear" }}
+          style={{ originX: `${cx}px`, originY: `${cy}px`, transformBox: "view-box" }}
+        />
+      );
+  }
+}
+
+function Eyes({ species, look, blink, mood }: { species: PetSpecies; look: { x: number; y: number }; blink: boolean; mood: PetMood }) {
+  // Pandaen har øynene på svarte flekker, og roboten på en mørk skjerm: da må strekene være lyse.
+  const ink = species === "robot" ? "#7df9ff" : species === "panda" ? "#ffffff" : "#1e1a1d";
+  if (mood !== "normal" && mood !== "surprised") {
+    return (
+      <>
+        {EYES[species].map(([cx, cy], i) => (
+          <MoodEye key={`${mood}-${i}`} cx={cx} cy={cy} mood={mood} ink={ink} />
+        ))}
+      </>
+    );
+  }
+  const big = mood === "surprised" ? 1.4 : 1;
   return (
     <>
       {EYES[species].map(([cx, cy], i) => (
         <motion.g
           key={i}
-          animate={{ scaleY: blink ? 0.12 : 1, x: look.x, y: look.y }}
+          animate={{ scaleY: blink ? 0.12 : big, scaleX: big, x: look.x, y: look.y }}
           transition={{ scaleY: { duration: 0.08 }, default: { type: "spring", stiffness: 260, damping: 20 } }}
           style={{ originX: `${cx}px`, originY: `${cy}px`, transformBox: "view-box" }}
         >
@@ -317,6 +365,17 @@ function Eyes({ species, look, blink }: { species: PetSpecies; look: { x: number
         </motion.g>
       ))}
     </>
+  );
+}
+
+// Ekstra rødme når dyret er glad eller blir klappet.
+function Blush({ species, show }: { species: PetSpecies; show: boolean }) {
+  const y = species === "robot" ? 93 : 81;
+  return (
+    <motion.g initial={false} animate={{ opacity: show ? 0.75 : 0 }} transition={{ duration: 0.3 }}>
+      <ellipse cx="40" cy={y} rx="5.6" ry="3.2" fill="#ff6b8b" />
+      <ellipse cx="80" cy={y} rx="5.6" ry="3.2" fill="#ff6b8b" />
+    </motion.g>
   );
 }
 
@@ -353,32 +412,40 @@ export default function PetSvg({
   blink = false,
   wag = true,
   breathe = true,
+  mood = "normal",
 }: {
   pet: PetConfig;
   look?: { x: number; y: number };
   blink?: boolean;
   wag?: boolean;
   breathe?: boolean;
+  mood?: PetMood;
 }) {
   const c = PET_COLORS[pet.color];
   const s = pet.species;
-  const eyes = <Eyes species={s} look={look} blink={blink} />;
+  const eyes = <Eyes species={s} look={look} blink={blink} mood={mood} />;
+  const sleepy = mood === "sleepy";
+  // Glad og klappet: halen logrer fortere. Søvnig: rolig, dyp pust og stille hale.
+  const excited = mood === "happy" || mood === "love";
 
   return (
     <svg viewBox="0 0 120 120" className="size-full overflow-visible" aria-hidden="true">
       <ellipse cx="60" cy="108" rx="27" ry="4.5" fill="#000000" opacity="0.2" />
       <motion.g
-        animate={breathe ? { scaleY: [1, 1.03, 1], scaleX: [1, 0.99, 1] } : undefined}
-        transition={{ duration: 2.6, repeat: Infinity, ease: "easeInOut" }}
+        animate={breathe ? { scaleY: sleepy ? [1, 1.06, 1] : [1, 1.03, 1], scaleX: sleepy ? [1, 0.98, 1] : [1, 0.99, 1] } : undefined}
+        transition={{ duration: sleepy ? 4.2 : 2.6, repeat: Infinity, ease: "easeInOut" }}
         style={{ originX: "60px", originY: "106px", transformBox: "view-box" }}
       >
         {s === "robot" ? (
-          <Robot c={c}>{eyes}</Robot>
+          <Robot c={c}>
+            {eyes}
+            <Blush species={s} show={excited} />
+          </Robot>
         ) : (
           <>
             <motion.g
-              animate={wag ? { rotate: [-7, 9, -7] } : undefined}
-              transition={{ duration: s === "hund" ? 0.5 : 1.8, repeat: Infinity, ease: "easeInOut" }}
+              animate={wag && !sleepy ? { rotate: excited ? [-14, 16, -14] : [-7, 9, -7] } : { rotate: 0 }}
+              transition={{ duration: excited ? 0.32 : s === "hund" ? 0.5 : 1.8, repeat: Infinity, ease: "easeInOut" }}
               style={{ originX: "84px", originY: "92px", transformBox: "view-box" }}
             >
               <Tail species={s} c={c} />
@@ -399,6 +466,7 @@ export default function PetSvg({
             {s !== "rev" && s !== "ugle" && <ellipse cx="60" cy="92" rx="17" ry="10" fill={s === "panda" ? "#ffffff" : c.belly} opacity="0.85" />}
             {s === "ugle" && <ellipse cx="60" cy="92" rx="18" ry="11" fill={c.belly} opacity="0.7" />}
             <Face species={s} c={c} />
+            <Blush species={s} show={excited} />
             {eyes}
           </>
         )}

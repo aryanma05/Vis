@@ -28,6 +28,28 @@ export const RULES = {
   projectUpdate: { limit: 20, windowSeconds: 24 * 60 * 60, message: "Du har lagt ut mange oppdateringer i dag. Prøv igjen i morgen." },
   partnerPost: { limit: 10, windowSeconds: 24 * 60 * 60, message: "Du har lagt ut mange prosjekter i dag. Prøv igjen i morgen." },
   partnerRequest: { limit: 10, windowSeconds: 24 * 60 * 60, message: "Du har sendt mange forespørsler i dag. Prøv igjen i morgen." },
+  jobApply: { limit: 20, windowSeconds: 24 * 60 * 60, message: "Du har sendt mange søknader i dag. Prøv igjen i morgen." },
+  challengeEntry: { limit: 20, windowSeconds: 24 * 60 * 60, message: SLOW_DOWN },
+  savedSearch: { limit: 50, windowSeconds: 24 * 60 * 60, message: SLOW_DOWN },
+  // Bedrift: tilgang, kontakt og eksport telles per bedrift (eller per bruker der det står).
+  companyCreate: { limit: 3, windowSeconds: 24 * 60 * 60, message: "Du har laget mange bedrifter i dag. Prøv igjen i morgen." },
+  companyInvite: { limit: 30, windowSeconds: 24 * 60 * 60, message: "Dere har sendt mange invitasjoner i dag. Prøv igjen i morgen." },
+  // Per e-postadresse (sha256), så ingen kan bruke invitasjoner til å mase på én adresse.
+  inviteEmail: { limit: 3, windowSeconds: 24 * 60 * 60, message: SLOW_DOWN },
+  inviteResend: { limit: 1, windowSeconds: 24 * 60 * 60, message: "Invitasjonen ble sendt på nytt nylig. Prøv igjen i morgen." },
+  companyContact: { limit: 25, windowSeconds: 24 * 60 * 60, message: "Bedriften har sendt mange henvendelser i dag. Prøv igjen i morgen." },
+  csvExport: { limit: 20, windowSeconds: 24 * 60 * 60, message: "Dere har lastet ned mange lister i dag. Prøv igjen i morgen." },
+  auditExport: { limit: 10, windowSeconds: 24 * 60 * 60, message: SLOW_DOWN },
+  candidateSearch: { limit: 300, windowSeconds: 60 * 60, message: SLOW_DOWN },
+  bulkAction: { limit: 10, windowSeconds: 60 * 60, message: SLOW_DOWN },
+  applicationNote: { limit: 120, windowSeconds: 60 * 60, message: SLOW_DOWN },
+  interviewSlots: { limit: 50, windowSeconds: 24 * 60 * 60, message: SLOW_DOWN },
+  interviewBook: { limit: 10, windowSeconds: 60 * 60, message: SLOW_DOWN },
+  companyVerify: { limit: 10, windowSeconds: 60 * 60, message: SLOW_DOWN },
+  // Disse to brukes med check(), uten å kaste: maks én oppsummering per person per døgn, og
+  // maks ett «X lagret profilen din» per bedrift og kandidat (nøkkel «bedrift:bruker») per 30 dager.
+  companyDigest: { limit: 1, windowSeconds: 20 * 60 * 60, message: SLOW_DOWN },
+  talentNotice: { limit: 1, windowSeconds: 30 * 24 * 60 * 60, message: SLOW_DOWN },
 } satisfies Record<string, Rule>;
 
 export type RuleName = keyof typeof RULES;

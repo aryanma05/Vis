@@ -3,7 +3,7 @@ import "server-only";
 import { and, desc, eq, gte, isNull, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db, schema } from "@/db";
-import type { NotificationPrefs, ReactionType } from "@/db/schema";
+import type { NotificationData, NotificationPrefs } from "@/db/schema";
 import { REACTION_LABELS } from "@/lib/constants";
 import type { Tx } from "@/lib/db-types";
 import { log } from "@/lib/log";
@@ -22,6 +22,7 @@ export const DEFAULT_NOTIFICATION_PREFS: Required<NotificationPrefs> = {
   digest: true,
   contact: true,
   partner: true,
+  companyDigest: true,
 };
 
 export function resolvePrefs(prefs: NotificationPrefs | null | undefined): Required<NotificationPrefs> {
@@ -35,7 +36,7 @@ type NotifyInput = {
   projectId?: string | null;
   commentId?: string | null;
   partnerRequestId?: string | null;
-  data?: { reaction?: ReactionType; contactId?: string } | null;
+  data?: NotificationData | null;
 };
 
 // Lager et varsel (aldri til seg selv). Reaksjoner og nye følgere varsles bare én gang
@@ -71,13 +72,27 @@ export async function notify(input: NotifyInput, tx: Tx | typeof db = db) {
   });
 }
 
+// Varseltyper som ikke får den generelle e-posten under.
+const NO_GENERIC_EMAIL = [
+  "reaction",
+  "contact",
+  "application",
+  "employee",
+  "challenge",
+  "company_invite",
+  "company_access",
+  "interview",
+  "talent",
+  "partner_request",
+  "partner_accepted",
+] as const satisfies readonly NotificationKind[];
+
 // E-post om et nytt varsel, hvis mottakeren har slått det på. Kalles etter at
 // transaksjonen er ferdig, så en treg e-posttjeneste ikke holder på databasen.
 export async function emailNotification(input: NotifyInput & { excerpt?: string | null }) {
-  // Reaksjoner sendes ikke på e-post. Kontaktforespørsler og samarbeid har sine egne
-  // e-poster med svaradresse (lib/contact.ts og lib/partner-posts.ts).
-  if (input.userId === input.actorId || input.type === "reaction" || input.type === "contact") return;
-  if (input.type === "partner_request" || input.type === "partner_accepted") return;
+  // Reaksjoner sendes ikke på e-post. Kontaktforespørsler, søknader, team, utfordringer,
+  // invitasjoner, tilgang, intervjuer, kandidatlister og samarbeid har sine egne e-poster (eller ingen).
+  if (input.userId === input.actorId || (NO_GENERIC_EMAIL as readonly NotificationKind[]).includes(input.type)) return;
   if (!emailProviderConfigured && process.env.NODE_ENV === "production") return;
 
   try {
@@ -121,7 +136,7 @@ export async function emailNotification(input: NotifyInput & { excerpt?: string 
         button: "Se prosjektet",
         path: input.projectId ? projectPath(input.projectId) : "/",
       },
-    }[input.type as Exclude<NotificationKind, "reaction" | "contact" | "partner_request" | "partner_accepted">];
+    }[input.type as Exclude<NotificationKind, (typeof NO_GENERIC_EMAIL)[number]>];
     if (!content) return;
 
     sendEmailInBackground(
@@ -197,6 +212,7 @@ export async function listNotifications(userId: string, { limit = 60, unreadOnly
     // Meldingen vises for eieren som får forespørselen, ikke i ja-varselet tilbake.
     excerpt: (r.commentBody ?? r.contactMessage ?? (r.type === "partner_request" ? r.partnerMessage : null))?.slice(0, 180) ?? null,
     reaction: r.data?.reaction ? REACTION_LABELS[r.data.reaction] : null,
+    data: r.data ?? {},
   }));
 }
 

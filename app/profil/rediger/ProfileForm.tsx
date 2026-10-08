@@ -50,6 +50,8 @@ export type ProfileValues = {
   readme: string;
   lookingFor: string;
   openTo: OpenTo[];
+  studyProgram: string;
+  graduationYear: string;
   accentColor: AccentKey | null;
   links: ProfileLink[];
   customSections: CustomSection[];
@@ -323,6 +325,19 @@ export default function ProfileForm({
               </Link>
             </p>
           )}
+          <div className="mt-6 grid gap-4 sm:grid-cols-[minmax(0,1fr)_140px]">
+            <Field
+              label={t("Studerer du?")}
+              optional
+              hint={t("Studieretning, f.eks. «Informatikk ved UiB». Bedrifter som ser etter sommerjobb og internship kan filtrere på det.")}
+              error={err("studyProgram")}
+            >
+              <input className={inputClass} value={values.studyProgram} onChange={(e) => set("studyProgram", e.target.value)} placeholder={t("Informatikk ved UiB")} maxLength={100} />
+            </Field>
+            <Field label={t("Ferdig utdannet")} optional hint={t("Årstall")} error={err("graduationYear")}>
+              <input className={inputClass} inputMode="numeric" value={values.graduationYear} onChange={(e) => set("graduationYear", e.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="2027" />
+            </Field>
+          </div>
           <Field label={t("Hva ser du etter?")} optional hint={t("Vises som et eget felt på profilen.")} error={err("lookingFor")} className="mt-6">
             <textarea
               className={`${textareaClass} min-h-20`}

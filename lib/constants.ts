@@ -1,10 +1,11 @@
 // Faste valg som brukes både i databasen, på serveren og i nettleseren.
 // (Ligger her og ikke i db/schema.ts, så klientkomponenter slipper å laste inn Drizzle.)
 
-export const OPEN_TO = ["jobb", "freelance", "samarbeid", "mentor", "prat"] as const;
+export const OPEN_TO = ["jobb", "sommerjobb", "freelance", "samarbeid", "mentor", "prat"] as const;
 export type OpenTo = (typeof OPEN_TO)[number];
 export const OPEN_TO_LABELS: Record<OpenTo, string> = {
   jobb: "Nye muligheter",
+  sommerjobb: "Sommerjobb eller internship",
   freelance: "Frilansoppdrag",
   samarbeid: "Samarbeid",
   mentor: "Mentoring",
@@ -129,3 +130,18 @@ export type PeriodKey = keyof typeof PERIODS;
 // Stillinger. Samme nøkler som i lib/jobs.ts.
 export const JOB_TYPE_LABELS = { fulltid: "Fulltid", deltid: "Deltid", internship: "Internship", sommerjobb: "Sommerjobb", trainee: "Trainee", frilans: "Frilans" } as const;
 export const REMOTE_LABELS = { nei: "På kontoret", hybrid: "Hybrid", helt: "Helt hjemmefra" } as const;
+
+// Søknader med Vis-profilen. Kolonnene i søkeroversikten, i rekkefølge.
+export const APPLICATION_STAGES = ["ny", "intervju", "tilbud", "avslag"] as const;
+export type ApplicationStage = (typeof APPLICATION_STAGES)[number];
+export type ApplicationStatus = ApplicationStage | "trukket";
+export const APPLICATION_STATUS_LABELS: Record<ApplicationStatus, string> = {
+  ny: "Ny",
+  intervju: "Intervju",
+  tilbud: "Tilbud",
+  avslag: "Avslag",
+  trukket: "Trukket",
+};
+// Hvordan man søker på en stilling.
+export const APPLY_MODES = ["vis", "ekstern"] as const;
+export type ApplyMode = (typeof APPLY_MODES)[number];

@@ -15,7 +15,10 @@ prosjektene dine på én lenke (`/@brukernavn`), pluss en feed der man oppdager 
   «åpen for»-status, prosjekter (festede først), aktivitetskart og følgere.
 - **Utseende**: banner med farge, gradient, mønster, ferdige illustrasjoner (SVG) eller eget
   bilde som kan flyttes, og et kjæledyr på profilen (åtte arter, farger, navn og tilbehør)
-  som følger musepekeren og hilser når man trykker på det.
+  som følger musepekeren med øynene. Hvert trykk gir et nytt triks (salto, piruett, dans,
+  superhopp med konfetti, rulle …), og hver art har sitt eget. Mange raske trykk gjør det
+  svimmelt, enda flere gir fest; holder man inne, blir det klappet (hjerteøyne), og får det
+  være i fred en stund, sovner det (`components/pet/Pet.tsx`, humøret i `PetSvg.tsx`).
 - **Prestasjoner** som på GitHub (`lib/achievement-defs.ts`): 18 merker, mange med nivåer
   (×2 bronse, ×3 sølv, ×4 gull). Regnes ut når profilen vises og lagres i `user_achievement`;
   eieren får en feiring når noe nytt er låst opp. Noe tilbehør til kjæledyret låses opp med merker.
@@ -58,6 +61,11 @@ prosjektene dine på én lenke (`/@brukernavn`), pluss en feed der man oppdager 
 - **Norsk og engelsk**: alt er på norsk, og engelsk kan velges i innstillingene (se «Språk» under).
 - **Innstillinger** (tannhjulet i menyen, profilmenyen og ⌘K): språk, fargetema og tilgjengelighet
   (reduser bevegelse, tettere flater, mer kontrast), lagret i nettleseren, pluss snarveier til kontoen.
+- **Bedrifter** (`/bedrifter`, se «Bedrift» under): bedriftsside med teamets prosjekter og
+  verktøy, stillinger med «Søk med Vis-profilen», søkeroversikt (Ny → Intervju → Tilbud →
+  Avslag) med automatisk beskjed til kandidaten, sammenligning side om side, kandidatsøk med
+  lagrede søk og varsler, og utfordringer som besvares med et prosjekt (`/utfordringer`).
+  Kandidaten ser søknadene sine på `/soknader`.
 - **Åpent API og webhooks** for utviklere og bedrifter (`/utviklere`).
 - **SEO**: titler og beskrivelser per side, delingsbilder (Open Graph) for forsiden,
   profiler og prosjekter, `sitemap.xml` og `robots.txt`.
@@ -96,14 +104,14 @@ med `DATABASE_URL=postgres://localhost:5432/vis`, eller en egen Neon-database/-b
 | `BETTER_AUTH_SECRET` | Tilfeldig hemmelighet, `openssl rand -base64 32` | Ja |
 | `BETTER_AUTH_URL` | `http://localhost:3000` lokalt, domenet i produksjon | Ja |
 | `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | GitHub OAuth-app, for innlogging og repo-import | Nei, knappen skjules uten |
-| `GITHUB_TOKEN` | Token uten tilganger for offentlige GitHub-data: import fra brukernavn/repo-lenke og repo-info på prosjektsidene. Uten den er grensen 60 kall i timen | Nei, men anbefalt i produksjon |
+| `GITHUB_TOKEN` | Token for offentlige GitHub-data: import fra brukernavn/repo-lenke og repo-info på prosjektsidene. Se «GitHub-import» under | Nei, men **påkrevd i produksjon** |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google OAuth-klient, for innlogging | Nei, knappen skjules uten |
 | `ADMIN_EMAILS` | Kommaseparerte e-postadresser som blir admin når kontoen lages | Nei |
 | `BLOB_READ_WRITE_TOKEN` | Vercel Blob. Uten den lagres bilder og CV-er i databasen (`/filer/...`) | Nei |
 | `BREVO_API_KEY` eller `RESEND_API_KEY`, og `EMAIL_FROM` | E-post for bekreftelse og nytt passord. Uten dem skrives e-postene til terminalen under utvikling, og i produksjon er e-postbekreftelse av | Nei |
 | `CONTACT_EMAIL` | Kontaktadresse som vises på /personvern | Nei |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` og `STRIPE_PRICE_*` | Betaling for Pro og Bedrift. Se «Betaling» under og `.env.example` | Nei, uten dem er betaling av |
-| `CRON_SECRET` | Beskytter planlagte jobber (ukesoppsummeringen). Se «Planlagte jobber» under | Nei, men trengs for ukesoppsummeringen |
+| `CRON_SECRET` | Beskytter planlagte jobber (ukesoppsummeringen, varsler om lagrede kandidatsøk og sletting av gamle søknader). Se «Planlagte jobber» under | Nei, men trengs for jobbene |
 | `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` eller `NEXT_PUBLIC_UMAMI_WEBSITE_ID` | Besøksstatistikk uten informasjonskapsler (Plausible eller Umami). Nevnes automatisk på /personvern | Nei |
 | `MICROLINK_API_KEY` | Skjermbilder av prosjektlenker via Microlink. Uten nøkkel: gratis, 50 sider i døgnet | Nei |
 | `SCREENSHOT_BROWSER_PATH` | Sti til Chrome/Chromium. Da tas skjermbildene lokalt i stedet for hos Microlink | Nei |
@@ -112,6 +120,25 @@ Under utvikling (`npm run dev`) kan du også ta skjermbilder av prosjekter som k
 din egen maskin, f.eks. `localhost:5173`. Da brukes Google Chrome på maskinen (eller
 `SCREENSHOT_BROWSER_PATH`), siden Microlink ikke når localhost. I produksjon blokkeres
 lokale adresser.
+
+### GitHub-import
+
+Import fra GitHub bruker GitHub sitt API. Uten nøkkel får hver IP-adresse 60 forespørsler i
+timen, og hos Render (og andre skytjenester) deles IP-adressen med mange andre, så den grensen
+er i praksis alltid brukt opp. Da feiler «Hent repoer» for alle som ikke har koblet til GitHub.
+Derfor må `GITHUB_TOKEN` være satt i produksjon:
+
+1. github.com/settings/personal-access-tokens → *Generate new token* (fine-grained).
+2. *Repository access*: «Public repositories (read-only)». Ingen andre tilganger trengs.
+3. Velg lang utløpstid (tokenet slutter å virke når det utløper), og legg det inn som
+   `GITHUB_TOKEN` under Environment hos Render.
+
+`lib/github.ts` prøver brukerens egen GitHub-nøkkel først (5 000 i timen per bruker), så
+`GITHUB_TOKEN` (5 000 i timen), og til slutt anonymt. Er en nøkkel ugyldig eller har nådd
+grensen, prøves neste, og brukeren får en melding med hvor lenge de må vente. README-er hentes
+fra raw.githubusercontent.com, som ikke teller mot grensen, og repoer mellomlagres i ti
+minutter. `/admin?fane=system` viser om tokenet virker og hvor mye som er igjen av grensen, og
+et utløpt token havner i feilloggen der.
 
 GitHub OAuth-app: github.com/settings/developers → New OAuth App.
 Callback-URL: `http://localhost:3000/api/auth/callback/github` (lag en egen app for produksjon).
@@ -170,7 +197,11 @@ lib/prepare-image.ts      krymper bilder i nettleseren før opplasting
 lib/mailer.ts             e-post (Brevo/Resend) og innholdet i e-postene
 lib/account.ts            kontosiden: dataeksport og sletting av filer
 lib/billing.ts, stripe.ts abonnementer (Pro og Bedrift) og Stripe-klienten
-lib/companies.ts, jobs.ts bedriftssider og stillinger; lib/talent.ts er kandidatsøket
+lib/companies.ts, jobs.ts bedriftssider, teamet og stillinger; lib/talent.ts er kandidatsøket
+lib/applications.ts       «Søk med Vis-profilen» og søkeroversikten (status, notater, varsler)
+lib/saved-searches.ts     lagrede kandidatsøk og e-postvarsler om nye kandidater
+lib/challenges.ts         utfordringer fra bedrifter og svarene (prosjekter)
+lib/cron.ts               tilgangssjekk for planlagte jobber (CRON_SECRET)
 lib/api.ts, api-v1.ts     det åpne API-et; lib/api-keys.ts er nøklene
 lib/webhooks.ts           webhooks for bedrifter (signerte leveringer)
 lib/i18n/                 språk: t(), getLocale() og den engelske ordboka (en.ts)
@@ -225,6 +256,10 @@ følgere, nytt fra folk man følger og utvalgte prosjekter). Kall den med
 eller gratis hos cron-job.org, hver time mandag kl. 07–10. Hver kjøring tar en porsjon på
 200; ingen får to på under seks dager. E-posten har ett-klikks avmelding (List-Unsubscribe).
 
+`/api/cron/daglig` (én gang i døgnet, f.eks. kl. 07) sender e-post til bedrifter om nye
+kandidater i lagrede søk og sletter søknader som ikke er endret på et år. Samme
+`Authorization: Bearer <CRON_SECRET>`.
+
 ## Betaling, Pro og Bedrift
 
 Vis er gratis. **Pro** (for personer) og **Bedrift** (for bedrifter) betales med Stripe.
@@ -236,8 +271,11 @@ Vis er gratis. **Pro** (for personer) og **Bedrift** (for bedrifter) betales med
 | Innsikt | 30 dager | 90 dager og 12 måneder | |
 | CV-maler | 3 | + Elegant og Tydelig | |
 | Eget domene, uten «Laget med Vis» | | ✓ | |
-| Bedriftsside og stillinger | én aktiv stilling | | ubegrenset |
-| Kandidatsøk, lister, CSV, kontakt | | | ✓ |
+| Bedriftsside, team og stillinger | én aktiv stilling | | ubegrenset |
+| Søk med Vis-profilen, søkerliste | ✓ | | ✓ |
+| Søkeroversikt med status og beskjed til kandidaten, notater, sammenligning | | | ✓ |
+| Kandidatsøk, lagrede søk med varsel, lister, CSV, kontakt | | | ✓ |
+| Utfordringer | | | ✓ |
 
 - `lib/stripe.ts` er en liten klient over Stripe sitt REST-API (ingen ekstra pakke), med
   sjekk av webhook-signaturer. `lib/billing.ts` lager Checkout-sider og kundeportal,
@@ -252,7 +290,35 @@ Vis er gratis. **Pro** (for personer) og **Bedrift** (for bedrifter) betales med
 - **Hvem har sett profilen:** lagres bare for innloggede besøkende som ikke har skjult seg
   (Konto → Personvern). Den som skjuler seg, ser heller ikke selv hvem som har besøkt dem.
 - **Synlig for bedrifter:** av som standard. Bare de som slår det på (Rediger profil) finnes
-  i kandidatsøket, og bedrifter ser aldri e-postadressen.
+  i kandidatsøket, og bedrifter ser aldri e-postadressen (bortsett fra når noen søker).
+
+## Bedrift
+
+Bedrift-delen er bygget rundt én ting: å la bedrifter se og vurdere ekte arbeid, raskt og
+billig. En CV viser ikke hva folk kan, men prosjektene gjør det.
+
+- **Søk med Vis-profilen** (`lib/applications.ts`): stillinger kan ta imot søknader på Vis i
+  stedet for en lenke (`job.apply_mode = 'vis'`, standard for nye stillinger). Kandidaten
+  velger opptil tre prosjekter og skriver en kort melding; profilen, prosjektene og
+  e-postadressen deles med bedriften. Alle søkere står i samme format under Søkere.
+- **Søkeroversikt:** kolonnene Ny → Intervju → Tilbud → Avslag, med dra-og-slipp. Kandidaten
+  får varsel og e-post når kortet flyttes, og ser alt på `/soknader`. Gratis-bedrifter ser
+  søkerne; å flytte dem, notater og sammenligning krever Bedrift.
+- **Sammenlign** (`/bedrift/<slug>/admin/sammenlign?folk=…`): opptil fire kandidater side om
+  side med prosjekter, teknologier faktisk brukt (taggene på prosjektene, med antall),
+  ferdigheter fra CV-en, erfaring, utdanning og søknaden.
+- **Lagrede søk** (`lib/saved-searches.ts`): kandidatsøket kan lagres. Bedriften ser «N nye
+  siden sist» og får e-post fra den daglige jobben. «Ny» betyr synlig for bedrifter etter
+  forrige varsel (`profile.visible_since`).
+- **Studenter:** «Sommerjobb eller internship» under «Åpen for», og studieretning og ferdig-år
+  på profilen. Kandidatsøket har filteret «Studenter».
+- **Team på bedriftssiden:** folk som jobber i bedriften (`company_employee`, uten tilgang
+  til administrasjonen) vises med prosjektene sine, sammen med «Verktøy vi bruker». De får
+  varsel og kan fjerne seg selv.
+- **Utfordringer** (`lib/challenges.ts`, `/utfordringer`): bedriften legger ut en liten
+  oppgave, og folk svarer med et av prosjektene sine. Svarene er offentlige, og bedriften kan
+  fremheve de beste (den som svarte får beskjed).
+- **Personvern:** søknader slettes et år etter siste endring, og tas med i dataeksporten.
 
 ### Eget domene (Pro)
 
@@ -272,8 +338,9 @@ Dokumentasjonen for brukerne ligger på `/utviklere`.
 - **Nøkler** (`lib/api-keys.ts`): lages under Konto → Utviklere. Bare en SHA-256-hash lagres;
   selve nøkkelen vises én gang. Uten nøkkel 120 kall/min per IP, med nøkkel 1 200/min
   (`RULES.api` og `RULES.apiKey` i `lib/rate-limit.ts`).
-- **Webhooks** (`lib/webhooks.ts`, krever Bedrift): `job.published`, `job.closed` og
-  `job.application_click` sendes som signert POST (`Vis-Signature`, HMAC-SHA256 som hos
+- **Webhooks** (`lib/webhooks.ts`, krever Bedrift): `job.published`, `job.closed`,
+  `job.application_click`, `job.application` (ny søknad med Vis-profilen, med kandidaten) og
+  `job.application_status` (ny status) sendes som signert POST (`Vis-Signature`, HMAC-SHA256 som hos
   Stripe) etter at svaret til brukeren er sendt (`after()` i `lib/jobs.ts`). Tre forsøk,
   ingen omdirigeringer, bare https og offentlige adresser (localhost er lov i utvikling).
   De siste leveringene vises under Administrer → Utviklere hos bedriften.

@@ -26,11 +26,11 @@ describe("API-nøkler og webhooks", { skip }, () => {
   before(async () => {
     const { db, schema } = await import("@/db");
     for (const id of [owner, other]) {
-      await db.insert(schema.user).values({ id, name: "Test", email: `${id}@test.no`, username: id.slice(0, 30) });
+      await db.insert(schema.user).values({ id, name: "Test", email: `${id}@test.no`, emailVerified: true, username: id.slice(0, 30) });
     }
     await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
     const { createCompany } = await import("@/lib/companies");
-    companyId = (await createCompany(owner, { name: `Testfirma ${owner.slice(-6)}` })).id;
+    companyId = (await createCompany(owner, { name: `Testfirma ${owner.slice(-6)}`, acceptTerms: true })).id;
   });
 
   after(async () => {

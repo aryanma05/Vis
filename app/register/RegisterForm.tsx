@@ -12,6 +12,7 @@ import { FieldError, Hint, inputClass, labelClass } from "@/components/ui/field"
 import { authClient } from "@/lib/auth-client";
 import { authError, type AuthField } from "@/lib/auth-errors";
 import { emailError, emailSuggestion } from "@/lib/email";
+import { safeInternalPath } from "@/lib/safe-path";
 import { toUsernameBase, usernameError } from "@/lib/username";
 
 type Errors = Partial<Record<AuthField, React.ReactNode>>;
@@ -27,8 +28,12 @@ function passwordStrength(pw: string) {
 }
 const STRENGTH = ["For kort", "Svakt", "Greit", "Bra", "Sterkt"];
 
-export default function RegisterForm({ devHint }: { devHint: boolean }) {
+// next: hvor man sendes når kontoen er klar (?neste=, f.eks. en invitasjon), ellers /velkommen.
+export default function RegisterForm({ devHint, next = null }: { devHint: boolean; next?: string | null }) {
   const router = useRouter();
+  const nextPath = safeInternalPath(next);
+  const done = nextPath ?? "/velkommen";
+  const loginHref = nextPath ? `/logg-inn?neste=${encodeURIComponent(nextPath)}` : "/logg-inn";
   const t = useT();
   // Feilmeldingene er norske nøkler; elementer (med lenker) vises som de er.
   const tr = (value: React.ReactNode) => (typeof value === "string" ? t(value) : value);
@@ -101,7 +106,7 @@ export default function RegisterForm({ devHint }: { devHint: boolean }) {
             email: (
               <>
                 {t(info.message)}{" "}
-                <Link href="/logg-inn" className="font-medium text-fg underline">
+                <Link href={loginHref} className="font-medium text-fg underline">
                   {t("Logg inn i stedet")}
                 </Link>
               </>
@@ -123,7 +128,7 @@ export default function RegisterForm({ devHint }: { devHint: boolean }) {
         return;
       }
 
-      router.push("/velkommen");
+      router.push(done);
       router.refresh();
     } catch {
       setFormError(authError({}).message);
@@ -138,7 +143,7 @@ export default function RegisterForm({ devHint }: { devHint: boolean }) {
         email={sentTo}
         devHint={devHint}
         onVerified={() => {
-          router.push("/velkommen");
+          router.push(done);
           router.refresh();
         }}
         onBack={() => setSentTo(null)}

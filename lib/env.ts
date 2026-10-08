@@ -55,7 +55,14 @@ export function checkEnv(env: Env = process.env): EnvCheck[] {
   add("E-post", "CONTACT_EMAIL", has(env, "CONTACT_EMAIL") ? "ok" : prod ? "warn" : "info", has(env, "CONTACT_EMAIL") ? "Vises på /personvern og /vilkar." : "Mangler. Personvernerklæringen må ha en kontaktadresse.");
 
   // Innhold og integrasjoner
-  add("Integrasjoner", "GITHUB_TOKEN", has(env, "GITHUB_TOKEN") ? "ok" : prod ? "warn" : "info", has(env, "GITHUB_TOKEN") ? "GitHub-import har høy grense." : "Uten token tåler GitHub-import bare 60 kall i timen for hele appen.");
+  add(
+    "Integrasjoner",
+    "GITHUB_TOKEN",
+    has(env, "GITHUB_TOKEN") ? "ok" : prod ? "error" : "info",
+    has(env, "GITHUB_TOKEN")
+      ? "GitHub-import har høy grense. Se «GitHub-import» øverst for om tokenet virker."
+      : "Mangler. Uten token deler appen 60 kall i timen med alle andre på samme IP-adresse, så GitHub-import feiler i praksis.",
+  );
   const github = has(env, "GITHUB_CLIENT_ID") && has(env, "GITHUB_CLIENT_SECRET");
   add("Integrasjoner", "GITHUB_CLIENT_ID", github ? "ok" : "info", github ? "Innlogging med GitHub er på." : "Innlogging med GitHub er av.");
   const google = has(env, "GOOGLE_CLIENT_ID") && has(env, "GOOGLE_CLIENT_SECRET");
@@ -68,7 +75,14 @@ export function checkEnv(env: Env = process.env): EnvCheck[] {
     ownBrowser || has(env, "MICROLINK_API_KEY") ? "ok" : "info",
     ownBrowser ? "Skjermbilder tas med egen nettleser." : has(env, "MICROLINK_API_KEY") ? "Skjermbilder via Microlink med nøkkel." : "Skjermbilder via Microlink uten nøkkel: 50 sider i døgnet for hele appen.",
   );
-  add("Integrasjoner", "CRON_SECRET", has(env, "CRON_SECRET") ? "ok" : "warn", has(env, "CRON_SECRET") ? "Planlagte jobber (ukesoppsummering) er beskyttet." : "Mangler. Ukesoppsummeringen på e-post sendes ikke.");
+  add(
+    "Integrasjoner",
+    "CRON_SECRET",
+    has(env, "CRON_SECRET") ? "ok" : "warn",
+    has(env, "CRON_SECRET")
+      ? "Planlagte jobber er beskyttet. Husk å kalle /api/cron/ukesoppsummering (mandager) og /api/cron/daglig (hver dag)."
+      : "Mangler. Ukesoppsummeringen og varsler om lagrede kandidatsøk sendes ikke, og gamle søknader slettes ikke.",
+  );
 
   // Betaling
   const stripe = has(env, "STRIPE_SECRET_KEY");
