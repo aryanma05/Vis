@@ -3183,4 +3183,20 @@ export const EN: Record<string, string> = {
   "Logget inn her og på {n} andre enheter eller nettlesere.": "Logged in here and on {n} other devices or browsers.",
   "Logg ut på andre enheter": "Log out other devices",
   "Du er logget ut på alle andre enheter": "You're logged out on all other devices",
+
+  /* ------------------------------------------------------------------ */
+  /*  Meldinger mellom venner                                            */
+  /* ------------------------------------------------------------------ */
+  Meldinger: "Messages",
+  Du: "You",
+  "Ingen venner ennå": "No friends yet",
+  "Når du og noen andre følger hverandre, kan dere sende meldinger her.": "When you and someone else follow each other, you can message each other here.",
+  "Si hei til {name}": "Say hi to {name}",
+  "Ingen meldinger ennå. Si hei til {name}!": "No messages yet. Say hi to {name}!",
+  "Skriv en melding …": "Write a message …",
+  "Skriv en melding først.": "Write a message first.",
+  "Dere er ikke venner ennå": "You're not friends yet",
+  "Dere må følge hverandre for å sende meldinger.": "You need to follow each other to send messages.",
+  "sendte deg en melding": "sent you a message",
+  "Navnet tilhører en bekreftet bedrift. Velg et annet navn.": "That name belongs to a verified company. Choose another name.",
 };

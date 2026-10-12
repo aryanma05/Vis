@@ -44,7 +44,8 @@ type NotifyInput = {
 export async function notify(input: NotifyInput, tx: Tx | typeof db = db) {
   if (input.userId === input.actorId) return;
 
-  if (input.type === "reaction" || input.type === "follow") {
+  // Meldinger: ett ulest varsel per avsender, uansett hvor mange meldinger som kommer.
+  if (input.type === "reaction" || input.type === "follow" || input.type === "message") {
     const [recent] = await tx
       .select({ id: notification.id })
       .from(notification)
@@ -54,7 +55,7 @@ export async function notify(input: NotifyInput, tx: Tx | typeof db = db) {
           eq(notification.actorId, input.actorId),
           eq(notification.type, input.type),
           input.projectId ? eq(notification.projectId, input.projectId) : isNull(notification.projectId),
-          gte(notification.createdAt, sql`now() - interval '1 day'`),
+          input.type === "message" ? isNull(notification.readAt) : gte(notification.createdAt, sql`now() - interval '1 day'`),
         ),
       )
       .limit(1);
@@ -85,6 +86,7 @@ const NO_GENERIC_EMAIL = [
   "talent",
   "partner_request",
   "partner_accepted",
+  "message",
 ] as const satisfies readonly NotificationKind[];
 
 // E-post om et nytt varsel, hvis mottakeren har slått det på. Kalles etter at

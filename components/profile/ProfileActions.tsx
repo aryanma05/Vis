@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { BarChart3, FileText, Flag, MoreHorizontal, PenLine } from "lucide-react";
+import { BarChart3, FileText, Flag, MessageCircle, MoreHorizontal, PenLine } from "lucide-react";
 import { useT } from "@/components/LocaleProvider";
 import ReportDialog from "@/components/moderation/ReportDialog";
 import FollowButton from "@/components/social/FollowButton";
@@ -19,6 +19,7 @@ export default function ProfileActions({
   isFollowing,
   loggedIn,
   contactEnabled = false,
+  canMessage = false,
 }: {
   userId: string;
   username: string;
@@ -27,6 +28,8 @@ export default function ProfileActions({
   isFollowing: boolean;
   loggedIn: boolean;
   contactEnabled?: boolean;
+  // Dere følger hverandre (venner), så dere kan sende meldinger.
+  canMessage?: boolean;
 }) {
   const t = useT();
   const [reporting, setReporting] = useState(false);
@@ -39,6 +42,11 @@ export default function ProfileActions({
         </ButtonLink>
       ) : (
         <FollowButton userId={userId} initialFollowing={isFollowing} loggedIn={loggedIn} name={name} className="flex-1 sm:flex-none" />
+      )}
+      {canMessage && (
+        <ButtonLink href={`/meldinger/${username}`} variant="secondary" size="sm">
+          <MessageCircle className="size-4" /> {t("Melding")}
+        </ButtonLink>
       )}
       {!isOwner && contactEnabled && <ContactButton recipientId={userId} name={name} loggedIn={loggedIn} />}
       <ShareMenu path={`/@${username}`} title={t("{name} på Vis", { name })} kind="profil" username={username} label={t(isOwner ? "Del profil" : "Del")} />

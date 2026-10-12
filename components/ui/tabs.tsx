@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { useId, type ReactNode } from "react";
+import { useId, useState, type ReactNode } from "react";
 
 export type TabItem = { key: string; label: ReactNode; href?: string; count?: number | null };
 
 // Faner som en segmentert kontroll (som i iOS): en kapsel der markøren glir mellom
 // valgene. Med href blir de lenker (URL-styrt), ellers knapper som kaller onSelect.
+// Med både href og onSelect er de lenker som bytter fane i nettleseren uten å hente siden.
 export function Tabs({
   items,
   active,
@@ -25,12 +26,15 @@ export function Tabs({
 }) {
   const layoutId = useId();
   const pad = size === "sm" ? "h-8 px-3 text-[13px]" : "h-9 px-4 text-sm";
+  // Markøren flytter seg med en gang man klikker, ikke først når den nye siden er hentet.
+  const [clicked, setClicked] = useState<{ key: string; from: string } | null>(null);
+  const current = clicked?.from === active ? clicked.key : active;
 
   return (
     <nav aria-label={label} className={`no-scrollbar max-w-full overflow-x-auto ${className}`}>
       <div className="glass-chip inline-flex gap-0.5 rounded-full p-1">
         {items.map((item) => {
-          const isActive = item.key === active;
+          const isActive = item.key === current;
           const inner = (
             <>
               {isActive && (
@@ -50,7 +54,20 @@ export function Tabs({
             isActive ? "text-fg" : "text-mist hover:text-fg"
           }`;
           return item.href ? (
-            <Link key={item.key} href={item.href} scroll={false} aria-current={isActive ? "page" : undefined} className={cls}>
+            <Link
+              key={item.key}
+              href={item.href}
+              scroll={false}
+              aria-current={isActive ? "page" : undefined}
+              className={cls}
+              onClick={(e) => {
+                if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+                if (onSelect) {
+                  e.preventDefault();
+                  onSelect(item.key);
+                } else setClicked({ key: item.key, from: active });
+              }}
+            >
               {inner}
             </Link>
           ) : (

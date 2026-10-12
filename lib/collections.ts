@@ -143,10 +143,3 @@ export async function listPublicCollections(ownerId: string) {
   });
 }
 
-export async function countPublicCollections(ownerId: string) {
-  const [{ n }] = await db
-    .select({ n: count() })
-    .from(collection)
-    .where(and(eq(collection.ownerId, ownerId), eq(collection.isPublic, true)));
-  return n;
-}
