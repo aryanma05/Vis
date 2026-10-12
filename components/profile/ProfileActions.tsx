@@ -35,21 +35,25 @@ export default function ProfileActions({
   const [reporting, setReporting] = useState(false);
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      {isOwner ? (
-        <ButtonLink href="/profil/rediger" size="sm" className="flex-1 sm:flex-none">
-          <PenLine className="size-4" /> {t("Rediger profil")}
-        </ButtonLink>
-      ) : (
-        <FollowButton userId={userId} initialFollowing={isFollowing} loggedIn={loggedIn} name={name} className="flex-1 sm:flex-none" />
-      )}
-      {canMessage && (
-        <ButtonLink href={`/meldinger/${username}`} variant="secondary" size="sm">
-          <MessageCircle className="size-4" /> {t("Melding")}
-        </ButtonLink>
-      )}
-      {!isOwner && contactEnabled && <ContactButton recipientId={userId} name={name} loggedIn={loggedIn} />}
-      <ShareMenu path={`/@${username}`} title={t("{name} på Vis", { name })} kind="profil" username={username} label={t(isOwner ? "Del profil" : "Del")} />
+    // «…» står alltid øverst til høyre, så menyen åpner seg innover i kortet selv om knappene
+    // til venstre må bryte over to linjer.
+    <div className="flex items-start gap-2">
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+        {isOwner ? (
+          <ButtonLink href="/profil/rediger" size="sm" className="flex-1 sm:flex-none">
+            <PenLine className="size-4" /> {t("Rediger profil")}
+          </ButtonLink>
+        ) : (
+          <FollowButton userId={userId} initialFollowing={isFollowing} loggedIn={loggedIn} name={name} className="flex-1 sm:flex-none" />
+        )}
+        {canMessage && (
+          <ButtonLink href={`/meldinger/${username}`} variant="secondary" size="icon-sm" aria-label={t("Send melding")} title={t("Send melding")}>
+            <MessageCircle className="size-4" />
+          </ButtonLink>
+        )}
+        {!isOwner && contactEnabled && <ContactButton recipientId={userId} name={name} loggedIn={loggedIn} />}
+        <ShareMenu path={`/@${username}`} title={t("{name} på Vis", { name })} kind="profil" username={username} label={t(isOwner ? "Del profil" : "Del")} />
+      </div>
       <Menu
         label={t("Mer")}
         align="end"
