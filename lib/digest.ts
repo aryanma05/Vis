@@ -100,7 +100,9 @@ export async function buildDigest(userId: string, name: string, picks: DigestCon
 }
 
 // Sender til neste porsjon. Returnerer hvor mange som fikk e-post og hvor mange som ble hoppet over.
-export async function sendWeeklyDigests({ batch = 200 }: { batch?: number } = {}) {
+// Kjøres én gang om dagen, så oppsummeringene spres utover uka. Maks 100 om dagen lar resten av
+// Brevo sin gratiskvote (300 i døgnet) stå igjen til innloggingskoder og varsler.
+export async function sendWeeklyDigests({ batch = 100 }: { batch?: number } = {}) {
   const featured = await getFeaturedProjects(3);
   const picksSource = featured.length > 0 ? featured : await getTrendingProjects({ limit: 3 });
   const picks = picksSource.map((p) => ({ title: p.title, owner: p.owner.name, path: projectPath(p.id) }));

@@ -110,7 +110,7 @@ Dette er ikke tekniske kontroller, og koden kan ikke avgjøre dem.
       når alt er testet. Webhooken peker til `https://visplatform.no/api/stripe/webhook`.
 - [ ] GitHub- og Google-innlogging: egne OAuth-apper for produksjon, med bare
       `https://visplatform.no/api/auth/callback/...` som tilbakekallsadresse.
-- [ ] `CRON_SECRET` satt, og cron-jobbene kaller `/api/cron/ukesoppsummering` og `/api/cron/daglig`
+- [ ] `CRON_SECRET` satt, og cron-jobbene kaller `/api/cron/ukesoppsummering` og `/api/cron/daglig` én gang hver dag
       (den daglige sletter gamle søknader og CV-utkast).
 
 ## Etter hver deploy

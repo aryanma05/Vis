@@ -1,15 +1,14 @@
 import { purgeAudit } from "@/lib/audit";
 import { expireInvites } from "@/lib/company-invites";
 import { cronAuthorized } from "@/lib/cron";
-import { purgeOldSlots, sendInterviewReminders } from "@/lib/interviews";
 import { log } from "@/lib/log";
 import { sendResponseDigests } from "@/lib/pipeline";
 import { runRetention } from "@/lib/retention";
 import { sendSavedSearchAlerts } from "@/lib/saved-searches";
 
 // Planlagt jobb, én gang i døgnet (f.eks. kl. 07): varsler om nye kandidater i lagrede søk,
-// sletter det som har passert lagringstiden (søknader, lister, logg, gamle intervjutider),
-// rydder invitasjoner, og sender oppsummeringer og påminnelser. Jobbene kjører hver for seg,
+// sletter det som har passert lagringstiden (søknader, lister og logg), rydder invitasjoner
+// og sender oppsummeringer. Jobbene kjører hver for seg,
 // så én som feiler stopper ikke de andre. Kall med «Authorization: Bearer <CRON_SECRET>».
 export const maxDuration = 300;
 
@@ -18,8 +17,6 @@ const JOBS = {
   retention: runRetention,
   invites: expireInvites,
   digests: sendResponseDigests,
-  reminders: sendInterviewReminders,
-  slots: purgeOldSlots,
   audit: purgeAudit,
 } satisfies Record<string, () => Promise<unknown>>;
 

@@ -142,13 +142,15 @@ Tester: `tests/access-control.test.ts` (bruker A mot bruker B, og uten innloggin
 | Alle (også API og innbyggingskort) | navn, brukernavn, profilbilde, profiltekst, publiserte prosjekter, kommentarer, reaksjoner, følgere, det man har fylt inn i CV-en (erfaring, utdanning, ferdigheter), CV-dokumentet hvis det er gjort synlig |
 | Bedrifter | profilen i kandidatsøket bare hvis «Synlig for bedrifter» er på (av som standard); e-post bare når man selv søker eller svarer |
 | Bare eieren | e-post, utkast, skjult CV, varsler, private samlinger, innsikt |
+| Bare de to i samtalen | meldinger mellom venner (to som følger hverandre) |
 
 - **Innsyn og dataportabilitet:** Konto → «Last ned alt vi har lagret om deg» (`/api/mine-data`, JSON).
 - **Sletting:** Konto → Slett konto. Alt slettes med en gang (cascade i databasen), sammen med filene og
   abonnementet hos Stripe. Sikkerhetskopier hos Neon forsvinner når lagringstiden der går ut.
 - **Lagringstid** (`lib/retention.ts`, daglig jobb): søknader 12 måneder etter siste endring (kortere hos
-  bedrifter som velger det), kontaktforespørsler 24 måneder, innholdet i CV-importutkast etter ett døgn,
-  feilloggen 30 dager, grensetellere 2 dager.
+  bedrifter som velger det), kontaktforespørsler 24 måneder, meldinger mellom venner til en av dem sletter
+  kontoen, innholdet i CV-importutkast etter ett døgn,
+  feilloggen 30 dager, grensetellere 2 dager (31 dager for «maks én gang per 30 dager»).
 - **Logger:** JSON-linjer uten headere, informasjonskapsler, passord eller koder. Feil kan inneholde
   bruker-id og sti. Feilloggen under `/admin` har samme innhold.
 - **Informasjonskapsler:** bare økten og språkvalget. Besøksstatistikken (Plausible/Umami) bruker ingen.

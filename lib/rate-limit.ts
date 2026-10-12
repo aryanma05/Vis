@@ -1,6 +1,6 @@
 import "server-only";
 
-import { lt, sql } from "drizzle-orm";
+import { and, lt, notInArray, or, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { UserFacingError } from "@/lib/result";
 
@@ -17,6 +17,8 @@ export const RULES = {
   projectCreate: { limit: 30, windowSeconds: 24 * 60 * 60, message: "Du har laget mange prosjekter i dag. Prøv igjen i morgen." },
   githubImport: { limit: 60, windowSeconds: 60 * 60, message: "Du har importert mye fra GitHub på kort tid. Vent litt og prøv igjen." },
   follow: { limit: 200, windowSeconds: 60 * 60, message: SLOW_DOWN },
+  message: { limit: 300, windowSeconds: 60 * 60, message: SLOW_DOWN },
+  view: { limit: 1, windowSeconds: 24 * 60 * 60, message: SLOW_DOWN },
   contact: { limit: 5, windowSeconds: 24 * 60 * 60, message: "Du har sendt mange henvendelser i dag. Prøv igjen i morgen." },
   clientError: { limit: 20, windowSeconds: 10 * 60, message: SLOW_DOWN },
   // Per konto (hash av e-post/brukernavn, se lib/auth-rules.ts), uansett IP-adresse.
@@ -48,8 +50,6 @@ export const RULES = {
   candidateSearch: { limit: 300, windowSeconds: 60 * 60, message: SLOW_DOWN },
   bulkAction: { limit: 10, windowSeconds: 60 * 60, message: SLOW_DOWN },
   applicationNote: { limit: 120, windowSeconds: 60 * 60, message: SLOW_DOWN },
-  interviewSlots: { limit: 50, windowSeconds: 24 * 60 * 60, message: SLOW_DOWN },
-  interviewBook: { limit: 10, windowSeconds: 60 * 60, message: SLOW_DOWN },
   companyVerify: { limit: 10, windowSeconds: 60 * 60, message: SLOW_DOWN },
   // Disse to brukes med check(), uten å kaste: maks én oppsummering per person per døgn, og
   // maks ett «X lagret profilen din» per bedrift og kandidat (nøkkel «bedrift:bruker») per 30 dager.
@@ -75,12 +75,7 @@ export async function hit(key: string, rule: Pick<Rule, "limit" | "windowSeconds
   const count = Number(row.count);
 
   // Rydder gamle tellere av og til, så tabellen ikke vokser.
-  if (Math.random() < 0.01) {
-    void db
-      .delete(schema.rateBucket)
-      .where(lt(schema.rateBucket.windowStart, sql`now() - interval '2 days'`))
-      .catch(() => {});
-  }
+  if (Math.random() < 0.01) void pruneRateBuckets().catch(() => {});
 
   return {
     ok: count <= rule.limit,
@@ -88,6 +83,23 @@ export async function hit(key: string, rule: Pick<Rule, "limit" | "windowSeconds
     remaining: Math.max(0, rule.limit - count),
     resetAt: new Date(new Date(row.window_start).getTime() + rule.windowSeconds * 1000),
   };
+}
+
+// Sletter tellere etter to døgn, men regler med lengre vindu (f.eks. «maks én gang per 30 dager»)
+// beholdes til vinduet er over, så de ikke starter på nytt fordi telleren ble ryddet bort for tidlig.
+const DAY = 24 * 60 * 60;
+const LONG_RULES = Object.entries(RULES).filter(([, r]) => r.windowSeconds > DAY).map(([name]) => name);
+const LONGEST = Math.max(...Object.values(RULES).map((r) => r.windowSeconds)) + DAY;
+export function pruneRateBuckets() {
+  const { rateBucket } = schema;
+  return db
+    .delete(rateBucket)
+    .where(
+      or(
+        and(lt(rateBucket.windowStart, sql`now() - interval '2 days'`), notInArray(sql`split_part(${rateBucket.key}, ':', 1)`, LONG_RULES)),
+        lt(rateBucket.windowStart, sql`now() - make_interval(secs => ${LONGEST})`),
+      ),
+    );
 }
 
 // Kaster en feil brukeren kan se når grensen er nådd.

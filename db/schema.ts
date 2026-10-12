@@ -553,6 +553,8 @@ export const notificationType = pgEnum("notification_type", [
   // Noen vil hjelpe med et prosjekt du har lagt ut på /partnere, og når du får ja.
   "partner_request",
   "partner_accepted",
+  // Ny melding fra en venn. Ett ulest varsel per avsender, uansett hvor mange meldinger.
+  "message",
 ]);
 
 export const notification = pgTable(
@@ -597,6 +599,27 @@ export const follow = pgTable(
   (t) => [
     primaryKey({ columns: [t.followerId, t.followingId] }),
     index("follow_following_idx").on(t.followingId, t.createdAt.desc()),
+  ],
+);
+
+// Meldinger mellom venner (to som følger hverandre). Samtalen er bare paret avsender/mottaker.
+export const message = pgTable(
+  "message",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    senderId: text("sender_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    recipientId: text("recipient_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    body: text("body").notNull(),
+    readAt: timestamp("read_at", { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index("message_pair_idx").on(t.senderId, t.recipientId, t.createdAt.desc()),
+    index("message_recipient_idx").on(t.recipientId, t.readAt),
   ],
 );
 

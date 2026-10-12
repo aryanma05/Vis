@@ -591,46 +591,14 @@ dialog.modal[open] > * {
   --glass-strong: var(--surface);
 }
 
-/* Språkbytte (components/LocaleProvider.tsx): det gamle språket toner raskt ut og det
-   nye inn, med et snev av uskarphet så teksten ikke ser ut til å hoppe mellom språkene. */
-::view-transition-old(.sprakbytte) {
-  animation: language-out 140ms ease-in both;
+/* Språkbytte (components/LocaleProvider.tsx): innholdet dempes med en gang man klikker, så man
+   ser at noe skjer mens siden hentes på det nye språket, og tones inn igjen med den nye teksten.
+   Bare opacity, ingen View Transition: den løftet innholdet over innstillingsvinduet under byttet. */
+#innhold {
+  transition: opacity 160ms ease-out;
 }
-::view-transition-new(.sprakbytte) {
-  animation: language-in 320ms var(--ease-out-expo) 60ms both;
-}
-::view-transition-group(.sprakbytte) {
-  animation-duration: 380ms;
-  animation-timing-function: var(--ease-out-expo);
-}
-
-@keyframes language-out {
-  to {
-    opacity: 0;
-    filter: blur(4px);
-  }
-}
-
-@keyframes language-in {
-  from {
-    opacity: 0;
-    filter: blur(4px);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  ::view-transition-group(*),
-  ::view-transition-old(*),
-  ::view-transition-new(*) {
-    animation-duration: 0s !important;
-    animation-delay: 0s !important;
-  }
-}
-:root[data-motion="reduce"]::view-transition-group(*),
-:root[data-motion="reduce"]::view-transition-old(*),
-:root[data-motion="reduce"]::view-transition-new(*) {
-  animation-duration: 0s !important;
-  animation-delay: 0s !important;
+:root[data-sprakbytte] #innhold {
+  opacity: 0.5;
 }
 
 /* Windows høykontrast: glass og kort trenger synlige kanter. */

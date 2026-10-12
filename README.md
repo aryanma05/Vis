@@ -257,8 +257,9 @@ components/               ProjectCard, ProjectCover, ImageEditor (beskjæring), 
 følgere, nytt fra folk man følger og utvalgte prosjekter). Kall den med
 `Authorization: Bearer <CRON_SECRET>`, f.eks. med en Cron Job hos Render
 (`curl -fsS -H "Authorization: Bearer $CRON_SECRET" https://<domenet>/api/cron/ukesoppsummering`)
-eller gratis hos cron-job.org, hver time mandag kl. 07–10. Hver kjøring tar en porsjon på
-200; ingen får to på under seks dager. E-posten har ett-klikks avmelding (List-Unsubscribe).
+eller gratis hos cron-job.org, én gang hver dag (f.eks. kl. 08). Hver kjøring tar en porsjon på
+100, så oppsummeringene spres utover uka og resten av Brevo sin gratiskvote (300 i døgnet) står
+igjen til innloggingskoder og varsler; ingen får to på under seks dager. E-posten har ett-klikks avmelding (List-Unsubscribe).
 
 `/api/cron/daglig` (én gang i døgnet, f.eks. kl. 07) sender e-post til bedrifter om nye
 kandidater i lagrede søk og sletter søknader som ikke er endret på et år. Samme
