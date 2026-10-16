@@ -209,6 +209,12 @@
     var(--glass-shadow);
 }
 
+/* Inne i et annet glass (profilmenyen i side- og fanelinjen) virker ikke uskarpheten:
+   forelderens backdrop-filter stopper den, og siden skinner skarpt gjennom. Da må flaten være tett. */
+.glass .glass-strong {
+  background-color: var(--surface);
+}
+
 /* Kort og grupper i innholdet. Ingen uskarphet (bakgrunnen er myk fra før),
    så mange kort på én side koster ingenting. */
 @utility glass-card {
