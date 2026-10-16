@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { useId } from "react";
 
-// «vis»-ordmerket. Prikken over i-en er aksentfargen.
+// «vis»-ordmerket. Prikken over i-en er aksentfargen. Den står over streken i Geists «ı»
+// (0.14em inn) med 0.1em luft; leading-none gjør at avstanden blir lik i alle størrelser.
 export function Wordmark({ className = "text-xl" }: { className?: string }) {
   return (
     <span className={`relative inline-flex items-baseline font-bold tracking-[-0.055em] text-fg ${className}`}>
-      v<span className="relative">ı<span aria-hidden="true" className="absolute left-1/2 top-[0.12em] size-[0.2em] -translate-x-1/2 rounded-full bg-ice" /></span>s
+      v<span className="relative leading-none">ı<span aria-hidden="true" className="absolute left-[0.14em] top-[0.02em] size-[0.2em] -translate-x-1/2 rounded-full bg-ice" /></span>s
     </span>
   );
 }
