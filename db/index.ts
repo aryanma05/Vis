@@ -1,7 +1,13 @@
+import { setDefaultAutoSelectFamilyAttemptTimeout } from "node:net";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "./schema";
 import { cleanDatabaseUrl } from "./url";
+
+// Node gir hver adresse til databasen (IPv6 og IPv4 om hverandre) bare 250 ms før den går
+// videre. Render har ikke IPv6, så et litt tregt håndtrykk mot Neon, f.eks. rett etter en
+// deploy, ga ETIMEDOUT på alle adressene. Med 2 sekunder per adresse kommer tilkoblingen fram.
+setDefaultAutoSelectFamilyAttemptTimeout(2000);
 
 const connectionString = process.env.DATABASE_URL;
 
