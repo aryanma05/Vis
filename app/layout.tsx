@@ -73,7 +73,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body className="min-h-screen overflow-x-hidden">
+      <body className="min-h-screen overflow-x-clip">
         <LocaleProvider locale={locale}>
         <ThemeProvider>
         <MotionPrefs>

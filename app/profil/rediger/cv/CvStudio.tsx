@@ -6,21 +6,25 @@ import { useRef, useState, useTransition } from "react";
 import { Check, FileUp, Printer } from "lucide-react";
 import { applyCvImportAction, importCvAction, parseStoredCvAction, saveCvAction } from "@/app/actions/cv";
 import { setCvTemplateAction } from "@/app/actions/profile";
+import CvView, { type CvViewData } from "@/components/cv/CvView";
 import { useT } from "@/components/LocaleProvider";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Section } from "@/components/ui/field";
 import { toast } from "@/components/ui/toast";
-import { CV_TEMPLATE_LABELS, CV_TEMPLATES, type CvTemplate } from "@/lib/constants";
+import { CV_TEMPLATE_LABELS, CV_TEMPLATES, defaultCvSections, type CvTemplate } from "@/lib/constants";
 import type { Cv } from "@/lib/cv";
 import type { ParsedCv } from "@/lib/validation";
 import CvDocumentPanel, { type DocState } from "./CvDocumentPanel";
-import CvEditor, { newKey, type CvState } from "./CvEditor";
+import CvEditor, { newKey, SectionOrder, type CvState } from "./CvEditor";
 
 const s = (v: string | null | undefined) => v ?? "";
 const n = (v: string) => v.trim() || null;
 
-function fromSaved(cv: Cv): CvState {
+function fromSaved(cv: Cv, view: CvViewData): CvState {
   return {
+    headline: s(view.headline),
+    summary: s(view.summary),
+    sections: view.sections,
     experience: cv.experience.map((e) => ({
       key: e.id,
       title: e.title,
@@ -45,7 +49,7 @@ function fromSaved(cv: Cv): CvState {
   };
 }
 
-function fromParsed(cv: ParsedCv): CvState {
+function fromParsed(cv: ParsedCv): Pick<CvState, "experience" | "education" | "skills"> {
   return {
     experience: cv.experience.map((e) => ({
       key: newKey(),
@@ -73,6 +77,9 @@ function fromParsed(cv: ParsedCv): CvState {
 
 function toPayload(state: CvState) {
   return {
+    headline: n(state.headline),
+    summary: n(state.summary),
+    sections: state.sections,
     experience: state.experience
       .filter((e) => e.title.trim() || e.organization.trim())
       .map((e) => ({
@@ -208,24 +215,37 @@ export default function CvStudio({
   doc,
   username,
   template: initialTemplate,
+  preview,
 }: {
   cv: Cv;
   doc: DocState;
   username: string;
   template: CvTemplate;
+  // CV-en slik den er lagret (kontaktinfo, prosjekter, farge). Feltene under legges oppå mens man skriver.
+  preview: CvViewData;
 }) {
   const router = useRouter();
   const t = useT();
-  const initial = useRef(fromSaved(cv));
+  const initial = useRef(fromSaved(cv, preview));
   const [state, setState] = useState<CvState>(initial.current);
   const [draft, setDraft] = useState<Pending | null>(null);
   const [applied, setApplied] = useState<Pending | null>(null);
   const [autofilling, setAutofilling] = useState(false);
   const [template, setTemplate] = useState(initialTemplate);
+  const [previewing, setPreviewing] = useState(false);
   const [saving, startSaving] = useTransition();
   const docxRef = useRef<HTMLInputElement>(null);
 
-  const dirty = JSON.stringify(toPayload(state)) !== JSON.stringify(toPayload(initial.current));
+  const payload = toPayload(state);
+  const dirty = JSON.stringify(payload) !== JSON.stringify(toPayload(initial.current));
+  const view: CvViewData = {
+    ...preview,
+    ...payload,
+    experience: payload.experience.map((e, i) => ({ ...e, id: String(i) })),
+    education: payload.education.map((e, i) => ({ ...e, id: String(i) })),
+  };
+  const sections = state.sections ?? defaultCvSections(template);
+  const emptySections = new Set(sections.filter((key) => (key === "summary" ? !view.summary : view[key].length === 0)));
   const isEmpty = state.experience.length + state.education.length + state.skills.length === 0;
 
   async function readCv(run: () => ReturnType<typeof parseStoredCvAction>) {
@@ -243,15 +263,19 @@ export default function CvStudio({
 
   function applyDraft(pending: Pending, mode: "replace" | "merge") {
     const incoming = fromParsed(pending.parsed);
-    setState((current) =>
-      mode === "replace"
+    // Tittel og profiltekst fra CV-en fylles bare inn der feltet er tomt, som på serveren.
+    setState((current) => ({
+      ...current,
+      headline: current.headline || s(pending.parsed.headline),
+      summary: current.summary || s(pending.parsed.summary),
+      ...(mode === "replace"
         ? incoming
         : {
             experience: [...current.experience, ...incoming.experience],
             education: [...current.education, ...incoming.education],
             skills: [...current.skills, ...incoming.skills.filter((x) => !current.skills.some((y) => y.toLowerCase() === x.toLowerCase()))],
-          },
-    );
+          }),
+    }));
     setApplied(pending);
     setDraft(null);
     toast.success("Feltene er fylt ut", { description: "Se over og trykk «Lagre CV»." });
@@ -271,18 +295,22 @@ export default function CvStudio({
 
   const save = () =>
     startSaving(async () => {
-      const payload = toPayload(state);
       const missing = payload.experience.some((e) => !e.title || !e.organization) || payload.education.some((e) => !e.institution);
       if (missing) {
         toast.error("Alle erfaringer trenger rolle og arbeidsgiver, og all utdanning trenger skole.");
         return;
       }
 
-      // Kommer innholdet fra en tolket CV, fylles også tomme profilfelter (tittel, bosted, lenker).
-      const result = applied
-        ? await applyCvImportAction(applied.importId, { mode: "replace", edited: { ...applied.parsed, ...payload } })
-        : await saveCvAction(payload);
-
+      // Kommer innholdet fra en tolket CV, fylles også tomme profilfelter (bosted, lenker, navn).
+      if (applied) {
+        const imported = await applyCvImportAction(applied.importId, { mode: "replace", edited: { ...applied.parsed, ...payload } });
+        if (!imported.ok) {
+          toast.error(imported.error);
+          return;
+        }
+        setApplied(null);
+      }
+      const result = await saveCvAction(payload);
       if (!result.ok) {
         toast.error(result.error);
         return;
@@ -295,110 +323,140 @@ export default function CvStudio({
 
   return (
     <>
-      <Section title={t("Mal")} description={t("Hvordan CV-en ser ut på profilen og når du laster den ned som PDF.")}>
-        <div role="radiogroup" aria-label={t("CV-mal")} className="grid gap-3 sm:grid-cols-3">
-          {CV_TEMPLATES.map((key) => {
-            const on = template === key;
-            return (
-              <button
-                key={key}
-                type="button"
-                role="radio"
-                aria-checked={on}
-                onClick={() => chooseTemplate(key)}
-                className={`group rounded-[20px] p-2 text-left ring-inset transition ${on ? "bg-sea/10 ring-2 ring-sea/70" : "ring-1 ring-line hover:bg-fill"}`}
-              >
-                <span className="block aspect-[210/150] overflow-hidden rounded-xl ring-1 ring-black/10">
-                  <TemplateThumb template={key} />
-                </span>
-                <span className="mt-2.5 flex items-center justify-between px-1">
-                  <span className="flex items-center gap-1.5 text-sm font-semibold">
-                    {t(CV_TEMPLATE_LABELS[key].name)}
-                    {CV_TEMPLATE_LABELS[key].pro && <span className="rounded-full bg-warn/15 px-1.5 py-0.5 text-[10px] font-semibold text-warn">Pro</span>}
-                  </span>
-                  {on && <Check className="size-4 text-ice" />}
-                </span>
-                <span className="block px-1 pb-1 text-xs text-mist">{t(CV_TEMPLATE_LABELS[key].description)}</span>
-              </button>
-            );
-          })}
-        </div>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <ButtonLink href={`/@${username}/cv`} variant="secondary" size="sm">
-            {t("Forhåndsvis")}
-          </ButtonLink>
-          <ButtonLink href={`/@${username}/cv?skriv=1`} variant="ghost" size="sm">
-            <Printer className="size-4" /> {t("Last ned som PDF")}
-          </ButtonLink>
-        </div>
-      </Section>
-
-      <Section
-        title={t("Importer CV")}
-        description={t("Last opp CV-en som PDF eller bilde. Den vises på profilen, og fra en PDF kan vi fylle ut feltene under for deg.")}
-      >
-        <CvDocumentPanel initial={doc} autofilling={autofilling} onAutofill={() => readCv(parseStoredCvAction)} />
-        <p className="mt-5 text-[13px] leading-5 text-mist/80">
-          <span className="font-medium text-fg">{t("Fra LinkedIn?")}</span>{" "}
-          {t("Gå til profilen din på LinkedIn, trykk «Mer» → «Lagre som PDF», og last opp filen her.")}
-        </p>
-      </Section>
-
-      <Section title={t("Innhold")} description={t("Erfaring, utdanning og ferdigheter. Dra i håndtaket eller bruk pilene for å endre rekkefølgen.")}>
-        {draft && (
-          <div className="mb-8 rounded-[20px] bg-sea/10 p-5">
-            <p className="flex items-center gap-2 font-medium">
-              <Check className="size-4 text-success" />{" "}
-              {t("Vi fant {experience} erfaringer, {education} utdanninger og {skills} ferdigheter.", {
-                experience: draft.parsed.experience.length,
-                education: draft.parsed.education.length,
-                skills: draft.parsed.skills.length,
+      {/* På store skjermer står CV-en ved siden av skjemaet og oppdateres mens man skriver; ellers byttes det med knappen nederst. */}
+      <div className="xl:grid xl:grid-cols-[minmax(0,1fr)_440px] xl:gap-12">
+        <div className={`${previewing ? "hidden" : ""} xl:block xl:[&>section]:grid-cols-1 xl:[&>section]:gap-5`}>
+          <Section title={t("Mal")} description={t("Hvordan CV-en ser ut på profilen og når du laster den ned som PDF.")}>
+            <div role="radiogroup" aria-label={t("CV-mal")} className="grid gap-3 sm:grid-cols-3">
+              {CV_TEMPLATES.map((key) => {
+                const on = template === key;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    role="radio"
+                    aria-checked={on}
+                    onClick={() => chooseTemplate(key)}
+                    className={`group rounded-[20px] p-2 text-left ring-inset transition ${on ? "bg-sea/10 ring-2 ring-sea/70" : "ring-1 ring-line hover:bg-fill"}`}
+                  >
+                    <span className="block aspect-[210/150] overflow-hidden rounded-xl ring-1 ring-black/10">
+                      <TemplateThumb template={key} />
+                    </span>
+                    <span className="mt-2.5 flex items-center justify-between px-1">
+                      <span className="flex items-center gap-1.5 text-sm font-semibold">
+                        {t(CV_TEMPLATE_LABELS[key].name)}
+                        {CV_TEMPLATE_LABELS[key].pro && <span className="rounded-full bg-warn/15 px-1.5 py-0.5 text-[10px] font-semibold text-warn">Pro</span>}
+                      </span>
+                      {on && <Check className="size-4 text-ice" />}
+                    </span>
+                    <span className="block px-1 pb-1 text-xs text-mist">{t(CV_TEMPLATE_LABELS[key].description)}</span>
+                  </button>
+                );
               })}
-            </p>
-            <p className="mt-1 text-sm text-mist">{t("Du har allerede fylt ut noe. Hva vil du gjøre?")}</p>
+            </div>
             <div className="mt-4 flex flex-wrap gap-2">
-              <Button size="sm" onClick={() => applyDraft(draft, "replace")}>
-                {t("Erstatt")}
-              </Button>
-              <Button size="sm" variant="secondary" onClick={() => applyDraft(draft, "merge")}>
-                {t("Legg til")}
-              </Button>
-              <Button size="sm" variant="ghost" onClick={() => setDraft(null)}>
-                {t("Avbryt")}
-              </Button>
+              <ButtonLink href={`/@${username}/cv`} variant="secondary" size="sm">
+                {t("Delbar CV")}
+              </ButtonLink>
+              <ButtonLink href={`/@${username}/cv?skriv=1`} variant="ghost" size="sm">
+                <Printer className="size-4" /> {t("Last ned som PDF")}
+              </ButtonLink>
+            </div>
+          </Section>
+
+          <Section title={t("Rekkefølge")} description={t("Dra delene dit du vil ha dem på CV-en. I maler med to spalter flyttes de innenfor sin spalte.")}>
+            <SectionOrder value={sections} onChange={(sections) => setState((current) => ({ ...current, sections }))} empty={emptySections} />
+          </Section>
+
+          <Section
+            title={t("Importer CV")}
+            description={t("Last opp CV-en som PDF eller bilde. Den vises på profilen, og fra en PDF kan vi fylle ut feltene under for deg.")}
+          >
+            <CvDocumentPanel initial={doc} autofilling={autofilling} onAutofill={() => readCv(parseStoredCvAction)} />
+            <p className="mt-5 text-[13px] leading-5 text-mist/80">
+              <span className="font-medium text-fg">{t("Fra LinkedIn?")}</span>{" "}
+              {t("Gå til profilen din på LinkedIn, trykk «Mer» → «Lagre som PDF», og last opp filen her.")}
+            </p>
+          </Section>
+
+          <Section title={t("Innhold")} description={t("Teksten på CV-en: om deg, erfaring, utdanning og ferdigheter. Dra i håndtaket eller bruk pilene for å endre rekkefølgen på oppføringene.")}>
+            {draft && (
+              <div className="mb-8 rounded-[20px] bg-sea/10 p-5">
+                <p className="flex items-center gap-2 font-medium">
+                  <Check className="size-4 text-success" />{" "}
+                  {t("Vi fant {experience} erfaringer, {education} utdanninger og {skills} ferdigheter.", {
+                    experience: draft.parsed.experience.length,
+                    education: draft.parsed.education.length,
+                    skills: draft.parsed.skills.length,
+                  })}
+                </p>
+                <p className="mt-1 text-sm text-mist">{t("Du har allerede fylt ut noe. Hva vil du gjøre?")}</p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Button size="sm" onClick={() => applyDraft(draft, "replace")}>
+                    {t("Erstatt")}
+                  </Button>
+                  <Button size="sm" variant="secondary" onClick={() => applyDraft(draft, "merge")}>
+                    {t("Legg til")}
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setDraft(null)}>
+                    {t("Avbryt")}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            <CvEditor value={state} onChange={setState} />
+
+            <p className="mt-10 text-sm text-mist/80">
+              {t("Har du CV-en bare i Word?")}{" "}
+              <button type="button" onClick={() => docxRef.current?.click()} disabled={autofilling} className="inline-flex items-center gap-1 text-ice hover:underline">
+                <FileUp className="size-3.5" /> {t("Les inn feltene fra en .docx-fil")}
+              </button>
+              <input
+                ref={docxRef}
+                type="file"
+                accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = "";
+                  if (!file) return;
+                  const fd = new FormData();
+                  fd.append("file", file);
+                  readCv(() => importCvAction(fd));
+                }}
+              />
+            </p>
+          </Section>
+        </div>
+
+        <aside aria-label={t("Forhåndsvisning")} className={`${previewing ? "" : "hidden"} py-10 xl:block`}>
+          <div className="xl:sticky xl:top-6 xl:max-h-[calc(100dvh-3rem)] xl:overflow-y-auto">
+            <p className="caption mb-4">{t("Slik blir CV-en. Den oppdateres mens du skriver.")}</p>
+            {/* 440 / 820 px: hele arket i spalten, med samme oppsett som på papir. */}
+            <div className="xl:[zoom:0.536]">
+              <CvView data={view} template={template} />
             </div>
           </div>
-        )}
+        </aside>
+      </div>
 
-        <CvEditor value={state} onChange={setState} />
-
-        <p className="mt-10 text-sm text-mist/80">
-          {t("Har du CV-en bare i Word?")}{" "}
-          <button type="button" onClick={() => docxRef.current?.click()} disabled={autofilling} className="inline-flex items-center gap-1 text-ice hover:underline">
-            <FileUp className="size-3.5" /> {t("Les inn feltene fra en .docx-fil")}
-          </button>
-          <input
-            ref={docxRef}
-            type="file"
-            accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              e.target.value = "";
-              if (!file) return;
-              const fd = new FormData();
-              fd.append("file", file);
-              readCv(() => importCvAction(fd));
-            }}
-          />
-        </p>
-      </Section>
-
-      <div className="sticky bottom-24 z-20 mt-2 flex items-center justify-end gap-4 glass rounded-[26px] py-2 pl-5 pr-2 md:bottom-6">
+      <div className="sticky bottom-24 z-20 mt-2 flex items-center justify-end gap-4 glass-strong rounded-[26px] py-2 pl-5 pr-2 md:bottom-6">
         <p className="mr-auto text-sm text-mist">{dirty || applied ? t("Du har endringer som ikke er lagret.") : t("Alt er lagret.")}</p>
         <Link href={`/@${username}?fane=cv`} className="hidden text-sm text-mist hover:text-fg sm:block">
           {t("Se CV-en")}
         </Link>
+        <Button
+          size="sm"
+          variant="secondary"
+          className="xl:hidden"
+          onClick={() => {
+            setPreviewing((on) => !on);
+            window.scrollTo({ top: 0 });
+          }}
+        >
+          {previewing ? t("Rediger") : t("Forhåndsvis")}
+        </Button>
         <Button size="sm" onClick={save} loading={saving} disabled={!dirty && !applied}>
           {t("Lagre CV")}
         </Button>

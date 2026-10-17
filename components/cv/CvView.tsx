@@ -1,5 +1,5 @@
-import type { CSSProperties } from "react";
-import type { CvTemplate } from "@/lib/constants";
+import { Fragment, type CSSProperties, type ReactNode } from "react";
+import { defaultCvSections, type CvSection, type CvTemplate } from "@/lib/constants";
 import { formatPeriod } from "@/lib/format";
 import { makeT, type Locale } from "@/lib/i18n";
 
@@ -18,6 +18,8 @@ export type CvViewData = {
   education: { id: string; institution: string; degree: string | null; fieldOfStudy: string | null; startDate: string | null; endDate: string | null; description: string | null }[];
   skills: string[];
   projects: { title: string; summary: string | null; tags: string[]; url: string }[];
+  // Rekkefølgen på delene, eller null for malens egen. Maler med to spalter sorterer hver spalte for seg.
+  sections: CvSection[] | null;
   accent: string;
   // «Laget med Vis» nederst. Pro kan skru det av.
   branding?: boolean;
@@ -55,23 +57,37 @@ function Lines({ text, className = "" }: { text: string | null; className?: stri
   );
 }
 
+// «LinkedIn: linkedin.com/in/…» blir bare «linkedin.com/in/…», siden adressen sier det samme.
+const linkText = (l: { label: string; url: string }) => (host(l.url).toLowerCase().includes(l.label.toLowerCase()) ? host(l.url) : `${l.label}: ${host(l.url)}`);
+
+// Lange lenker brytes etter en skråstrek i stedet for midt i et ord.
+const breakable = (text: string) => text.split(/(?<=\/)/).flatMap((part, i) => (i ? [<wbr key={i} />, part] : [part]));
+
+// Én ferdighet deles ikke over to linjer (med mindre den er lengre enn hele linjen).
+// Skilletegnet har hardt mellomrom foran, så en linje aldri starter med «·».
+const keepTogether = (skills: string[], separator: string) => skills.map((s) => s.replaceAll(" ", "\u00a0")).join(separator);
+
 function Contact({ data, className = "", vertical = false }: { data: CvViewData; className?: string; vertical?: boolean }) {
-  const items = [data.location, data.profileUrl, data.website ? host(data.website) : null, ...data.links.map((l) => `${l.label}: ${host(l.url)}`)].filter(Boolean) as string[];
+  const items = [data.location, data.profileUrl, data.website ? host(data.website) : null, ...data.links.map(linkText)].filter(Boolean) as string[];
   return (
     <p className={`${vertical ? "flex flex-col gap-1" : "flex flex-wrap gap-x-3 gap-y-0.5"} ${className}`}>
       {items.map((item, i) => (
-        <span key={i} className="break-all">
-          {item}
-        </span>
+        <span key={i}>{breakable(item)}</span>
       ))}
     </p>
   );
 }
 
-const paper =
-  "cv-paper mx-auto w-full max-w-[820px] bg-white text-[#0f172a] shadow-[0_40px_90px_-40px_rgb(0_0_0/0.75)] ring-1 ring-black/5 [print-color-adjust:exact] [-webkit-print-color-adjust:exact]";
+// Delene i rekkefølgen brukeren har valgt. Tomme deler (null/false) hoppes over.
+function ordered(data: CvViewData, parts: Partial<Record<CvSection, ReactNode>>) {
+  return (data.sections ?? []).map((key) => (parts[key] ? <Fragment key={key}>{parts[key]}</Fragment> : null));
+}
 
-export default function CvView({ data, template }: { data: CvViewData; template: CvTemplate }) {
+const paper =
+  "cv-paper mx-auto w-full max-w-[820px] bg-white [overflow-wrap:anywhere] text-[#0f172a] shadow-[0_40px_90px_-40px_rgb(0_0_0/0.75)] ring-1 ring-black/5 [print-color-adjust:exact] [-webkit-print-color-adjust:exact]";
+
+export default function CvView({ data: raw, template }: { data: CvViewData; template: CvTemplate }) {
+  const data = { ...raw, sections: raw.sections ?? defaultCvSections(template) };
   const style = { "--cv-accent": data.accent, fontFamily: "var(--font-sans)" } as CSSProperties;
   if (template === "moderne") return <Modern data={data} style={style} />;
   if (template === "kompakt") return <Compact data={data} style={style} />;
@@ -106,63 +122,65 @@ function Classic({ data, style }: { data: CvViewData; style: CSSProperties }) {
         {data.headline && <p className="mt-2.5 text-[17px] text-[#334155]">{data.headline}</p>}
         <Contact data={data} className="mt-3 text-[12.5px] text-[#64748b]" />
       </header>
-      {data.summary && (
-        <Row label={t("Profil")}>
-          <p className="whitespace-pre-line text-[13.5px] leading-6 text-[#1e293b]">{data.summary}</p>
-        </Row>
-      )}
-      {data.experience.length > 0 && (
-        <Row label={t("Erfaring")}>
-          <ol className="space-y-4">
-            {data.experience.map((e) => (
-              <li key={e.id} className="cv-entry">
-                <div className="flex flex-wrap items-baseline justify-between gap-x-4">
-                  <p className="text-[14px] font-semibold">
-                    {e.title}, <span className="font-normal text-[#334155]">{e.organization}</span>
-                  </p>
-                  <p className="text-[12px] tabular-nums text-[#64748b]">{formatPeriod(e.startDate, e.endDate, data.locale)}</p>
-                </div>
-                {e.location && <p className="text-[12px] text-[#64748b]">{e.location}</p>}
-                <Lines text={e.description} className="mt-1.5 text-[13px] leading-[1.55] text-[#334155]" />
-              </li>
-            ))}
-          </ol>
-        </Row>
-      )}
-      {data.education.length > 0 && (
-        <Row label={t("Utdanning")}>
-          <ol className="space-y-3">
-            {data.education.map((e) => (
-              <li key={e.id} className="cv-entry">
-                <div className="flex flex-wrap items-baseline justify-between gap-x-4">
-                  <p className="text-[14px] font-semibold">{e.institution}</p>
-                  <p className="text-[12px] tabular-nums text-[#64748b]">{formatPeriod(e.startDate, e.endDate, data.locale)}</p>
-                </div>
-                {(e.degree || e.fieldOfStudy) && <p className="text-[13px] text-[#334155]">{[e.degree, e.fieldOfStudy].filter(Boolean).join(", ")}</p>}
-                <Lines text={e.description} className="mt-1 text-[13px] leading-[1.55] text-[#334155]" />
-              </li>
-            ))}
-          </ol>
-        </Row>
-      )}
-      {data.skills.length > 0 && (
-        <Row label={t("Ferdigheter")}>
-          <p className="text-[13.5px] leading-6 text-[#1e293b]">{data.skills.join(" · ")}</p>
-        </Row>
-      )}
-      {data.projects.length > 0 && (
-        <Row label={t("Prosjekter")}>
-          <ul className="space-y-2.5">
-            {data.projects.map((p) => (
-              <li key={p.url} className="cv-entry text-[13px] leading-[1.55]">
-                <span className="font-semibold">{p.title}</span>
-                {p.summary && <span className="text-[#334155]"> – {p.summary}</span>}
-                {p.tags.length > 0 && <span className="block text-[11.5px] text-[#64748b]">{p.tags.slice(0, 5).join(", ")}</span>}
-              </li>
-            ))}
-          </ul>
-        </Row>
-      )}
+      {ordered(data, {
+        summary: data.summary && (
+          <Row label={t("Profil")}>
+            <p className="whitespace-pre-line text-[13.5px] leading-6 text-[#1e293b]">{data.summary}</p>
+          </Row>
+        ),
+        experience: data.experience.length > 0 && (
+          <Row label={t("Erfaring")}>
+            <ol className="space-y-4">
+              {data.experience.map((e) => (
+                <li key={e.id} className="cv-entry">
+                  <div className="flex flex-wrap items-baseline justify-between gap-x-4">
+                    <p className="text-[14px] font-semibold">
+                      {e.title}, <span className="font-normal text-[#334155]">{e.organization}</span>
+                    </p>
+                    <p className="text-[12px] tabular-nums text-[#64748b]">{formatPeriod(e.startDate, e.endDate, data.locale)}</p>
+                  </div>
+                  {e.location && <p className="text-[12px] text-[#64748b]">{e.location}</p>}
+                  <Lines text={e.description} className="mt-1.5 text-[13px] leading-[1.55] text-[#334155]" />
+                </li>
+              ))}
+            </ol>
+          </Row>
+        ),
+        education: data.education.length > 0 && (
+          <Row label={t("Utdanning")}>
+            <ol className="space-y-3">
+              {data.education.map((e) => (
+                <li key={e.id} className="cv-entry">
+                  <div className="flex flex-wrap items-baseline justify-between gap-x-4">
+                    <p className="text-[14px] font-semibold">{e.institution}</p>
+                    <p className="text-[12px] tabular-nums text-[#64748b]">{formatPeriod(e.startDate, e.endDate, data.locale)}</p>
+                  </div>
+                  {(e.degree || e.fieldOfStudy) && <p className="text-[13px] text-[#334155]">{[e.degree, e.fieldOfStudy].filter(Boolean).join(", ")}</p>}
+                  <Lines text={e.description} className="mt-1 text-[13px] leading-[1.55] text-[#334155]" />
+                </li>
+              ))}
+            </ol>
+          </Row>
+        ),
+        skills: data.skills.length > 0 && (
+          <Row label={t("Ferdigheter")}>
+            <p className="text-[13.5px] leading-6 text-[#1e293b]">{keepTogether(data.skills, "\u00a0· ")}</p>
+          </Row>
+        ),
+        projects: data.projects.length > 0 && (
+          <Row label={t("Prosjekter")}>
+            <ul className="space-y-2.5">
+              {data.projects.map((p) => (
+                <li key={p.url} className="cv-entry text-[13px] leading-[1.55]">
+                  <span className="font-semibold">{p.title}</span>
+                  {p.summary && <span className="text-[#334155]"> – {p.summary}</span>}
+                  {p.tags.length > 0 && <span className="block text-[11.5px] text-[#64748b]">{p.tags.slice(0, 5).join(", ")}</span>}
+                </li>
+              ))}
+            </ul>
+          </Row>
+        ),
+      })}
       {data.experience.length + data.education.length === 0 && !data.summary && <EmptyNote data={data} />}
       <footer className="mt-6 flex flex-wrap justify-between gap-2 border-t border-[#e2e8f0] pt-4 text-[11px] text-[#94a3b8]">
         <span>{t("Hele profilen og prosjektene: {url}", { url: data.profileUrl })}</span>
@@ -192,75 +210,79 @@ function Modern({ data, style }: { data: CvViewData; style: CSSProperties }) {
           <H>{t("Kontakt")}</H>
           <Contact data={data} vertical className="text-[12px] leading-5 text-[#1e293b]" />
         </div>
-        {data.skills.length > 0 && (
-          <div className="mt-7">
-            <H>{t("Ferdigheter")}</H>
-            <ul className="flex flex-wrap gap-1.5">
-              {data.skills.map((s) => (
-                <li key={s} className="rounded-md bg-white/70 px-2 py-0.5 text-[11.5px] text-[#0f172a]">
-                  {s}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-        {data.education.length > 0 && (
-          <div className="mt-7">
-            <H>{t("Utdanning")}</H>
-            <ol className="space-y-3">
-              {data.education.map((e) => (
-                <li key={e.id} className="cv-entry text-[12.5px] leading-5">
-                  <p className="font-semibold">{e.institution}</p>
-                  {(e.degree || e.fieldOfStudy) && <p className="text-[#1e293b]">{[e.degree, e.fieldOfStudy].filter(Boolean).join(", ")}</p>}
-                  <p className="tabular-nums text-[#475569]">{formatPeriod(e.startDate, e.endDate, data.locale)}</p>
-                </li>
-              ))}
-            </ol>
-          </div>
-        )}
+        {ordered(data, {
+          skills: data.skills.length > 0 && (
+            <div className="mt-7">
+              <H>{t("Ferdigheter")}</H>
+              <ul className="flex flex-wrap gap-1.5">
+                {data.skills.map((s) => (
+                  <li key={s} className="rounded-md bg-white/70 px-2 py-0.5 text-[11.5px] text-[#0f172a]">
+                    {s}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ),
+          education: data.education.length > 0 && (
+            <div className="mt-7">
+              <H>{t("Utdanning")}</H>
+              <ol className="space-y-3">
+                {data.education.map((e) => (
+                  <li key={e.id} className="cv-entry text-[12.5px] leading-5">
+                    <p className="font-semibold">{e.institution}</p>
+                    {(e.degree || e.fieldOfStudy) && <p className="text-[#1e293b]">{[e.degree, e.fieldOfStudy].filter(Boolean).join(", ")}</p>}
+                    <p className="tabular-nums text-[#475569]">{formatPeriod(e.startDate, e.endDate, data.locale)}</p>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          ),
+        })}
       </aside>
-      <div className="px-7 py-10 sm:px-10 sm:py-12">
-        {data.summary && (
-          <section className="cv-section mb-8">
-            <H>{t("Profil")}</H>
-            <p className="whitespace-pre-line text-[13.5px] leading-6 text-[#1e293b]">{data.summary}</p>
-          </section>
-        )}
-        {data.experience.length > 0 && (
-          <section className="cv-section mb-8">
-            <H>{t("Erfaring")}</H>
-            <ol className="relative space-y-5 border-l-2 pl-5" style={{ borderColor: "color-mix(in srgb, var(--cv-accent) 55%, white)" }}>
-              {data.experience.map((e) => (
-                <li key={e.id} className="cv-entry relative">
-                  <span className="absolute -left-[27px] top-1.5 size-3 rounded-full border-2 border-white" style={{ background: "color-mix(in srgb, var(--cv-accent) 80%, #0f172a)" }} />
-                  <p className="text-[12px] tabular-nums text-[#64748b]">{formatPeriod(e.startDate, e.endDate, data.locale)}</p>
-                  <p className="text-[14.5px] font-semibold">{e.title}</p>
-                  <p className="text-[13px] text-[#334155]">
-                    {e.organization}
-                    {e.location && ` · ${e.location}`}
-                  </p>
-                  <Lines text={e.description} className="mt-1.5 text-[13px] leading-[1.55] text-[#334155]" />
-                </li>
-              ))}
-            </ol>
-          </section>
-        )}
-        {data.projects.length > 0 && (
-          <section className="cv-section">
-            <H>{t("Utvalgte prosjekter")}</H>
-            <ul className="grid gap-3 sm:grid-cols-2">
-              {data.projects.map((p) => (
-                <li key={p.url} className="cv-entry rounded-lg border border-[#e2e8f0] p-3 text-[12.5px] leading-5">
-                  <p className="font-semibold">{p.title}</p>
-                  {p.summary && <p className="mt-0.5 text-[#334155]">{p.summary}</p>}
-                  {p.tags.length > 0 && <p className="mt-1 text-[11px] text-[#64748b]">{p.tags.slice(0, 4).join(" · ")}</p>}
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
+      <div className="min-w-0 space-y-8 px-7 py-10 sm:px-10 sm:py-12">
+        {ordered(data, {
+          summary: data.summary && (
+            <section className="cv-section">
+              <H>{t("Profil")}</H>
+              <p className="whitespace-pre-line text-[13.5px] leading-6 text-[#1e293b]">{data.summary}</p>
+            </section>
+          ),
+          experience: data.experience.length > 0 && (
+            <section className="cv-section">
+              <H>{t("Erfaring")}</H>
+              <ol className="relative space-y-5 border-l-2 pl-5" style={{ borderColor: "color-mix(in srgb, var(--cv-accent) 55%, white)" }}>
+                {data.experience.map((e) => (
+                  <li key={e.id} className="cv-entry relative">
+                    <span className="absolute -left-[27px] top-1.5 size-3 rounded-full border-2 border-white" style={{ background: "color-mix(in srgb, var(--cv-accent) 80%, #0f172a)" }} />
+                    <p className="text-[12px] tabular-nums text-[#64748b]">{formatPeriod(e.startDate, e.endDate, data.locale)}</p>
+                    <p className="text-[14.5px] font-semibold">{e.title}</p>
+                    <p className="text-[13px] text-[#334155]">
+                      {e.organization}
+                      {e.location && ` · ${e.location}`}
+                    </p>
+                    <Lines text={e.description} className="mt-1.5 text-[13px] leading-[1.55] text-[#334155]" />
+                  </li>
+                ))}
+              </ol>
+            </section>
+          ),
+          projects: data.projects.length > 0 && (
+            <section className="cv-section">
+              <H>{t("Utvalgte prosjekter")}</H>
+              <ul className="grid gap-3 sm:grid-cols-2">
+                {data.projects.map((p) => (
+                  <li key={p.url} className="cv-entry rounded-lg border border-[#e2e8f0] p-3 text-[12.5px] leading-5">
+                    <p className="font-semibold">{p.title}</p>
+                    {p.summary && <p className="mt-0.5 text-[#334155]">{p.summary}</p>}
+                    {p.tags.length > 0 && <p className="mt-1 text-[11px] text-[#64748b]">{p.tags.slice(0, 4).join(" · ")}</p>}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ),
+        })}
         {data.experience.length + data.education.length === 0 && !data.summary && <EmptyNote data={data} />}
-        <Brand data={data} className="mt-8" />
+        <Brand data={data} />
       </div>
     </article>
   );
@@ -292,7 +314,7 @@ function Compact({ data, style }: { data: CvViewData; style: CSSProperties }) {
       </header>
       {data.summary && <p className="mt-4 whitespace-pre-line text-[12.5px] leading-5 text-[#1e293b]">{data.summary}</p>}
       <div className="mt-5 grid gap-6 sm:grid-cols-[1.35fr_1fr]">
-        <div>
+        <div className="min-w-0">
           {data.experience.length > 0 && (
             <section className="cv-section">
               <H>{t("Erfaring")}</H>
@@ -314,40 +336,42 @@ function Compact({ data, style }: { data: CvViewData; style: CSSProperties }) {
             </section>
           )}
         </div>
-        <div className="space-y-5">
-          {data.education.length > 0 && (
-            <section className="cv-section">
-              <H>{t("Utdanning")}</H>
-              <ol className="space-y-2">
-                {data.education.map((e) => (
-                  <li key={e.id} className="cv-entry text-[12px] leading-[1.45]">
-                    <p className="font-semibold">{e.institution}</p>
-                    <p className="text-[#334155]">{[e.degree, e.fieldOfStudy].filter(Boolean).join(", ")}</p>
-                    <p className="tabular-nums text-[#64748b]">{formatPeriod(e.startDate, e.endDate, data.locale)}</p>
-                  </li>
-                ))}
-              </ol>
-            </section>
-          )}
-          {data.skills.length > 0 && (
-            <section className="cv-section">
-              <H>{t("Ferdigheter")}</H>
-              <p className="text-[12px] leading-5 text-[#1e293b]">{data.skills.join(", ")}</p>
-            </section>
-          )}
-          {data.projects.length > 0 && (
-            <section className="cv-section">
-              <H>{t("Prosjekter")}</H>
-              <ul className="space-y-1.5">
-                {data.projects.map((p) => (
-                  <li key={p.url} className="cv-entry text-[12px] leading-[1.45]">
-                    <span className="font-semibold">{p.title}</span>
-                    {p.summary && <span className="text-[#334155]"> – {p.summary}</span>}
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
+        <div className="min-w-0 space-y-5">
+          {ordered(data, {
+            education: data.education.length > 0 && (
+              <section className="cv-section">
+                <H>{t("Utdanning")}</H>
+                <ol className="space-y-2">
+                  {data.education.map((e) => (
+                    <li key={e.id} className="cv-entry text-[12px] leading-[1.45]">
+                      <p className="font-semibold">{e.institution}</p>
+                      {(e.degree || e.fieldOfStudy) && <p className="text-[#334155]">{[e.degree, e.fieldOfStudy].filter(Boolean).join(", ")}</p>}
+                      <p className="tabular-nums text-[#64748b]">{formatPeriod(e.startDate, e.endDate, data.locale)}</p>
+                    </li>
+                  ))}
+                </ol>
+              </section>
+            ),
+            skills: data.skills.length > 0 && (
+              <section className="cv-section">
+                <H>{t("Ferdigheter")}</H>
+                <p className="text-[12px] leading-5 text-[#1e293b]">{keepTogether(data.skills, ", ")}</p>
+              </section>
+            ),
+            projects: data.projects.length > 0 && (
+              <section className="cv-section">
+                <H>{t("Prosjekter")}</H>
+                <ul className="space-y-1.5">
+                  {data.projects.map((p) => (
+                    <li key={p.url} className="cv-entry text-[12px] leading-[1.45]">
+                      <span className="font-semibold">{p.title}</span>
+                      {p.summary && <span className="text-[#334155]"> – {p.summary}</span>}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ),
+          })}
         </div>
       </div>
       {data.experience.length + data.education.length === 0 && !data.summary && <div className="mt-6"><EmptyNote data={data} /></div>}
@@ -384,68 +408,70 @@ function Elegant({ data, style }: { data: CvViewData; style: CSSProperties }) {
         {data.headline && <p className="mt-3 text-[15px] italic text-[#334155]" style={serif}>{data.headline}</p>}
         <Contact data={data} className="mt-3 justify-center text-[12px] text-[#64748b]" />
       </header>
-      {data.summary && (
-        <section className="cv-section mt-8">
-          <H>{t("Profil")}</H>
-          <p className="mx-auto max-w-[60ch] whitespace-pre-line text-center text-[13.5px] leading-6 text-[#1e293b]">{data.summary}</p>
-        </section>
-      )}
-      {data.experience.length > 0 && (
-        <section className="cv-section mt-8">
-          <H>{t("Erfaring")}</H>
-          <ol className="space-y-4">
-            {data.experience.map((e) => (
-              <li key={e.id} className="cv-entry">
-                <div className="flex flex-wrap items-baseline justify-between gap-x-4">
-                  <p className="text-[15px]" style={serif}>
-                    <span className="font-semibold">{e.title}</span> · {e.organization}
+      {ordered(data, {
+        summary: data.summary && (
+          <section className="cv-section mt-8">
+            <H>{t("Profil")}</H>
+            <p className="mx-auto max-w-[60ch] whitespace-pre-line text-center text-[13.5px] leading-6 text-[#1e293b]">{data.summary}</p>
+          </section>
+        ),
+        experience: data.experience.length > 0 && (
+          <section className="cv-section mt-8">
+            <H>{t("Erfaring")}</H>
+            <ol className="space-y-4">
+              {data.experience.map((e) => (
+                <li key={e.id} className="cv-entry">
+                  <div className="flex flex-wrap items-baseline justify-between gap-x-4">
+                    <p className="text-[15px]" style={serif}>
+                      <span className="font-semibold">{e.title}</span> · {e.organization}
+                    </p>
+                    <p className="text-[12px] tabular-nums text-[#64748b]">{formatPeriod(e.startDate, e.endDate, data.locale)}</p>
+                  </div>
+                  {e.location && <p className="text-[12px] text-[#64748b]">{e.location}</p>}
+                  <Lines text={e.description} className="mt-1.5 text-[13px] leading-[1.6] text-[#334155]" />
+                </li>
+              ))}
+            </ol>
+          </section>
+        ),
+        education: data.education.length > 0 && (
+          <section className="cv-section mt-8">
+            <H>{t("Utdanning")}</H>
+            <ol className="space-y-3">
+              {data.education.map((e) => (
+                <li key={e.id} className="cv-entry flex flex-wrap items-baseline justify-between gap-x-4">
+                  <p className="text-[14px]" style={serif}>
+                    <span className="font-semibold">{e.institution}</span>
+                    {(e.degree || e.fieldOfStudy) && <span className="text-[#334155]"> · {[e.degree, e.fieldOfStudy].filter(Boolean).join(", ")}</span>}
                   </p>
                   <p className="text-[12px] tabular-nums text-[#64748b]">{formatPeriod(e.startDate, e.endDate, data.locale)}</p>
-                </div>
-                {e.location && <p className="text-[12px] text-[#64748b]">{e.location}</p>}
-                <Lines text={e.description} className="mt-1.5 text-[13px] leading-[1.6] text-[#334155]" />
-              </li>
-            ))}
-          </ol>
-        </section>
-      )}
-      {data.education.length > 0 && (
-        <section className="cv-section mt-8">
-          <H>{t("Utdanning")}</H>
-          <ol className="space-y-3">
-            {data.education.map((e) => (
-              <li key={e.id} className="cv-entry flex flex-wrap items-baseline justify-between gap-x-4">
-                <p className="text-[14px]" style={serif}>
-                  <span className="font-semibold">{e.institution}</span>
-                  {(e.degree || e.fieldOfStudy) && <span className="text-[#334155]"> · {[e.degree, e.fieldOfStudy].filter(Boolean).join(", ")}</span>}
-                </p>
-                <p className="text-[12px] tabular-nums text-[#64748b]">{formatPeriod(e.startDate, e.endDate, data.locale)}</p>
-              </li>
-            ))}
-          </ol>
-        </section>
-      )}
-      {data.skills.length > 0 && (
-        <section className="cv-section mt-8">
-          <H>{t("Ferdigheter")}</H>
-          <p className="text-center text-[13px] leading-6 text-[#1e293b]">{data.skills.join("  ·  ")}</p>
-        </section>
-      )}
-      {data.projects.length > 0 && (
-        <section className="cv-section mt-8">
-          <H>{t("Prosjekter")}</H>
-          <ul className="grid gap-3 sm:grid-cols-2">
-            {data.projects.map((p) => (
-              <li key={p.url} className="cv-entry text-[13px] leading-[1.55]">
-                <p className="font-semibold" style={serif}>
-                  {p.title}
-                </p>
-                {p.summary && <p className="text-[#334155]">{p.summary}</p>}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+                </li>
+              ))}
+            </ol>
+          </section>
+        ),
+        skills: data.skills.length > 0 && (
+          <section className="cv-section mt-8">
+            <H>{t("Ferdigheter")}</H>
+            <p className="text-center text-[13px] leading-6 text-[#1e293b]">{keepTogether(data.skills, "\u00a0\u00a0·  ")}</p>
+          </section>
+        ),
+        projects: data.projects.length > 0 && (
+          <section className="cv-section mt-8">
+            <H>{t("Prosjekter")}</H>
+            <ul className="grid gap-3 sm:grid-cols-2">
+              {data.projects.map((p) => (
+                <li key={p.url} className="cv-entry text-[13px] leading-[1.55]">
+                  <p className="font-semibold" style={serif}>
+                    {p.title}
+                  </p>
+                  {p.summary && <p className="text-[#334155]">{p.summary}</p>}
+                </li>
+              ))}
+            </ul>
+          </section>
+        ),
+      })}
       {data.experience.length + data.education.length === 0 && !data.summary && <EmptyNote data={data} />}
       <Brand data={data} className="mt-10 text-center" />
     </article>
@@ -471,75 +497,79 @@ function Bold({ data, style }: { data: CvViewData; style: CSSProperties }) {
       </header>
       <div className="grid gap-8 px-7 py-9 sm:grid-cols-[1fr_32%] sm:px-12">
         <div className="min-w-0 space-y-8">
-          {data.summary && (
-            <section className="cv-section">
-              <H>{t("Om meg")}</H>
-              <p className="whitespace-pre-line text-[13.5px] leading-6 text-[#1e293b]">{data.summary}</p>
-            </section>
-          )}
-          {data.experience.length > 0 && (
-            <section className="cv-section">
-              <H>{t("Erfaring")}</H>
-              <ol className="space-y-5">
-                {data.experience.map((e) => (
-                  <li key={e.id} className="cv-entry">
-                    <p className="text-[15px] font-bold">{e.title}</p>
-                    <p className="text-[13px] text-[#334155]">
-                      {e.organization}
-                      {e.location && ` · ${e.location}`} · <span className="tabular-nums">{formatPeriod(e.startDate, e.endDate, data.locale)}</span>
-                    </p>
-                    <Lines text={e.description} className="mt-1.5 text-[13px] leading-[1.55] text-[#334155]" />
-                  </li>
-                ))}
-              </ol>
-            </section>
-          )}
-          {data.projects.length > 0 && (
-            <section className="cv-section">
-              <H>{t("Prosjekter")}</H>
-              <ul className="space-y-2.5">
-                {data.projects.map((p) => (
-                  <li key={p.url} className="cv-entry text-[13px] leading-[1.55]">
-                    <span className="font-bold">{p.title}</span>
-                    {p.summary && <span className="text-[#334155]"> – {p.summary}</span>}
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
+          {ordered(data, {
+            summary: data.summary && (
+              <section className="cv-section">
+                <H>{t("Om meg")}</H>
+                <p className="whitespace-pre-line text-[13.5px] leading-6 text-[#1e293b]">{data.summary}</p>
+              </section>
+            ),
+            experience: data.experience.length > 0 && (
+              <section className="cv-section">
+                <H>{t("Erfaring")}</H>
+                <ol className="space-y-5">
+                  {data.experience.map((e) => (
+                    <li key={e.id} className="cv-entry">
+                      <p className="text-[15px] font-bold">{e.title}</p>
+                      <p className="text-[13px] text-[#334155]">
+                        {e.organization}
+                        {e.location && ` · ${e.location}`} · <span className="tabular-nums">{formatPeriod(e.startDate, e.endDate, data.locale)}</span>
+                      </p>
+                      <Lines text={e.description} className="mt-1.5 text-[13px] leading-[1.55] text-[#334155]" />
+                    </li>
+                  ))}
+                </ol>
+              </section>
+            ),
+            projects: data.projects.length > 0 && (
+              <section className="cv-section">
+                <H>{t("Prosjekter")}</H>
+                <ul className="space-y-2.5">
+                  {data.projects.map((p) => (
+                    <li key={p.url} className="cv-entry text-[13px] leading-[1.55]">
+                      <span className="font-bold">{p.title}</span>
+                      {p.summary && <span className="text-[#334155]"> – {p.summary}</span>}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ),
+          })}
           {data.experience.length + data.education.length === 0 && !data.summary && <EmptyNote data={data} />}
         </div>
-        <aside className="space-y-7">
+        <aside className="min-w-0 space-y-7">
           <section className="cv-section">
             <H>{t("Kontakt")}</H>
             <Contact data={data} vertical className="text-[12px] leading-5 text-[#1e293b]" />
           </section>
-          {data.skills.length > 0 && (
-            <section className="cv-section">
-              <H>{t("Ferdigheter")}</H>
-              <ul className="flex flex-wrap gap-1.5">
-                {data.skills.map((s) => (
-                  <li key={s} className="rounded-full px-2.5 py-0.5 text-[11.5px] font-medium" style={{ background: "color-mix(in srgb, var(--cv-accent) 30%, white)" }}>
-                    {s}
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-          {data.education.length > 0 && (
-            <section className="cv-section">
-              <H>{t("Utdanning")}</H>
-              <ol className="space-y-3">
-                {data.education.map((e) => (
-                  <li key={e.id} className="cv-entry text-[12.5px] leading-5">
-                    <p className="font-bold">{e.institution}</p>
-                    {(e.degree || e.fieldOfStudy) && <p className="text-[#1e293b]">{[e.degree, e.fieldOfStudy].filter(Boolean).join(", ")}</p>}
-                    <p className="tabular-nums text-[#475569]">{formatPeriod(e.startDate, e.endDate, data.locale)}</p>
-                  </li>
-                ))}
-              </ol>
-            </section>
-          )}
+          {ordered(data, {
+            skills: data.skills.length > 0 && (
+              <section className="cv-section">
+                <H>{t("Ferdigheter")}</H>
+                <ul className="flex flex-wrap gap-1.5">
+                  {data.skills.map((s) => (
+                    <li key={s} className="rounded-full px-2.5 py-0.5 text-[11.5px] font-medium" style={{ background: "color-mix(in srgb, var(--cv-accent) 30%, white)" }}>
+                      {s}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ),
+            education: data.education.length > 0 && (
+              <section className="cv-section">
+                <H>{t("Utdanning")}</H>
+                <ol className="space-y-3">
+                  {data.education.map((e) => (
+                    <li key={e.id} className="cv-entry text-[12.5px] leading-5">
+                      <p className="font-bold">{e.institution}</p>
+                      {(e.degree || e.fieldOfStudy) && <p className="text-[#1e293b]">{[e.degree, e.fieldOfStudy].filter(Boolean).join(", ")}</p>}
+                      <p className="tabular-nums text-[#475569]">{formatPeriod(e.startDate, e.endDate, data.locale)}</p>
+                    </li>
+                  ))}
+                </ol>
+              </section>
+            ),
+          })}
           <Brand data={data} />
         </aside>
       </div>
