@@ -1,10 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
-import { ArrowDown, ArrowUp, Briefcase, ChevronDown, GraduationCap, GripVertical, Plus, Trash2, Wrench, X } from "lucide-react";
+import { Reorder } from "framer-motion";
+import { ArrowDown, ArrowUp, Briefcase, ChevronDown, GraduationCap, GripVertical, Plus, Trash2, UserRound, Wrench, X } from "lucide-react";
 import { useLocale, useT } from "@/components/LocaleProvider";
 import { Button } from "@/components/ui/button";
 import { Field, inputClass, textareaClass } from "@/components/ui/field";
+import { CV_SECTION_LABELS, type CvSection } from "@/lib/constants";
 import { formatPeriod } from "@/lib/format";
 import MonthYear from "@/components/ui/month-year";
 
@@ -30,7 +33,8 @@ export type Education = {
   description: string;
 };
 
-export type CvState = { experience: Experience[]; education: Education[]; skills: string[] };
+// sections er null til brukeren har endret rekkefølgen; da følger CV-en malens oppsett.
+export type CvState = { headline: string; summary: string; experience: Experience[]; education: Education[]; skills: string[]; sections: CvSection[] | null };
 
 export const newKey = () => Math.random().toString(36).slice(2);
 
@@ -69,6 +73,37 @@ function useDrag<T>(list: T[], onReorder: (next: T[]) => void) {
     },
   });
   return { props, dragging, over };
+}
+
+// Rekkefølgen på delene av CV-en. Dra en rad (med mus eller finger), eller bruk pilene.
+export function SectionOrder({ value, onChange, empty }: { value: CvSection[]; onChange: (next: CvSection[]) => void; empty: Set<CvSection> }) {
+  const t = useT();
+  return (
+    <Reorder.Group axis="y" values={value} onReorder={onChange} className="space-y-2">
+      {value.map((section, i) => (
+        <Reorder.Item
+          key={section}
+          value={section}
+          className="flex cursor-grab select-none items-center gap-2 rounded-[18px] bg-surface py-2 pl-3 pr-2 ring-1 ring-inset ring-line active:cursor-grabbing"
+          whileDrag={{ scale: 1.02, boxShadow: "0 12px 30px -12px rgb(0 0 0 / 0.35)" }}
+        >
+          <GripVertical className="size-4 shrink-0 text-mist/60" aria-hidden="true" />
+          <span className="min-w-0 flex-1 truncate font-medium">
+            {t(CV_SECTION_LABELS[section])}
+            {empty.has(section) && <span className="ml-2 text-xs font-normal text-mist">{t("Tom, vises ikke")}</span>}
+          </span>
+          <span className="flex shrink-0 items-center text-mist">
+            <button type="button" onClick={() => onChange(move(value, i, i - 1))} disabled={i === 0} aria-label={t("Flytt opp")} className="rounded-lg p-1.5 hover:bg-surface-2 hover:text-fg disabled:opacity-30">
+              <ArrowUp className="size-4" />
+            </button>
+            <button type="button" onClick={() => onChange(move(value, i, i + 1))} disabled={i === value.length - 1} aria-label={t("Flytt ned")} className="rounded-lg p-1.5 hover:bg-surface-2 hover:text-fg disabled:opacity-30">
+              <ArrowDown className="size-4" />
+            </button>
+          </span>
+        </Reorder.Item>
+      ))}
+    </Reorder.Group>
+  );
 }
 
 function EntryShell({
@@ -271,6 +306,25 @@ export default function CvEditor({ value, onChange }: { value: CvState; onChange
 
   return (
     <div className="space-y-12">
+      <div>
+        {heading(UserRound, t("Om deg"))}
+        <div className="grid gap-4">
+          <Field label={t("Tittel")} optional hint={t("Én linje om hva du driver med.")}>
+            <input className={inputClass} value={value.headline} maxLength={120} onChange={(ev) => onChange({ ...value, headline: ev.target.value })} placeholder={t("Informatikkstudent ved UiO")} />
+          </Field>
+          <Field label={t("Profiltekst")} optional hint={t("To–tre setninger. Vises øverst under «Om meg» og i CV-en.")}>
+            <textarea className={textareaClass} value={value.summary} maxLength={2000} onChange={(ev) => onChange({ ...value, summary: ev.target.value })} />
+          </Field>
+        </div>
+        <p className="mt-3 text-sm text-mist">
+          {t("Navn, bosted og lenker endrer du under")}{" "}
+          <Link href="/profil/rediger" className="text-ice hover:underline">
+            {t("Profil")}
+          </Link>
+          .
+        </p>
+      </div>
+
       <div>
         {heading(Briefcase, t("Erfaring"), addExperience, t("Legg til"))}
         {value.experience.length === 0 && <p className="rounded-2xl bg-fill px-4 py-6 text-center text-sm text-mist">{t("Ingen erfaring lagt til ennå.")}</p>}

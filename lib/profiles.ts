@@ -41,6 +41,7 @@ const profileColumns = {
   banner: profile.banner,
   pet: profile.pet,
   cvTemplate: profile.cvTemplate,
+  cvSections: profile.cvSections,
   contactEnabled: profile.contactEnabled,
   studyProgram: profile.studyProgram,
   graduationYear: profile.graduationYear,

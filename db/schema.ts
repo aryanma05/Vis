@@ -213,6 +213,8 @@ export const profile = pgTable("profile", {
   banner: jsonb("banner").$type<BannerConfig>(),
   pet: jsonb("pet").$type<PetConfig>(),
   cvTemplate: text("cv_template").$type<CvTemplate>().notNull().default("klassisk"),
+  // Rekkefølgen på delene av CV-en (CV_SECTIONS i lib/constants.ts). Null = standard.
+  cvSections: jsonb("cv_sections").$type<string[]>(),
   notificationPrefs: jsonb("notification_prefs").$type<NotificationPrefs>(),
   // «Kontakt meg»-knappen på profilen. Av til personen selv slår den på.
   contactEnabled: boolean("contact_enabled").notNull().default(false),

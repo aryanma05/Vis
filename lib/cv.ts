@@ -4,6 +4,7 @@ import { and, asc, eq, gte, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db, schema } from "@/db";
 import { parseCv, type CvFile } from "@/lib/cv-parser";
+import { CV_SECTIONS, cvSectionOrder } from "@/lib/constants";
 import { isUuid } from "@/lib/projects";
 import { UserFacingError } from "@/lib/result";
 import type { Tx } from "@/lib/db-types";
@@ -95,6 +96,15 @@ export const cvInput = z.object({
 
 export type CvInput = z.output<typeof cvInput>;
 
+// CV-redigeringen sender også tittelen, profilteksten og rekkefølgen på delene av CV-en.
+export const cvEditorInput = cvInput.extend({
+  headline: entryText(120),
+  summary: entryText(2000),
+  // null = malens egen rekkefølge.
+  sections: z.array(z.enum(CV_SECTIONS)).max(CV_SECTIONS.length).nullable().transform((v) => v && cvSectionOrder(v)),
+});
+type CvAbout = Pick<z.output<typeof cvEditorInput>, "headline" | "summary" | "sections">;
+
 async function replaceCv(tx: Tx, userId: string, cv: CvInput) {
   await tx.delete(cvExperience).where(eq(cvExperience.userId, userId));
   await tx.delete(cvEducation).where(eq(cvEducation.userId, userId));
@@ -136,9 +146,15 @@ async function replaceCv(tx: Tx, userId: string, cv: CvInput) {
   }
 }
 
-// Erstatter hele CV-en. Skjemaet sender alltid alle oppføringene.
-export async function saveCv(userId: string, cv: CvInput) {
-  await db.transaction((tx) => replaceCv(tx, userId, cv));
+// Erstatter hele CV-en. Skjemaet sender alltid alle oppføringene, og `about` er
+// profilfeltene som står på CV-en (tittel, profiltekst og rekkefølge).
+export async function saveCv(userId: string, cv: CvInput, about?: CvAbout) {
+  await db.transaction(async (tx) => {
+    await replaceCv(tx, userId, cv);
+    if (!about) return;
+    const fields = { headline: about.headline, bio: about.summary, cvSections: about.sections };
+    await tx.insert(profile).values({ userId, ...fields }).onConflictDoUpdate({ target: profile.userId, set: fields });
+  });
 }
 
 /* -------------------------------------------------------------------------- */
