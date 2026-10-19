@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Briefcase } from "lucide-react";
 import JobList from "@/components/company/JobList";
+import FilterButton, { FilterChip, FilterGroup } from "@/components/FilterButton";
 import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/misc";
 import { JOB_TYPE_LABELS, REMOTE_LABELS } from "@/lib/constants";
@@ -22,11 +22,6 @@ export default async function JobsPage({ searchParams }: Props) {
   const { q = "", type, remote } = await searchParams;
   const t = await getT();
   const jobs = await listOpenJobs({ q: q.slice(0, 100), type: type ?? null, remote: remote ?? null });
-  const chip = (href: string, label: string, active: boolean) => (
-    <Link key={href} href={href} className={`rounded-full px-3.5 py-1.5 text-sm font-medium transition ${active ? "bg-primary text-on-primary" : "glass-chip text-fg hover:bg-fill-2"}`}>
-      {label}
-    </Link>
-  );
   const params = (patch: Record<string, string | undefined>) => {
     const p = new URLSearchParams();
     const merged = { q: q || undefined, type, remote, ...patch };
@@ -53,20 +48,36 @@ export default async function JobsPage({ searchParams }: Props) {
           </div>
         </div>
 
-        <form action="/stillinger" className="mt-8">
-          {type && <input type="hidden" name="type" value={type} />}
-          {remote && <input type="hidden" name="remote" value={remote} />}
-          <input name="q" defaultValue={q} placeholder={t("Søk etter rolle, teknologi, bedrift eller sted")} aria-label={t("Søk i stillinger")} className="h-12 w-full rounded-full bg-fill px-5 text-[17px] outline-none inset-ring inset-ring-line focus:ring-2 focus:ring-sea/50" />
-        </form>
-        <div className="mt-4 flex flex-wrap gap-2">
-          {chip(params({ type: undefined }), t("Alle typer"), !type)}
-          {Object.entries(JOB_TYPE_LABELS).map(([k, v]) => chip(params({ type: k }), t(v), type === k))}
-        </div>
-        <div className="mt-2 flex flex-wrap gap-2">
-          {chip(params({ remote: undefined }), t("Alle steder"), !remote)}
-          {Object.entries(REMOTE_LABELS)
-            .filter(([k]) => k !== "nei")
-            .map(([k, v]) => chip(params({ remote: k }), t(v), remote === k))}
+        <div className="mt-8 flex items-center gap-2">
+          <form action="/stillinger" className="flex-1">
+            {type && <input type="hidden" name="type" value={type} />}
+            {remote && <input type="hidden" name="remote" value={remote} />}
+            <input name="q" defaultValue={q} placeholder={t("Søk etter rolle, teknologi, bedrift eller sted")} aria-label={t("Søk i stillinger")} className="h-12 w-full rounded-full bg-fill px-5 text-[17px] outline-none inset-ring inset-ring-line focus:ring-2 focus:ring-sea/50" />
+          </form>
+          <FilterButton active={[type, remote].filter(Boolean).length}>
+            <FilterGroup title={t("Type")}>
+              <FilterChip href={params({ type: undefined })} active={!type}>
+                {t("Alle typer")}
+              </FilterChip>
+              {Object.entries(JOB_TYPE_LABELS).map(([k, v]) => (
+                <FilterChip key={k} href={params({ type: k })} active={type === k}>
+                  {t(v)}
+                </FilterChip>
+              ))}
+            </FilterGroup>
+            <FilterGroup title={t("Hjemmekontor")}>
+              <FilterChip href={params({ remote: undefined })} active={!remote}>
+                {t("Alle steder")}
+              </FilterChip>
+              {Object.entries(REMOTE_LABELS)
+                .filter(([k]) => k !== "nei")
+                .map(([k, v]) => (
+                  <FilterChip key={k} href={params({ remote: k })} active={remote === k}>
+                    {t(v)}
+                  </FilterChip>
+                ))}
+            </FilterGroup>
+          </FilterButton>
         </div>
 
         <div className="mt-8">

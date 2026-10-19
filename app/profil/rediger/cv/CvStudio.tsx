@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import { Check, FileUp, Printer } from "lucide-react";
 import { applyCvImportAction, importCvAction, parseStoredCvAction, saveCvAction } from "@/app/actions/cv";
 import { setCvTemplateAction } from "@/app/actions/profile";
@@ -11,7 +11,7 @@ import { useT } from "@/components/LocaleProvider";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Section } from "@/components/ui/field";
 import { toast } from "@/components/ui/toast";
-import { CV_TEMPLATE_LABELS, CV_TEMPLATES, defaultCvSections, type CvTemplate } from "@/lib/constants";
+import { CV_TEMPLATE_LABELS, CV_TEMPLATES, defaultCvSections, isProTemplate, type CvTemplate } from "@/lib/constants";
 import type { Cv } from "@/lib/cv";
 import type { ParsedCv } from "@/lib/validation";
 import CvDocumentPanel, { type DocState } from "./CvDocumentPanel";
@@ -209,18 +209,30 @@ function TemplateThumb({ template }: { template: CvTemplate }) {
 }
 
 type Pending = { importId: string; parsed: ParsedCv };
+type Draft = { base: string; state: CvState; applied: Pending | null };
+
+const noSubscribe = () => () => {};
+function readDraft(key: string) {
+  try {
+    return sessionStorage.getItem(key) ?? "";
+  } catch {
+    return "";
+  }
+}
 
 export default function CvStudio({
   cv,
   doc,
   username,
   template: initialTemplate,
+  pro,
   preview,
 }: {
   cv: Cv;
   doc: DocState;
   username: string;
   template: CvTemplate;
+  pro: boolean;
   // CV-en slik den er lagret (kontaktinfo, prosjekter, farge). Feltene under legges oppå mens man skriver.
   preview: CvViewData;
 }) {
@@ -231,13 +243,42 @@ export default function CvStudio({
   const [draft, setDraft] = useState<Pending | null>(null);
   const [applied, setApplied] = useState<Pending | null>(null);
   const [autofilling, setAutofilling] = useState(false);
+  // `template` er malen som vises; `saved` er den profilen bruker.
   const [template, setTemplate] = useState(initialTemplate);
+  const [saved, setSaved] = useState(initialTemplate);
   const [previewing, setPreviewing] = useState(false);
   const [saving, startSaving] = useTransition();
   const docxRef = useRef<HTMLInputElement>(null);
 
+  // Ulagrede endringer ligger i fanen (sessionStorage), så de er der igjen når man har
+  // vært innom profilen. Lagres CV-en et annet sted i mellomtiden, gjelder ikke utkastet.
+  const draftKey = `vis-cv-utkast:${username}`;
+  const savedJson = JSON.stringify(toPayload(initial.current));
+  const stored = useSyncExternalStore(noSubscribe, () => readDraft(draftKey), () => null);
+  const [restored, setRestored] = useState(false);
+  if (!restored && stored !== null) {
+    setRestored(true);
+    try {
+      const draft = stored ? (JSON.parse(stored) as Draft) : null;
+      if (draft?.base === savedJson) {
+        setState(draft.state);
+        setApplied(draft.applied);
+      }
+    } catch {}
+  }
+
   const payload = toPayload(state);
-  const dirty = JSON.stringify(payload) !== JSON.stringify(toPayload(initial.current));
+  const dirty = JSON.stringify(payload) !== savedJson;
+
+  useEffect(() => {
+    if (!restored) return;
+    try {
+      if (dirty || applied) sessionStorage.setItem(draftKey, JSON.stringify({ base: savedJson, state, applied } satisfies Draft));
+      else sessionStorage.removeItem(draftKey);
+    } catch {}
+  }, [restored, dirty, applied, state, draftKey, savedJson]);
+
+  const locked = isProTemplate(template) && !pro;
   const view: CvViewData = {
     ...preview,
     ...payload,
@@ -282,14 +323,16 @@ export default function CvStudio({
   }
 
   async function chooseTemplate(next: CvTemplate) {
-    const previous = template;
     setTemplate(next);
+    // Pro-malene kan forhåndsvises uten Pro, men ikke tas i bruk.
+    if (next === saved || (isProTemplate(next) && !pro)) return;
     const result = await setCvTemplateAction(next);
     if (!result.ok) {
-      setTemplate(previous);
+      setTemplate(saved);
       toast.error(result.error);
       return;
     }
+    setSaved(next);
     toast.success(t("{name} er valgt", { name: t(CV_TEMPLATE_LABELS[next].name) }));
   }
 
@@ -354,6 +397,17 @@ export default function CvStudio({
                 );
               })}
             </div>
+            {locked && (
+              <p className="mt-4 text-sm text-mist">
+                {t("Du ser {name} med vannmerke. Profilen bruker fortsatt {saved}.", {
+                  name: t(CV_TEMPLATE_LABELS[template].name),
+                  saved: t(CV_TEMPLATE_LABELS[saved].name),
+                })}{" "}
+                <Link href="/priser" className="text-ice hover:underline">
+                  {t("Se Pro")}
+                </Link>
+              </p>
+            )}
             <div className="mt-4 flex flex-wrap gap-2">
               <ButtonLink href={`/@${username}/cv`} variant="secondary" size="sm">
                 {t("Delbar CV")}
@@ -435,7 +489,7 @@ export default function CvStudio({
             <p className="caption mb-4">{t("Slik blir CV-en. Den oppdateres mens du skriver.")}</p>
             {/* 440 / 820 px: hele arket i spalten, med samme oppsett som på papir. */}
             <div className="xl:[zoom:0.536]">
-              <CvView data={view} template={template} />
+              <CvView data={view} template={template} watermark={locked} />
             </div>
           </div>
         </aside>

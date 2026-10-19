@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { isPro } from "@/lib/billing";
 import { buildCvViewData } from "@/lib/cv-view";
 import { getLocale, getT } from "@/lib/i18n/server";
 import { showsBranding } from "@/lib/pro";
@@ -15,7 +16,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function EditCvPage() {
   const user = await requireUser();
   // Hele profilen, så forhåndsvisningen har kontaktinfo, prosjekter og farge som den ferdige CV-en.
-  const [profile, branding, locale] = await Promise.all([getProfileByUsername(user.username, user.id), showsBranding(user.id), getLocale()]);
+  const [profile, pro, branding, locale] = await Promise.all([getProfileByUsername(user.username, user.id), isPro(user.id), showsBranding(user.id), getLocale()]);
   if (!profile) notFound();
   const doc = profile.cvDocument;
 
@@ -27,6 +28,7 @@ export default async function EditCvPage() {
           cv={profile.cv}
           username={user.username}
           template={profile.cvTemplate}
+          pro={pro}
           preview={buildCvViewData(profile, { branding, locale })}
           doc={
             doc && {

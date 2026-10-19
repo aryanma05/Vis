@@ -5,7 +5,6 @@ import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from
 import { ArrowRight, Compass, FileText, Flame, Handshake, Hash, Plus, Search, Settings, UserPen, Users } from "lucide-react";
 import { quickSearchAction, type QuickResult } from "@/app/actions/search";
 import Avatar from "@/components/Avatar";
-import { OPEN_SEARCH_EVENT } from "@/components/nav/search-events";
 import { useT } from "@/components/LocaleProvider";
 import { openSettings } from "@/components/settings/settings-events";
 import { Kbd } from "@/components/ui/misc";
@@ -28,8 +27,8 @@ export default function CommandPalette({ loggedIn, username }: { loggedIn: boole
   const [active, setActive] = useState(0);
   const [pending, startTransition] = useTransition();
 
-  const show = useCallback((initial = "") => {
-    setQuery(initial);
+  const show = useCallback(() => {
+    setQuery("");
     setResults(EMPTY);
     setActive(0);
     setOpen(true);
@@ -46,13 +45,8 @@ export default function CommandPalette({ loggedIn, username }: { loggedIn: boole
         show();
       }
     };
-    const onOpen = (e: Event) => show((e as CustomEvent<{ query?: string }>).detail?.query ?? "");
     window.addEventListener("keydown", onKey);
-    window.addEventListener(OPEN_SEARCH_EVENT, onOpen);
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      window.removeEventListener(OPEN_SEARCH_EVENT, onOpen);
-    };
+    return () => window.removeEventListener("keydown", onKey);
   }, [open, show]);
 
   useEffect(() => {

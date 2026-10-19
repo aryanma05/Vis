@@ -2,10 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, Briefcase, Compass, Handshake, Home, LogIn, Plus, Search, Settings } from "lucide-react";
+import { Briefcase, Compass, Handshake, LogIn, Plus, Settings } from "lucide-react";
 import Avatar from "@/components/Avatar";
-import NavUserMenu, { type NavUser } from "@/components/nav/NavUserMenu";
-import { openSearch } from "@/components/nav/search-events";
+import NavUserMenu, { UnreadBadge, type NavUser } from "@/components/nav/NavUserMenu";
 import { useT } from "@/components/LocaleProvider";
 import { openSettings } from "@/components/settings/settings-events";
 
@@ -23,19 +22,18 @@ const itemBase =
   "relative flex size-11 items-center justify-center rounded-full transition duration-200 active:scale-90 focus-visible:outline-offset-2";
 
 // Flytende sidemeny i glass på desktop. Menyvalgene endrer seg etter om du er logget inn.
-// Logoen står for seg selv øverst til venstre (components/nav/HomeLogo.tsx), ikke her.
-// Innstillingene (tannhjulet) ligger alltid nederst.
+// Logoen øverst til venstre (components/nav/HomeLogo.tsx) er veien til forsiden/strømmen.
+// Varslene ligger i profilmenyen, med antallet på profilbildet. Innstillingene (tannhjulet)
+// ligger alltid nederst. Søket ligger i Utforsk (og bak ⌘K).
 export default function Sidebar({ user = null }: { user?: NavUser }) {
   const pathname = usePathname();
   const t = useT();
-  const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`));
+  const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
   const items = [
-    { href: "/", label: t(user ? "Strømmen" : "Hjem"), Icon: Home },
     { href: "/sok", label: t("Utforsk"), Icon: Compass },
-    { href: "/partnere", label: t("Finn partnere"), Icon: Handshake },
     { href: "/stillinger", label: t("Stillinger"), Icon: Briefcase },
-    ...(user ? [{ href: "/varsler", label: t("Varsler"), Icon: Bell, badge: user.unread ?? 0 }] : []),
+    { href: "/partnere", label: t("Finn partnere"), Icon: Handshake },
   ];
 
   return (
@@ -44,23 +42,8 @@ export default function Sidebar({ user = null }: { user?: NavUser }) {
         aria-label={t("Hovedmeny")}
         className="glass pointer-events-auto flex w-[60px] flex-col items-center gap-1 rounded-full py-2"
       >
-        <div className="group relative">
-          <button
-            type="button"
-            onClick={() => openSearch()}
-            aria-label={`${t("Søk")} (⌘K)`}
-            className={`${itemBase} text-mist hover:bg-fill hover:text-fg`}
-          >
-            <Search className="size-[19px]" />
-          </button>
-          <Tip>
-            {t("Søk")} <span className="ml-1 text-mist">⌘K</span>
-          </Tip>
-        </div>
-
-        {items.map(({ href, label, Icon, ...rest }) => {
+        {items.map(({ href, label, Icon }) => {
           const active = isActive(href);
-          const badge = "badge" in rest ? (rest.badge as number) : 0;
           return (
             <div key={href} className="group relative">
               <Link
@@ -70,11 +53,6 @@ export default function Sidebar({ user = null }: { user?: NavUser }) {
                 className={`${itemBase} ${active ? "glass-thumb text-fg" : "text-mist hover:bg-fill hover:text-fg"}`}
               >
                 <Icon className="size-[19px]" strokeWidth={active ? 2.2 : 1.8} />
-                {badge > 0 && (
-                  <span className="absolute right-0 top-0 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-danger px-1 text-[10px] font-semibold text-white">
-                    {badge > 9 ? "9+" : badge}
-                  </span>
-                )}
               </Link>
               <Tip>{label}</Tip>
             </div>
@@ -107,12 +85,13 @@ export default function Sidebar({ user = null }: { user?: NavUser }) {
                     aria-haspopup="menu"
                     aria-expanded={open}
                     aria-controls={open ? id : undefined}
-                    aria-label={t("Profilmeny")}
-                    className={`rounded-full p-0.5 ring-2 transition active:scale-90 ${
-                      open || pathname.startsWith(`/@${user.username}`) || pathname.startsWith("/profil") ? "ring-fg/30" : "ring-transparent hover:ring-fill-2"
+                    aria-label={user.unread ? t("Profilmeny, {n} uleste varsler", { n: user.unread }) : t("Profilmeny")}
+                    className={`relative rounded-full p-0.5 ring-2 transition active:scale-90 ${
+                      open || pathname.startsWith(`/@${user.username}`) || pathname.startsWith("/profil") || pathname.startsWith("/varsler") ? "ring-fg/30" : "ring-transparent hover:ring-fill-2"
                     }`}
                   >
                     <Avatar name={user.name} image={user.image} size={36} />
+                    <UnreadBadge count={user.unread ?? 0} className="absolute -right-1 -top-1" />
                   </button>
                   {!open && <Tip>{user.name}</Tip>}
                 </div>

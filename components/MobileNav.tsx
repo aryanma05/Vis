@@ -3,11 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import { Bell, Compass, Home, LogIn, Plus, Search, Settings, UserPlus } from "lucide-react";
+import { Compass, Home, LogIn, Plus, Settings, UserPlus } from "lucide-react";
 import Avatar from "@/components/Avatar";
 import { LogoBadge } from "@/components/Logo";
-import NavUserMenu, { type NavUser } from "@/components/nav/NavUserMenu";
-import { openSearch } from "@/components/nav/search-events";
+import NavUserMenu, { UnreadBadge, type NavUser } from "@/components/nav/NavUserMenu";
 import { useT } from "@/components/LocaleProvider";
 import { openSettings } from "@/components/settings/settings-events";
 
@@ -25,13 +24,13 @@ function Bubble() {
   );
 }
 
-// Mobil: en tynn topplinje med logo, innstillinger og søk, og en flytende fanelinje i glass nederst.
+// Mobil: en tynn topplinje med logo og innstillinger, og en flytende fanelinje i glass nederst. Søket ligger i Utforsk.
 export default function MobileNav({ user = null }: { user?: NavUser }) {
   const pathname = usePathname();
   const t = useT();
   const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`));
 
-  const tab = (href: string, text: string, Icon: typeof Home, badge = 0) => {
+  const tab = (href: string, text: string, Icon: typeof Home) => {
     const active = isActive(href);
     const label = t(text);
     return (
@@ -45,16 +44,11 @@ export default function MobileNav({ user = null }: { user?: NavUser }) {
         {active && <Bubble />}
         <Icon className="relative size-[22px]" strokeWidth={active ? 2.1 : 1.7} />
         <span className="relative">{label}</span>
-        {badge > 0 && (
-          <span className="absolute right-[calc(50%-20px)] top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[9.5px] font-semibold text-white">
-            {badge > 9 ? "9+" : badge}
-          </span>
-        )}
       </Link>
     );
   };
 
-  const profileActive = Boolean(user) && (pathname.startsWith(`/@${user?.username}`) || pathname.startsWith("/profil"));
+  const profileActive = Boolean(user) && (pathname.startsWith(`/@${user?.username}`) || pathname.startsWith("/profil") || pathname.startsWith("/varsler"));
 
   return (
     <>
@@ -67,25 +61,15 @@ export default function MobileNav({ user = null }: { user?: NavUser }) {
         <Link href="/" aria-label={t("Vis – forsiden")} className="rounded-full focus-visible:outline-offset-4">
           <LogoBadge className="size-11 rounded-full shadow-[0_8px_20px_-8px_rgb(0_0_0/0.45)]" />
         </Link>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => openSettings()}
-            aria-haspopup="dialog"
-            aria-label={t("Innstillinger")}
-            className="flex size-9 items-center justify-center rounded-full glass-chip text-fg transition active:scale-90"
-          >
-            <Settings className="size-[18px]" />
-          </button>
-          <button
-            type="button"
-            onClick={() => openSearch()}
-            aria-label={t("Søk")}
-            className="flex size-9 items-center justify-center rounded-full glass-chip text-fg transition active:scale-90"
-          >
-            <Search className="size-[18px]" />
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => openSettings()}
+          aria-haspopup="dialog"
+          aria-label={t("Innstillinger")}
+          className="flex size-9 items-center justify-center rounded-full glass-chip text-fg transition active:scale-90"
+        >
+          <Settings className="size-[18px]" />
+        </button>
       </header>
 
       <div
@@ -97,7 +81,6 @@ export default function MobileNav({ user = null }: { user?: NavUser }) {
           {tab("/sok", "Utforsk", Compass)}
           {user ? (
             <>
-              {tab("/varsler", "Varsler", Bell, user.unread ?? 0)}
               <div className="flex flex-1 [&>div]:flex [&>div]:flex-1">
                 <NavUserMenu
                   user={user}
@@ -109,12 +92,13 @@ export default function MobileNav({ user = null }: { user?: NavUser }) {
                       onClick={toggle}
                       aria-haspopup="menu"
                       aria-expanded={open}
-                      aria-label={t("Profilmeny")}
+                      aria-label={user.unread ? t("Profilmeny, {n} uleste varsler", { n: user.unread }) : t("Profilmeny")}
                       className={`${tabClass} h-full w-full ${profileActive || open ? "text-fg" : "text-mist"}`}
                     >
                       {profileActive && <Bubble />}
                       <Avatar name={user.name} image={user.image} size={24} className="relative" />
                       <span className="relative">{t("Meg")}</span>
+                      <UnreadBadge count={user.unread ?? 0} className="absolute right-[calc(50%-22px)] top-0.5" />
                     </button>
                   )}
                 />

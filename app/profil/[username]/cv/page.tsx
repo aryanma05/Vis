@@ -52,7 +52,7 @@ export default async function CvPage({ params, searchParams }: Props) {
           cvLocale={cvLocale}
         />
         <div className="mt-8 print:mt-0">
-          <CvView data={buildCvViewData(profile, { branding, locale: cvLocale })} template={template} />
+          <CvView data={buildCvViewData(profile, { branding, locale: cvLocale })} template={template} watermark={isProTemplate(template) && !ownerPro} />
         </div>
         <p className="mt-6 text-center text-xs text-mist print:hidden">
           {t("Tips: I utskriftsvinduet, slå av «Topptekst og bunntekst» for en ren PDF.")}

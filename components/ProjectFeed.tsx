@@ -3,11 +3,11 @@
 import { useState, useTransition } from "react";
 import { loadMoreProjectsAction } from "@/app/actions/feed";
 import { useT } from "@/components/LocaleProvider";
-import ProjectCard from "@/components/ProjectCard";
+import ProjectMasonry from "@/components/ProjectMasonry";
 import { Button } from "@/components/ui/button";
 import type { ProjectCard as Card } from "@/lib/projects";
 
-// Prosjekter med «Vis flere». `source` avgjør hvilken liste som hentes videre.
+// Prosjekter i ulike størrelser (som i Utforsk) med «Vis flere». `source` avgjør hvilken liste som hentes videre.
 export default function ProjectFeed({
   initial,
   cursor,
@@ -36,11 +36,7 @@ export default function ProjectFeed({
 
   return (
     <>
-      <div className={`grid grid-cols-1 gap-x-5 gap-y-9 sm:grid-cols-2 ${columns === 3 ? "xl:grid-cols-3" : ""}`}>
-        {projects.map((p, i) => (
-          <ProjectCard key={p.id} project={p} priority={i < 3} />
-        ))}
-      </div>
+      <ProjectMasonry projects={projects} columns={columns} />
       {error && <p className="mt-8 text-center text-sm text-danger">{error}</p>}
       {next && (
         <div className="mt-14 flex justify-center">

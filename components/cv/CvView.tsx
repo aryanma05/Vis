@@ -86,14 +86,36 @@ function ordered(data: CvViewData, parts: Partial<Record<CvSection, ReactNode>>)
 const paper =
   "cv-paper mx-auto w-full max-w-[820px] bg-white [overflow-wrap:anywhere] text-[#0f172a] shadow-[0_40px_90px_-40px_rgb(0_0_0/0.75)] ring-1 ring-black/5 [print-color-adjust:exact] [-webkit-print-color-adjust:exact]";
 
-export default function CvView({ data: raw, template }: { data: CvViewData; template: CvTemplate }) {
+// `watermark`: Pro-malene kan forhåndsvises uten Pro, men da med et stort vannmerke (også på utskrift).
+export default function CvView({ data: raw, template, watermark = false }: { data: CvViewData; template: CvTemplate; watermark?: boolean }) {
   const data = { ...raw, sections: raw.sections ?? defaultCvSections(template) };
   const style = { "--cv-accent": data.accent, fontFamily: "var(--font-sans)" } as CSSProperties;
-  if (template === "moderne") return <Modern data={data} style={style} />;
-  if (template === "kompakt") return <Compact data={data} style={style} />;
-  if (template === "elegant") return <Elegant data={data} style={style} />;
-  if (template === "tydelig") return <Bold data={data} style={style} />;
-  return <Classic data={data} style={style} />;
+  const view =
+    template === "moderne" ? (
+      <Modern data={data} style={style} />
+    ) : template === "kompakt" ? (
+      <Compact data={data} style={style} />
+    ) : template === "elegant" ? (
+      <Elegant data={data} style={style} />
+    ) : template === "tydelig" ? (
+      <Bold data={data} style={style} />
+    ) : (
+      <Classic data={data} style={style} />
+    );
+  if (!watermark) return view;
+  return (
+    <div className="relative mx-auto max-w-[820px]">
+      {view}
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 flex select-none flex-col items-center justify-around overflow-hidden">
+        {[0, 1, 2].map((i) => (
+          <p key={i} className="-rotate-[24deg] whitespace-nowrap text-center font-black uppercase leading-none text-[#0f172a]/15">
+            <span className="block text-[clamp(5rem,18vw,10rem)] tracking-[0.08em]">Pro</span>
+            <span className="block text-[clamp(1rem,3vw,1.6rem)] tracking-[0.3em]">{makeT(data.locale ?? "nb")("Forhåndsvisning")}</span>
+          </p>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function EmptyNote({ data }: { data: CvViewData }) {
