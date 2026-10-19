@@ -7,6 +7,7 @@ import { cancelAllSubscriptions } from "@/lib/billing";
 import { releaseCompaniesOf } from "@/lib/companies";
 import { AUDIT_ACTION_LABELS, type AuditAction } from "@/lib/company-labels";
 import { getCv } from "@/lib/cv";
+import { exportMessages } from "@/lib/messages";
 import { exportPartnerData } from "@/lib/partner-posts";
 import { deleteStoredFiles, storageKeyFromUrl } from "@/lib/storage";
 
@@ -334,6 +335,7 @@ export async function exportUserData(userId: string) {
     contactRequests: { sent: contactsSent, received: contactsReceived },
     // Samarbeid: prosjekter du har lagt ut, og forespørsler om å hjelpe andre.
     partner: await exportPartnerData(userId),
+    messages: await exportMessages(userId),
     // Profiler du har besøkt mens du var innlogget (vises for Pro-eiere hvis du ikke har skjult deg).
     profilesVisited: visits,
     plan: { subscriptions, grants },

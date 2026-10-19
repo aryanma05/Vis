@@ -3,8 +3,9 @@ import "server-only";
 import { readFile, unlink } from "node:fs/promises";
 import path from "node:path";
 import { del, put } from "@vercel/blob";
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
+import type { EnvCheck } from "@/lib/env";
 import { isPdf, sniffImageType } from "@/lib/file-signatures";
 import { UserFacingError } from "@/lib/result";
 
@@ -15,6 +16,23 @@ import { UserFacingError } from "@/lib/result";
 //   databasen er det eneste stedet som overlever en omstart der.
 // Eldre filer fra lokal utvikling (public/uploads, nøkler som starter med "local:")
 // kan fortsatt leses og slettes.
+
+// shortcut: grensen er Neon sitt gratisnivå (0,5 GB); endre tallet hvis dere bytter plan.
+const DATABASE_LIMIT_BYTES = 512 * 1024 * 1024;
+
+// Til /admin?fane=system: hvor full databasen er. Bilder og CV-er ligger der uten Vercel Blob,
+// og når Neon er full, feiler alle skrivinger (også innlogging).
+export async function databaseSizeCheck(): Promise<EnvCheck> {
+  const [row] = await db.execute<{ bytes: string }>(sql`select pg_database_size(current_database()) as bytes`);
+  const used = Number(row.bytes) / DATABASE_LIMIT_BYTES;
+  const mb = Math.round(Number(row.bytes) / 1024 / 1024);
+  return {
+    group: "Database",
+    key: "Størrelse",
+    status: used >= 0.9 ? "error" : used >= 0.7 ? "warn" : "ok",
+    message: `${mb} MB av ${DATABASE_LIMIT_BYTES / 1024 / 1024} MB (${Math.round(used * 100)} %).${used >= 0.7 ? " Sett BLOB_READ_WRITE_TOKEN eller oppgrader Neon før den blir full." : ""}`,
+  };
+}
 
 // Hva vi tar imot. Bildene krympes etterpå (se processImage), så det som lagres er mye mindre.
 export const MAX_IMAGE_BYTES = 12 * 1024 * 1024;

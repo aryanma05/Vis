@@ -38,7 +38,7 @@ async function getStats(userId: string): Promise<Stats> {
       (select count(*) from cv_experience e where e.user_id = ${userId}) + (select count(*) from cv_education e where e.user_id = ${userId}) as "cv",
       (select count(*) from project p where p.owner_id = ${userId} and ${published}
         and extract(hour from p.published_at at time zone 'Europe/Oslo') < 5) as "nightOwl",
-      (select count(*) from "user" o where o.created_at <= (select created_at from "user" where id = ${userId})) as "pioneer",
+      (select count(*) from (select 1 from "user" o where o.created_at <= (select created_at from "user" where id = ${userId}) limit ${PIONEER_LIMIT + 1}) earlier) as "pioneer",
       (select pr.pet is not null from profile pr where pr.user_id = ${userId}) as "pet"
   `);
 

@@ -1324,7 +1324,8 @@ export const EN: Record<string, string> = {
   "Fra LinkedIn?": "From LinkedIn?",
   "Gå til profilen din på LinkedIn, trykk «Mer» → «Lagre som PDF», og last opp filen her.": "Go to your profile on LinkedIn, tap “More” → “Save to PDF”, and upload the file here.",
   Innhold: "Content",
-  "Erfaring, utdanning og ferdigheter. Dra i håndtaket eller bruk pilene for å endre rekkefølgen.": "Experience, education and skills. Drag the handle or use the arrows to change the order.",
+  "Teksten på CV-en: om deg, erfaring, utdanning og ferdigheter. Dra i håndtaket eller bruk pilene for å endre rekkefølgen på oppføringene.":
+    "The text on your CV: about you, experience, education and skills. Drag the handle or use the arrows to reorder the entries.",
   "Vi fant {experience} erfaringer, {education} utdanninger og {skills} ferdigheter.": "We found {experience} jobs, {education} degrees and {skills} skills.",
   "Du har allerede fylt ut noe. Hva vil du gjøre?": "You've already filled in some things. What do you want to do?",
   Erstatt: "Replace",
@@ -3188,4 +3189,29 @@ export const EN: Record<string, string> = {
   "Logget inn her og på {n} andre enheter eller nettlesere.": "Logged in here and on {n} other devices or browsers.",
   "Logg ut på andre enheter": "Log out other devices",
   "Du er logget ut på alle andre enheter": "You're logged out on all other devices",
+
+  /* ------------------------------------------------------------------ */
+  /*  Meldinger mellom venner                                            */
+  /* ------------------------------------------------------------------ */
+  Meldinger: "Messages",
+  Du: "You",
+  "Ingen venner ennå": "No friends yet",
+  "Når du og noen andre følger hverandre, kan dere sende meldinger her.": "When you and someone else follow each other, you can message each other here.",
+  "Si hei til {name}": "Say hi to {name}",
+  "Ingen meldinger ennå. Si hei til {name}!": "No messages yet. Say hi to {name}!",
+  "Skriv en melding …": "Write a message …",
+  "Skriv en melding først.": "Write a message first.",
+  "Dere er ikke venner ennå": "You're not friends yet",
+  "Dere må følge hverandre for å sende meldinger.": "You need to follow each other to send messages.",
+  "sendte deg en melding": "sent you a message",
+  "Navnet tilhører en bekreftet bedrift. Velg et annet navn.": "That name belongs to a verified company. Choose another name.",
+  "Om deg": "About you",
+  Profiltekst: "Summary",
+  "Informatikkstudent ved UiO": "Computer science student at UiO",
+  "Navn, bosted og lenker endrer du under": "Change your name, location and links under",
+  Rekkefølge: "Order",
+  "Dra delene dit du vil ha dem på CV-en. I maler med to spalter flyttes de innenfor sin spalte.":
+    "Drag the sections to where you want them on the CV. In two-column templates they move within their column.",
+  "Tom, vises ikke": "Empty, not shown",
+  "Slik blir CV-en. Den oppdateres mens du skriver.": "This is how your CV looks. It updates as you type.",
 };

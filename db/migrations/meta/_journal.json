@@ -92,6 +92,27 @@
       "when": 1791476582105,
       "tag": "0012_samarbeid",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1791823335166,
+      "tag": "0013_meldinger",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1791833123694,
+      "tag": "0014_meldingsvarsel",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1792264059737,
+      "tag": "0015_cv_rekkefolge",
+      "breakpoints": true
     }
   ]
 }

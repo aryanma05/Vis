@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { invalidInput, runAction } from "@/lib/action";
-import { applyCvImport, cvInput, discardCvImport, importCv, saveCv } from "@/lib/cv";
+import { applyCvImport, cvEditorInput, discardCvImport, importCv, saveCv } from "@/lib/cv";
 import {
   addCvPage,
   deleteCvDocument,
@@ -46,14 +46,16 @@ export async function discardCvImportAction(importId: string) {
   });
 }
 
-// Manuell redigering: sender hele CV-en (erfaring, utdanning, ferdigheter).
+// Manuell redigering: sender hele CV-en (erfaring, utdanning, ferdigheter), tittelen,
+// profilteksten og rekkefølgen på delene.
 export async function saveCvAction(cv: unknown) {
-  const parsed = cvInput.safeParse(cv);
+  const parsed = cvEditorInput.safeParse(cv);
   if (!parsed.success) return invalidInput(parsed.error, "cv");
 
   return runAction(async () => {
     const user = await requireUserForAction();
-    await saveCv(user.id, parsed.data);
+    const { headline, summary, sections, ...entries } = parsed.data;
+    await saveCv(user.id, entries, { headline, summary, sections });
     revalidatePath(`/profil/${user.username}`);
   });
 }

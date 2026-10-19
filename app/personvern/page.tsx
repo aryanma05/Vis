@@ -84,6 +84,11 @@ function PrivacyNb({ blob, emailService, github, google, contact, stripe, analyt
           kan svare deg direkte. Mottakerens e-post deles aldri med deg.
         </li>
         <li>
+          <strong>Meldinger mellom venner:</strong> følger du og en annen hverandre, kan dere sende meldinger til hverandre fra
+          profilen. Vi lagrer meldingene, hvem de er fra og til, og når de er lest. Bare dere to ser dem. De ligger til en av dere
+          sletter kontoen sin, og er med når du laster ned dataene dine. Mottakeren får et varsel i appen, ikke e-post.
+        </li>
+        <li>
           <strong>Betaling:</strong>{" "}
           {stripe
             ? "betaler du for Pro eller Bedrift, skjer betalingen hos Stripe. Vi lagrer hvilken plan du har, om den fornyes og en kunde-ID fra Stripe – aldri kortnummeret ditt. Stripe er ansvarlig for kortopplysningene og må oppbevare kvitteringer etter bokføringsreglene."

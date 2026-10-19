@@ -34,13 +34,22 @@ describe("bedrift: søknader, lagrede søk, team og utfordringer", { skip }, () 
   after(async () => {
     const { db } = await import("@/db");
     const { sql } = await import("drizzle-orm");
-    await db.execute(sql`delete from company where id = ${companyId}`);
+    await db.execute(sql`delete from company where id = ${companyId} or created_by_id = ${outsider}`);
     await db.execute(sql`delete from plan_grant where owner_id = ${companyId}`);
     for (const id of [owner, candidate, outsider]) await db.execute(sql`delete from "user" where id = ${id}`);
     await db.$client.end();
   });
 
   const applicant = () => ({ id: candidate, name: "Kari Kandidat", username: candidate.slice(0, 30), email: `${candidate}@test.no`, emailVerified: true });
+
+  test("ingen andre kan ta navnet til en bekreftet bedrift", async () => {
+    const { db, schema } = await import("@/db");
+    const { eq } = await import("drizzle-orm");
+    const { createCompany } = await import("@/lib/companies");
+    const [{ name }] = await db.update(schema.company).set({ verifiedAt: new Date() }).where(eq(schema.company.id, companyId)).returning({ name: schema.company.name });
+    await assert.rejects(createCompany(outsider, { name: name.toUpperCase(), acceptTerms: true }), /bekreftet bedrift/);
+    await db.update(schema.company).set({ verifiedAt: null }).where(eq(schema.company.id, companyId));
+  });
 
   test("stillinger med «Søk med Vis-profilen» trenger ingen lenke, andre gjør det", async () => {
     const { createJob } = await import("@/lib/jobs");

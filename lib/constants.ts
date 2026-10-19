@@ -53,6 +53,26 @@ export const CV_TEMPLATE_LABELS: Record<CvTemplate, { name: string; description:
 };
 export const isProTemplate = (t: CvTemplate) => Boolean(CV_TEMPLATE_LABELS[t].pro);
 
+// Delene av CV-en i standardrekkefølgen. Brukeren kan dra dem i en annen rekkefølge.
+export const CV_SECTIONS = ["summary", "experience", "education", "skills", "projects"] as const;
+export type CvSection = (typeof CV_SECTIONS)[number];
+export const CV_SECTION_LABELS: Record<CvSection, string> = {
+  summary: "Profil",
+  experience: "Erfaring",
+  education: "Utdanning",
+  skills: "Ferdigheter",
+  projects: "Prosjekter",
+};
+
+// Uten egen rekkefølge følger CV-en malens oppsett: Moderne og Tydelig har ferdigheter før utdanning i sidekolonnen.
+export const defaultCvSections = (template: CvTemplate): CvSection[] =>
+  template === "moderne" || template === "tydelig" ? ["summary", "experience", "skills", "education", "projects"] : [...CV_SECTIONS];
+
+// Den lagrede rekkefølgen, rettet opp: ukjente deler fjernes og manglende legges til sist.
+export const cvSectionOrder = (saved: readonly string[] | null | undefined): CvSection[] => [
+  ...new Set([...(saved ?? []).filter((s): s is CvSection => (CV_SECTIONS as readonly string[]).includes(s)), ...CV_SECTIONS]),
+];
+
 // Aksentfarger en profil kan velge. `ink` er fargen tekst på aksenten skal ha.
 export const ACCENTS = {
   is: { label: "Is", color: "#c7f9ff", ink: "#071a52" },

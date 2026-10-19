@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AtSign, Bell, Bookmark, Briefcase, Building2, CalendarCheck, CalendarX, Crown, HandHeart, Handshake, Heart, KeyRound, Lightbulb, LogOut, Mail, MessageCircle, Reply, Settings, Sparkles, Star, Trophy, UserCheck, UserMinus, UserPlus, Users, UserX } from "lucide-react";
+import { AtSign, Bell, Bookmark, Briefcase, Building2, CalendarCheck, CalendarX, Crown, HandHeart, Handshake, Heart, KeyRound, Lightbulb, LogOut, Mail, MessageCircle, Reply, Send, Settings, Sparkles, Star, Trophy, UserCheck, UserMinus, UserPlus, Users, UserX } from "lucide-react";
 import Avatar from "@/components/Avatar";
 import PendingInvites from "@/components/company/PendingInvites";
 import { EmptyState } from "@/components/ui/misc";
@@ -29,6 +29,8 @@ function describe(n: NotificationItem, t: T, locale: Locale) {
       return { Icon: AtSign, tone: "text-ice", text: <>{t("nevnte deg på")} {project}</> };
     case "follow":
       return { Icon: UserPlus, tone: "text-success", text: <>{t("begynte å følge deg")}</> };
+    case "message":
+      return { Icon: Send, tone: "text-ice", text: <>{t("sendte deg en melding")}</> };
     case "contact":
       return {
         Icon: Mail,
@@ -157,6 +159,7 @@ function describe(n: NotificationItem, t: T, locale: Locale) {
 
 function href(n: NotificationItem) {
   if (n.type === "contact" && n.contactId) return `/kontakt/${n.contactId}`;
+  if (n.type === "message") return `/meldinger/${n.actor.username}`;
   if (n.type === "application") {
     return n.data.event === "status" || n.data.event === "job_closed" ? "/soknader" : `/bedrift/${n.data.companySlug}/admin/soker/${n.data.applicationId}`;
   }

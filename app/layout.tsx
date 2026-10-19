@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
 import Analytics from "@/components/Analytics";
-import { LocaleProvider, LocaleTransition } from "@/components/LocaleProvider";
+import { LocaleProvider } from "@/components/LocaleProvider";
 import { makeT } from "@/lib/i18n";
 import { getLocale } from "@/lib/i18n/server";
 import MobileNav from "@/components/MobileNav";
@@ -73,7 +73,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body className="min-h-screen overflow-x-hidden">
+      <body className="min-h-screen overflow-x-clip">
         <LocaleProvider locale={locale}>
         <ThemeProvider>
         <MotionPrefs>
@@ -86,9 +86,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           <HomeLogo />
           <Sidebar user={navUser} />
           <MobileNav user={navUser} />
-          <LocaleTransition>
-            <div id="innhold">{children}</div>
-          </LocaleTransition>
+          <div id="innhold">{children}</div>
           <SiteFooter />
           <Analytics />
           <CommandPalette loggedIn={Boolean(user)} username={user?.username ?? null} />

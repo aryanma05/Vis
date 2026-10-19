@@ -15,6 +15,7 @@ import { REPORT_REASON_LABELS } from "@/lib/constants";
 import { checkEnv } from "@/lib/env";
 import { getErrorSummary } from "@/lib/errors";
 import { getGithubStatus } from "@/lib/github";
+import { databaseSizeCheck } from "@/lib/storage";
 import { getKeyMetrics } from "@/lib/metrics";
 import { timeAgo } from "@/lib/format";
 import { getProjectById } from "@/lib/projects";
@@ -137,7 +138,7 @@ export default async function AdminPage({ searchParams }: Props) {
         </div>
 
         {metrics && <MetricsTab metrics={metrics} billing={billing} />}
-        {errors && <SystemTab checks={checkEnv()} errors={errors} github={github} ip={await ipDiagnostics()} />}
+        {errors && <SystemTab checks={[...checkEnv(), await databaseSizeCheck()]} errors={errors} github={github} ip={await ipDiagnostics()} />}
 
         {tab === "rapporter" ? (
           <>

@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { CvViewData } from "@/components/cv/CvView";
-import { ACCENTS, isProTemplate, type CvTemplate } from "@/lib/constants";
+import { ACCENTS, cvSectionOrder, isProTemplate, type CvTemplate } from "@/lib/constants";
 import type { Locale } from "@/lib/i18n";
 import type { Profile } from "@/lib/profiles";
 import { siteUrl } from "@/lib/site";
@@ -26,6 +26,7 @@ export function buildCvViewData(profile: Profile, { branding = true, locale = "n
     education: profile.cv.education,
     skills: profile.cv.skills,
     projects: projects.map((p) => ({ title: p.title, summary: p.summary, tags: p.tags.map((t) => t.name), url: `/prosjekt/${p.id}` })),
+    sections: profile.cvSections ? cvSectionOrder(profile.cvSections) : null,
     accent: ACCENTS[profile.accentColor ?? "is"].color,
     branding,
     brandHost: origin,
