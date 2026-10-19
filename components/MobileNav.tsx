@@ -3,11 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import { Bell, Compass, Home, LogIn, Plus, Search, Settings, UserPlus } from "lucide-react";
+import { Bell, Compass, Home, LogIn, Plus, Settings, UserPlus } from "lucide-react";
 import Avatar from "@/components/Avatar";
 import { LogoBadge } from "@/components/Logo";
 import NavUserMenu, { type NavUser } from "@/components/nav/NavUserMenu";
-import { openSearch } from "@/components/nav/search-events";
 import { useT } from "@/components/LocaleProvider";
 import { openSettings } from "@/components/settings/settings-events";
 
@@ -25,7 +24,7 @@ function Bubble() {
   );
 }
 
-// Mobil: en tynn topplinje med logo, innstillinger og søk, og en flytende fanelinje i glass nederst.
+// Mobil: en tynn topplinje med logo og innstillinger, og en flytende fanelinje i glass nederst. Søket ligger i Utforsk.
 export default function MobileNav({ user = null }: { user?: NavUser }) {
   const pathname = usePathname();
   const t = useT();
@@ -67,25 +66,15 @@ export default function MobileNav({ user = null }: { user?: NavUser }) {
         <Link href="/" aria-label={t("Vis – forsiden")} className="rounded-full focus-visible:outline-offset-4">
           <LogoBadge className="size-11 rounded-full shadow-[0_8px_20px_-8px_rgb(0_0_0/0.45)]" />
         </Link>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => openSettings()}
-            aria-haspopup="dialog"
-            aria-label={t("Innstillinger")}
-            className="flex size-9 items-center justify-center rounded-full glass-chip text-fg transition active:scale-90"
-          >
-            <Settings className="size-[18px]" />
-          </button>
-          <button
-            type="button"
-            onClick={() => openSearch()}
-            aria-label={t("Søk")}
-            className="flex size-9 items-center justify-center rounded-full glass-chip text-fg transition active:scale-90"
-          >
-            <Search className="size-[18px]" />
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => openSettings()}
+          aria-haspopup="dialog"
+          aria-label={t("Innstillinger")}
+          className="flex size-9 items-center justify-center rounded-full glass-chip text-fg transition active:scale-90"
+        >
+          <Settings className="size-[18px]" />
+        </button>
       </header>
 
       <div

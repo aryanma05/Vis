@@ -2,10 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, Briefcase, Compass, Handshake, Home, LogIn, Plus, Search, Settings } from "lucide-react";
+import { Bell, Briefcase, Compass, Handshake, Home, LogIn, Plus, Settings } from "lucide-react";
 import Avatar from "@/components/Avatar";
 import NavUserMenu, { type NavUser } from "@/components/nav/NavUserMenu";
-import { openSearch } from "@/components/nav/search-events";
 import { useT } from "@/components/LocaleProvider";
 import { openSettings } from "@/components/settings/settings-events";
 
@@ -24,7 +23,7 @@ const itemBase =
 
 // Flytende sidemeny i glass på desktop. Menyvalgene endrer seg etter om du er logget inn.
 // Logoen står for seg selv øverst til venstre (components/nav/HomeLogo.tsx), ikke her.
-// Innstillingene (tannhjulet) ligger alltid nederst.
+// Innstillingene (tannhjulet) ligger alltid nederst. Søket ligger i Utforsk (og bak ⌘K).
 export default function Sidebar({ user = null }: { user?: NavUser }) {
   const pathname = usePathname();
   const t = useT();
@@ -44,20 +43,6 @@ export default function Sidebar({ user = null }: { user?: NavUser }) {
         aria-label={t("Hovedmeny")}
         className="glass pointer-events-auto flex w-[60px] flex-col items-center gap-1 rounded-full py-2"
       >
-        <div className="group relative">
-          <button
-            type="button"
-            onClick={() => openSearch()}
-            aria-label={`${t("Søk")} (⌘K)`}
-            className={`${itemBase} text-mist hover:bg-fill hover:text-fg`}
-          >
-            <Search className="size-[19px]" />
-          </button>
-          <Tip>
-            {t("Søk")} <span className="ml-1 text-mist">⌘K</span>
-          </Tip>
-        </div>
-
         {items.map(({ href, label, Icon, ...rest }) => {
           const active = isActive(href);
           const badge = "badge" in rest ? (rest.badge as number) : 0;
