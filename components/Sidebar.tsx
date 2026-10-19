@@ -32,8 +32,8 @@ export default function Sidebar({ user = null }: { user?: NavUser }) {
 
   const items = [
     { href: "/sok", label: t("Utforsk"), Icon: Compass },
-    { href: "/partnere", label: t("Finn partnere"), Icon: Handshake },
     { href: "/stillinger", label: t("Stillinger"), Icon: Briefcase },
+    { href: "/partnere", label: t("Finn partnere"), Icon: Handshake },
   ];
 
   return (
