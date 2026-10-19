@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { ArrowRight, Handshake, SearchX, Users } from "lucide-react";
 import ProjectMasonry from "@/components/ProjectMasonry";
 import { PersonTile } from "@/components/social/PersonRow";
 import { ButtonLink } from "@/components/ui/button";
-import { EmptyState, Tag } from "@/components/ui/misc";
+import { EmptyState } from "@/components/ui/misc";
 import { FIELD_KEYS, OPEN_TO, OPEN_TO_LABELS, PERIODS, type FieldKey, type OpenTo, type PeriodKey } from "@/lib/constants";
 import { getPopularLocations, searchPeople } from "@/lib/profiles";
 import { getPopularTags, getTagBySlug, searchProjects, type ProjectSort } from "@/lib/projects";
@@ -79,26 +78,11 @@ export default async function SearchPage({ searchParams }: Props) {
   return (
     <main className="px-5 pb-28 pt-10 md:pb-20 md:pl-28 md:pr-10 md:pt-14">
       <div className="mx-auto max-w-7xl">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <h1 className="display text-[34px] md:text-5xl">{t("Utforsk")}</h1>
-          <Link href="/stillinger" className="text-sm text-mist transition hover:text-fg">
-            {t("Ledige stillinger →")}
-          </Link>
-        </div>
+        <h1 className="display text-[34px] md:text-5xl">{t("Utforsk")}</h1>
 
         <div className="mt-6">
           <ExploreFilters state={state} tags={tagList} locations={locations} />
         </div>
-
-        {state.type === "prosjekter" && !state.tag && tagList.length > 0 && (
-          <div className="no-scrollbar -mx-5 mt-6 flex gap-2 overflow-x-auto px-5 sm:mx-0 sm:flex-wrap sm:px-0">
-            {tagList.slice(0, 18).map((tag) => (
-              <Tag key={tag.slug} href={`/sok?tag=${encodeURIComponent(tag.slug)}`} count={tag.count}>
-                {tag.name}
-              </Tag>
-            ))}
-          </div>
-        )}
 
         <div className="mt-10">
           <div className="mb-6 flex flex-wrap items-baseline justify-between gap-4">

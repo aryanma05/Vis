@@ -7,10 +7,10 @@ import ProjectCover from "@/components/ProjectCover";
 import ProjectFeed from "@/components/ProjectFeed";
 import { PersonRow } from "@/components/social/PersonRow";
 import { ButtonLink } from "@/components/ui/button";
-import { EmptyState, SectionHeading, Tag } from "@/components/ui/misc";
+import { EmptyState, SectionHeading } from "@/components/ui/misc";
 import { Tabs } from "@/components/ui/tabs";
 import { getFeaturedProfiles, getOnboarding, getPlatformStats } from "@/lib/profiles";
-import { getFeaturedProjects, getFollowingProjects, getLatestProjects, getPopularTags, getTrendingProjects, type ProjectCard } from "@/lib/projects";
+import { getFeaturedProjects, getFollowingProjects, getLatestProjects, getTrendingProjects, type ProjectCard } from "@/lib/projects";
 import { getT } from "@/lib/i18n/server";
 import { getCurrentUser, type CurrentUser } from "@/lib/session";
 import { getFollowCounts, suggestPeople } from "@/lib/social";
@@ -199,10 +199,9 @@ async function Feed({ user, searchParams }: { user: CurrentUser; searchParams: P
   const followsAnyone = counts.following > 0;
   const tab = fane === "trender" || fane === "nyeste" || fane === "folger" ? fane : followsAnyone ? "folger" : "trender";
 
-  const [steps, people, tags, content] = await Promise.all([
+  const [steps, people, content] = await Promise.all([
     getOnboarding(user.id, user.username),
     suggestPeople(user.id, 4),
-    getPopularTags(14),
     tab === "folger"
       ? getFollowingProjects(user.id, { limit: 24 })
       : tab === "nyeste"
@@ -219,14 +218,9 @@ async function Feed({ user, searchParams }: { user: CurrentUser; searchParams: P
           <h1 className="display text-[34px] md:text-5xl">
             {t(greeting())}, {firstName}
           </h1>
-          <div className="flex gap-2">
-            <ButtonLink href="/sok" variant="secondary" size="sm">
-              <Compass className="size-4" /> {t("Utforsk")}
-            </ButtonLink>
-            <ButtonLink href="/ny" size="sm">
-              {t("Del prosjekt")}
-            </ButtonLink>
-          </div>
+          <ButtonLink href="/ny" size="sm">
+            {t("Del prosjekt")}
+          </ButtonLink>
         </header>
 
         <div className="mt-8 grid grid-cols-1 gap-12 xl:grid-cols-[minmax(0,1fr)_320px]">
@@ -297,18 +291,6 @@ async function Feed({ user, searchParams }: { user: CurrentUser; searchParams: P
               </section>
             )}
 
-            {tags.length > 0 && (
-              <section>
-                <h2 className="px-1 caption">{t("Populære teknologier")}</h2>
-                <div className="mt-4 flex flex-wrap gap-1.5">
-                  {tags.map((tag) => (
-                    <Tag key={tag.slug} href={`/tag/${tag.slug}`} count={tag.count}>
-                      {tag.name}
-                    </Tag>
-                  ))}
-                </div>
-              </section>
-            )}
           </aside>
         </div>
       </div>

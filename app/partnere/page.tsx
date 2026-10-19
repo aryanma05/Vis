@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { FolderOpen, Hammer, Handshake, Lightbulb, MapPin, Plus, Search, Send, UserRound, Users } from "lucide-react";
 import Avatar from "@/components/Avatar";
+import FilterButton, { FilterChip, FilterGroup } from "@/components/FilterButton";
 import PartnerPostTile from "@/components/partners/PartnerPostTile";
 import ContactButton from "@/components/profile/ContactButton";
 import FollowButton from "@/components/social/FollowButton";
@@ -227,10 +228,10 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
               ]}
             />
 
-            <form action="/partnere" className="mt-5 flex flex-wrap gap-2">
+            <form action="/partnere" className="mt-5 flex items-center gap-2">
               {state.vis === "folk" && <input type="hidden" name="vis" value="folk" />}
               {state.fag && <input type="hidden" name="fag" value={state.fag} />}
-              <label className="relative min-w-56 flex-[2]">
+              <label className="relative min-w-0 flex-1">
                 <span className="sr-only">{t("Søk")}</span>
                 <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-mist" aria-hidden="true" />
                 <input
@@ -240,26 +241,26 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
                   className={`${inputClass} pl-10`}
                 />
               </label>
-              <label className="relative min-w-40 flex-1">
-                <span className="sr-only">{t("Sted")}</span>
-                <MapPin className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-mist" aria-hidden="true" />
-                <input name="sted" defaultValue={state.sted} placeholder={t("Sted")} className={`${inputClass} pl-10`} />
-              </label>
-              <button type="submit" className="h-11 rounded-full bg-primary px-5 text-sm font-semibold text-on-primary transition hover:opacity-90">
-                {t("Søk")}
-              </button>
+              <FilterButton active={[state.sted, state.fag].filter(Boolean).length} submit>
+                <FilterGroup title={t("Sted")}>
+                  <label className="relative w-full">
+                    <span className="sr-only">{t("Sted")}</span>
+                    <MapPin className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-mist" aria-hidden="true" />
+                    <input name="sted" defaultValue={state.sted} placeholder={t("Sted")} className={`${inputClass} pl-10`} />
+                  </label>
+                </FilterGroup>
+                <FilterGroup title={t("Fagfelt")}>
+                  <FilterChip href={href(state, { fag: null })} active={!state.fag}>
+                    {t("Alle")}
+                  </FilterChip>
+                  {FIELD_KEYS.map((key) => (
+                    <FilterChip key={key} href={href(state, { fag: key })} active={state.fag === key}>
+                      {t(FIELDS[key].label)}
+                    </FilterChip>
+                  ))}
+                </FilterGroup>
+              </FilterButton>
             </form>
-
-            <nav aria-label={t("Fagfelt")} className="no-scrollbar mt-4 flex gap-2 overflow-x-auto">
-              <Tag href={href(state, { fag: null })} active={!state.fag}>
-                {t("Alle")}
-              </Tag>
-              {FIELD_KEYS.map((key) => (
-                <Tag key={key} href={href(state, { fag: key })} active={state.fag === key}>
-                  {t(FIELDS[key].label)}
-                </Tag>
-              ))}
-            </nav>
 
             {posts &&
               (posts.length === 0 ? (

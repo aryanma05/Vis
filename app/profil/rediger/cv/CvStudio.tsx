@@ -2,15 +2,16 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import { Check, FileUp, Printer } from "lucide-react";
 import { applyCvImportAction, importCvAction, parseStoredCvAction, saveCvAction } from "@/app/actions/cv";
 import { setCvTemplateAction } from "@/app/actions/profile";
+import CvView, { type CvViewData } from "@/components/cv/CvView";
 import { useT } from "@/components/LocaleProvider";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Section } from "@/components/ui/field";
 import { toast } from "@/components/ui/toast";
-import { CV_TEMPLATE_LABELS, CV_TEMPLATES, type CvTemplate } from "@/lib/constants";
+import { CV_TEMPLATE_LABELS, CV_TEMPLATES, isProTemplate, type CvTemplate } from "@/lib/constants";
 import type { Cv } from "@/lib/cv";
 import type { ParsedCv } from "@/lib/validation";
 import CvDocumentPanel, { type DocState } from "./CvDocumentPanel";
@@ -202,17 +203,32 @@ function TemplateThumb({ template }: { template: CvTemplate }) {
 }
 
 type Pending = { importId: string; parsed: ParsedCv };
+type Draft = { base: string; state: CvState; applied: Pending | null };
+
+const PAPER_WIDTH = 820;
+const noSubscribe = () => () => {};
+function readDraft(key: string) {
+  try {
+    return sessionStorage.getItem(key) ?? "";
+  } catch {
+    return "";
+  }
+}
 
 export default function CvStudio({
   cv,
   doc,
   username,
   template: initialTemplate,
+  pro,
+  preview,
 }: {
   cv: Cv;
   doc: DocState;
   username: string;
   template: CvTemplate;
+  pro: boolean;
+  preview: CvViewData;
 }) {
   const router = useRouter();
   const t = useT();
@@ -221,11 +237,58 @@ export default function CvStudio({
   const [draft, setDraft] = useState<Pending | null>(null);
   const [applied, setApplied] = useState<Pending | null>(null);
   const [autofilling, setAutofilling] = useState(false);
+  // `template` er malen som vises; `saved` er den profilen bruker.
   const [template, setTemplate] = useState(initialTemplate);
+  const [saved, setSaved] = useState(initialTemplate);
   const [saving, startSaving] = useTransition();
   const docxRef = useRef<HTMLInputElement>(null);
 
-  const dirty = JSON.stringify(toPayload(state)) !== JSON.stringify(toPayload(initial.current));
+  // Ulagrede endringer ligger i fanen (sessionStorage), så de er der igjen når man har
+  // vært innom profilen. Lagres CV-en et annet sted i mellomtiden, gjelder ikke utkastet.
+  const draftKey = `vis-cv-utkast:${username}`;
+  const savedJson = JSON.stringify(toPayload(initial.current));
+  const stored = useSyncExternalStore(noSubscribe, () => readDraft(draftKey), () => null);
+  const [restored, setRestored] = useState(false);
+  if (!restored && stored !== null) {
+    setRestored(true);
+    try {
+      const draft = stored ? (JSON.parse(stored) as Draft) : null;
+      if (draft?.base === savedJson) {
+        setState(draft.state);
+        setApplied(draft.applied);
+      }
+    } catch {}
+  }
+
+  const payload = toPayload(state);
+  const dirty = JSON.stringify(payload) !== savedJson;
+
+  useEffect(() => {
+    if (!restored) return;
+    try {
+      if (dirty || applied) sessionStorage.setItem(draftKey, JSON.stringify({ base: savedJson, state, applied } satisfies Draft));
+      else sessionStorage.removeItem(draftKey);
+    } catch {}
+  }, [restored, dirty, applied, state, draftKey, savedJson]);
+
+  // Arket tegnes i full bredde og skaleres ned til kolonnen, så det ser ut som utskriften.
+  const previewRef = useRef<HTMLDivElement>(null);
+  const [previewScale, setPreviewScale] = useState(1);
+  useEffect(() => {
+    const el = previewRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(([entry]) => setPreviewScale(Math.min(1, entry.contentRect.width / PAPER_WIDTH)));
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  const locked = isProTemplate(template) && !pro;
+  const previewData: CvViewData = {
+    ...preview,
+    experience: payload.experience.map((e, i) => ({ ...e, id: String(i) })),
+    education: payload.education.map((e, i) => ({ ...e, id: String(i) })),
+    skills: payload.skills,
+  };
   const isEmpty = state.experience.length + state.education.length + state.skills.length === 0;
 
   async function readCv(run: () => ReturnType<typeof parseStoredCvAction>) {
@@ -258,20 +321,21 @@ export default function CvStudio({
   }
 
   async function chooseTemplate(next: CvTemplate) {
-    const previous = template;
     setTemplate(next);
+    // Pro-malene kan forhåndsvises uten Pro, men ikke tas i bruk.
+    if (next === saved || (isProTemplate(next) && !pro)) return;
     const result = await setCvTemplateAction(next);
     if (!result.ok) {
-      setTemplate(previous);
+      setTemplate(saved);
       toast.error(result.error);
       return;
     }
+    setSaved(next);
     toast.success(t("{name} er valgt", { name: t(CV_TEMPLATE_LABELS[next].name) }));
   }
 
   const save = () =>
     startSaving(async () => {
-      const payload = toPayload(state);
       const missing = payload.experience.some((e) => !e.title || !e.organization) || payload.education.some((e) => !e.institution);
       if (missing) {
         toast.error("Alle erfaringer trenger rolle og arbeidsgiver, og all utdanning trenger skole.");
@@ -323,10 +387,25 @@ export default function CvStudio({
             );
           })}
         </div>
+        {locked && (
+          <p className="mt-4 text-sm text-mist">
+            {t("Du ser {name} med vannmerke. Profilen bruker fortsatt {saved}.", {
+              name: t(CV_TEMPLATE_LABELS[template].name),
+              saved: t(CV_TEMPLATE_LABELS[saved].name),
+            })}{" "}
+            <Link href="/priser" className="text-ice hover:underline">
+              {t("Se Pro")}
+            </Link>
+          </p>
+        )}
+        <div className="mt-5 max-h-[70vh] overflow-y-auto rounded-[22px] bg-fill p-3 sm:p-6">
+          <div ref={previewRef}>
+            <div style={{ width: PAPER_WIDTH, zoom: previewScale }}>
+              <CvView data={previewData} template={template} watermark={locked} />
+            </div>
+          </div>
+        </div>
         <div className="mt-4 flex flex-wrap gap-2">
-          <ButtonLink href={`/@${username}/cv`} variant="secondary" size="sm">
-            {t("Forhåndsvis")}
-          </ButtonLink>
           <ButtonLink href={`/@${username}/cv?skriv=1`} variant="ghost" size="sm">
             <Printer className="size-4" /> {t("Last ned som PDF")}
           </ButtonLink>

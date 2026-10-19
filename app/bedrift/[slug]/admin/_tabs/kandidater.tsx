@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ShieldCheck } from "lucide-react";
 import Avatar from "@/components/Avatar";
+import FilterButton from "@/components/FilterButton";
 import { UsedTech } from "@/components/company/Applicants";
 import { ContactCandidate } from "@/components/company/ContactCandidate";
 import { AddToList } from "@/components/company/ListTools";
@@ -46,26 +47,30 @@ export default async function KandidaterTab({ ctx }: { ctx: AdminCtx }) {
       <form action={base} className="flex flex-wrap gap-2">
         <input type="hidden" name="fane" value="kandidater" />
         <input name="q" defaultValue={filters.q} placeholder={t("Ferdighet, rolle eller navn")} aria-label={t("Søk")} className="h-10 min-w-56 flex-1 rounded-full bg-fill px-4 outline-none inset-ring inset-ring-line focus:ring-2 focus:ring-sea/50" />
-        <input name="sted" defaultValue={filters.location ?? ""} placeholder={t("Sted")} aria-label={t("Sted")} className="h-10 w-36 rounded-full bg-fill px-4 outline-none inset-ring inset-ring-line focus:ring-2 focus:ring-sea/50" />
-        <select name="fag" defaultValue={filters.field ?? ""} aria-label={t("Fagfelt")} className="h-10 rounded-full bg-fill px-4 outline-none inset-ring inset-ring-line">
-          <option value="">{t("Alle fagfelt")}</option>
-          {FIELD_KEYS.map((k) => (
-            <option key={k} value={k}>
-              {t(FIELDS[k].label)}
-            </option>
-          ))}
-        </select>
-        <select name="apen" defaultValue={filters.openTo ?? ""} aria-label={t("Åpen for")} className="h-10 rounded-full bg-fill px-4 outline-none inset-ring inset-ring-line">
-          <option value="">{t("Åpen for alt")}</option>
-          {OPEN_TO.map((o) => (
-            <option key={o} value={o}>
-              {t(OPEN_TO_LABELS[o])}
-            </option>
-          ))}
-        </select>
-        <label className="flex h-10 cursor-pointer items-center gap-2 rounded-full bg-fill px-4 text-sm inset-ring inset-ring-line">
-          <input type="checkbox" name="student" value="1" defaultChecked={filters.student} className="accent-[var(--sea)]" /> {t("Studenter")}
-        </label>
+        <FilterButton active={[filters.location, filters.field, filters.openTo, filters.student].filter(Boolean).length} submit>
+          <div className="flex flex-wrap gap-2">
+            <input name="sted" defaultValue={filters.location ?? ""} placeholder={t("Sted")} aria-label={t("Sted")} className="h-10 min-w-36 flex-1 rounded-full bg-fill px-4 outline-none inset-ring inset-ring-line focus:ring-2 focus:ring-sea/50" />
+            <select name="fag" defaultValue={filters.field ?? ""} aria-label={t("Fagfelt")} className="h-10 rounded-full bg-fill px-4 outline-none inset-ring inset-ring-line">
+              <option value="">{t("Alle fagfelt")}</option>
+              {FIELD_KEYS.map((k) => (
+                <option key={k} value={k}>
+                  {t(FIELDS[k].label)}
+                </option>
+              ))}
+            </select>
+            <select name="apen" defaultValue={filters.openTo ?? ""} aria-label={t("Åpen for")} className="h-10 rounded-full bg-fill px-4 outline-none inset-ring inset-ring-line">
+              <option value="">{t("Åpen for alt")}</option>
+              {OPEN_TO.map((o) => (
+                <option key={o} value={o}>
+                  {t(OPEN_TO_LABELS[o])}
+                </option>
+              ))}
+            </select>
+            <label className="flex h-10 cursor-pointer items-center gap-2 rounded-full bg-fill px-4 text-sm inset-ring inset-ring-line">
+              <input type="checkbox" name="student" value="1" defaultChecked={filters.student} className="accent-[var(--sea)]" /> {t("Studenter")}
+            </label>
+          </div>
+        </FilterButton>
         <button type="submit" className="h-10 rounded-full bg-primary px-5 text-sm font-semibold text-on-primary">
           {t("Søk")}
         </button>
