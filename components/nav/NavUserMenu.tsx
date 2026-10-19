@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { BarChart3, Bookmark, Briefcase, Building2, FileText, LogOut, MailPlus, Settings, Shield, Sparkles, UserCog, UserRound, UserPen } from "lucide-react";
+import { BarChart3, Bell, Bookmark, Briefcase, Building2, LogOut, MailPlus, Settings, Shield, Sparkles, UserRound, UserPen } from "lucide-react";
 import Avatar from "@/components/Avatar";
 import { useT } from "@/components/LocaleProvider";
 import { openSettings } from "@/components/settings/settings-events";
@@ -10,7 +10,17 @@ import { authClient } from "@/lib/auth-client";
 
 export type NavUser = { username: string; name: string; image: string | null; unread?: number; isAdmin?: boolean } | null;
 
-// Profilmenyen: lenker til profil, innsikt og konto, innstillingene og utlogging.
+// Antall uleste varsler som en rød prikk, på profilbildet i menyene.
+export function UnreadBadge({ count, className = "" }: { count: number; className?: string }) {
+  if (count <= 0) return null;
+  return (
+    <span className={`flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-danger px-1 text-[10px] font-semibold text-white ${className}`}>
+      {count > 9 ? "9+" : count}
+    </span>
+  );
+}
+
+// Profilmenyen: varsler, lenker til profil, innsikt og redigering, innstillingene og utlogging.
 export default function NavUserMenu({
   user,
   side = "right",
@@ -34,6 +44,9 @@ export default function NavUserMenu({
         </div>
       </div>
       <MenuSeparator />
+      <MenuItem href="/varsler" icon={<Bell className="size-4" />} hint={<UnreadBadge count={user.unread ?? 0} />}>
+        {t("Varsler")}
+      </MenuItem>
       <MenuItem href={`/@${user.username}`} icon={<UserRound className="size-4" />}>
         {t("Profilen din")}
       </MenuItem>
@@ -46,14 +59,9 @@ export default function NavUserMenu({
       <MenuItem href="/soknader" icon={<Briefcase className="size-4" />}>
         {t("Søknader")}
       </MenuItem>
+      {/* Profil, CV og konto ligger som faner på samme side. */}
       <MenuItem href="/profil/rediger" icon={<UserPen className="size-4" />}>
         {t("Rediger profil")}
-      </MenuItem>
-      <MenuItem href="/profil/rediger/cv" icon={<FileText className="size-4" />}>
-        CV
-      </MenuItem>
-      <MenuItem href="/profil/rediger/konto" icon={<UserCog className="size-4" />}>
-        {t("Konto og varsler")}
       </MenuItem>
       <MenuItem href="/bedrifter" icon={<Building2 className="size-4" />}>
         {t("Bedrifter")}

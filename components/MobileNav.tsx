@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import { Bell, Compass, Home, LogIn, Plus, Settings, UserPlus } from "lucide-react";
+import { Compass, Home, LogIn, Plus, Settings, UserPlus } from "lucide-react";
 import Avatar from "@/components/Avatar";
 import { LogoBadge } from "@/components/Logo";
-import NavUserMenu, { type NavUser } from "@/components/nav/NavUserMenu";
+import NavUserMenu, { UnreadBadge, type NavUser } from "@/components/nav/NavUserMenu";
 import { useT } from "@/components/LocaleProvider";
 import { openSettings } from "@/components/settings/settings-events";
 
@@ -30,7 +30,7 @@ export default function MobileNav({ user = null }: { user?: NavUser }) {
   const t = useT();
   const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`));
 
-  const tab = (href: string, text: string, Icon: typeof Home, badge = 0) => {
+  const tab = (href: string, text: string, Icon: typeof Home) => {
     const active = isActive(href);
     const label = t(text);
     return (
@@ -44,16 +44,11 @@ export default function MobileNav({ user = null }: { user?: NavUser }) {
         {active && <Bubble />}
         <Icon className="relative size-[22px]" strokeWidth={active ? 2.1 : 1.7} />
         <span className="relative">{label}</span>
-        {badge > 0 && (
-          <span className="absolute right-[calc(50%-20px)] top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[9.5px] font-semibold text-white">
-            {badge > 9 ? "9+" : badge}
-          </span>
-        )}
       </Link>
     );
   };
 
-  const profileActive = Boolean(user) && (pathname.startsWith(`/@${user?.username}`) || pathname.startsWith("/profil"));
+  const profileActive = Boolean(user) && (pathname.startsWith(`/@${user?.username}`) || pathname.startsWith("/profil") || pathname.startsWith("/varsler"));
 
   return (
     <>
@@ -86,7 +81,6 @@ export default function MobileNav({ user = null }: { user?: NavUser }) {
           {tab("/sok", "Utforsk", Compass)}
           {user ? (
             <>
-              {tab("/varsler", "Varsler", Bell, user.unread ?? 0)}
               <div className="flex flex-1 [&>div]:flex [&>div]:flex-1">
                 <NavUserMenu
                   user={user}
@@ -98,12 +92,13 @@ export default function MobileNav({ user = null }: { user?: NavUser }) {
                       onClick={toggle}
                       aria-haspopup="menu"
                       aria-expanded={open}
-                      aria-label={t("Profilmeny")}
+                      aria-label={user.unread ? t("Profilmeny, {n} uleste varsler", { n: user.unread }) : t("Profilmeny")}
                       className={`${tabClass} h-full w-full ${profileActive || open ? "text-fg" : "text-mist"}`}
                     >
                       {profileActive && <Bubble />}
                       <Avatar name={user.name} image={user.image} size={24} className="relative" />
                       <span className="relative">{t("Meg")}</span>
+                      <UnreadBadge count={user.unread ?? 0} className="absolute right-[calc(50%-22px)] top-0.5" />
                     </button>
                   )}
                 />

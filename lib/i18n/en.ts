@@ -16,6 +16,7 @@ export const EN: Record<string, string> = {
   Søk: "Search",
   "Del prosjekt": "Share project",
   Profilmeny: "Profile menu",
+  "Profilmeny, {n} uleste varsler": "Profile menu, {n} unread notifications",
   "Logg inn": "Log in",
   "Logg ut": "Log out",
   "Lag profil": "Sign up",
