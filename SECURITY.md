@@ -14,7 +14,7 @@ studentprosjekt uten dusørprogram, men vi krediterer deg gjerne hvis du vil.
 ## Når du tester
 
 - Bruk dine egne kontoer. Ikke les, endre eller slett andres data, og stopp når du har vist at noe er mulig.
-- Ingen tjenestenekt (DoS), lasttester, spam, sosial manipulering eller angrep på Render, Neon, Brevo,
+- Ingen tjenestenekt (DoS), lasttester, spam, sosial manipulering eller angrep på Vercel, Neon, Brevo,
   Stripe eller andre leverandører.
 - Ikke offentliggjør feilen før den er rettet.
 

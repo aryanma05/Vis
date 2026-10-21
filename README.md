@@ -125,14 +125,14 @@ lokale adresser.
 ### GitHub-import
 
 Import fra GitHub bruker GitHub sitt API. Uten nøkkel får hver IP-adresse 60 forespørsler i
-timen, og hos Render (og andre skytjenester) deles IP-adressen med mange andre, så den grensen
+timen, og hos Vercel (og andre skytjenester) deles IP-adressen med mange andre, så den grensen
 er i praksis alltid brukt opp. Da feiler «Hent repoer» for alle som ikke har koblet til GitHub.
 Derfor må `GITHUB_TOKEN` være satt i produksjon:
 
 1. github.com/settings/personal-access-tokens → *Generate new token* (fine-grained).
 2. *Repository access*: «Public repositories (read-only)». Ingen andre tilganger trengs.
 3. Velg lang utløpstid (tokenet slutter å virke når det utløper), og legg det inn som
-   `GITHUB_TOKEN` under Environment hos Render.
+   `GITHUB_TOKEN` under Environment Variables hos Vercel.
 
 `lib/github.ts` prøver brukerens egen GitHub-nøkkel først (5 000 i timen per bruker), så
 `GITHUB_TOKEN` (5 000 i timen), og til slutt anonymt. Er en nøkkel ugyldig eller har nådd
@@ -255,9 +255,9 @@ components/               ProjectCard, ProjectCover, ImageEditor (beskjæring), 
 
 `/api/cron/ukesoppsummering` sender ukesoppsummeringen (hvem som har sett profilen, nye
 følgere, nytt fra folk man følger og utvalgte prosjekter). Kall den med
-`Authorization: Bearer <CRON_SECRET>`, f.eks. med en Cron Job hos Render
-(`curl -fsS -H "Authorization: Bearer $CRON_SECRET" https://<domenet>/api/cron/ukesoppsummering`)
-eller gratis hos cron-job.org, én gang hver dag (f.eks. kl. 08). Hver kjøring tar en porsjon på
+`Authorization: Bearer <CRON_SECRET>`
+(`curl -fsS -H "Authorization: Bearer $CRON_SECRET" https://<domenet>/api/cron/ukesoppsummering`),
+f.eks. gratis hos cron-job.org, én gang hver dag (f.eks. kl. 08). Hver kjøring tar en porsjon på
 100, så oppsummeringene spres utover uka og resten av Brevo sin gratiskvote (300 i døgnet) står
 igjen til innloggingskoder og varsler; ingen får to på under seks dager. E-posten har ett-klikks avmelding (List-Unsubscribe).
 
@@ -330,8 +330,8 @@ billig. En CV viser ikke hva folk kan, men prosjektene gjør det.
 Brukeren legger inn domenet under Konto → Pro-innstillinger og får en TXT-post
 (`_vis.<domene>`) og en CNAME til appens adresse. Når TXT-posten er funnet, er domenet
 bekreftet. `proxy.ts` viser da profilen på `<domene>/` og CV-en på `<domene>/cv`; alt annet
-sendes til hovedsiden. **Manuelt steg:** legg domenet til under Settings → Custom Domains hos
-Render, så lages HTTPS-sertifikatet (Render har også et API for dette hvis det blir mange).
+sendes til hovedsiden. **Manuelt steg:** legg domenet til under Settings → Domains hos
+Vercel, så lages HTTPS-sertifikatet (Vercel har også et API for dette hvis det blir mange).
 
 ## API og webhooks
 
@@ -437,81 +437,58 @@ Rutene heter `/sok`, `/logg-inn`, `/ny` og `/varsler`. `/explore` og `/login` se
 til de to første, så gamle lenker fortsatt virker. `/@brukernavn` skrives om til
 `/profil/brukernavn` i `next.config.ts`, så begge adressene virker.
 
-## Deploy på Vercel
+## Deploy på Vercel + Neon
 
-1. Importer repoet i Vercel.
-2. Storage → Create Database → Neon (Postgres). `DATABASE_URL` settes automatisk.
-3. Storage → Create → Blob. `BLOB_READ_WRITE_TOKEN` settes automatisk.
-4. Legg inn `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` (f.eks. `https://vis.no`), og GitHub-nøklene under Settings → Environment Variables.
-5. Kjør migreringene mot produksjonsdatabasen: `DATABASE_URL=<prod-url> npm run db:migrate`.
-
-## Deploy på Render + Neon
+Begge er gratis: Vercel Hobby og Neon sitt gratisnivå. **NB:** Vercel Hobby er bare for
+ikke-kommersiell bruk. Når Vis tar betalt (Stripe), må dere over på Vercel Pro (20 $/mnd).
 
 **Neon** (console.neon.tech): lag et prosjekt i regionen *AWS Europe Central 1 (Frankfurt)*.
 Under *Connect* finnes to strenger: den med *Connection pooling* på (verten inneholder
 `-pooler`) er `DATABASE_URL`, den uten er `DATABASE_URL_UNPOOLED`.
 
-**Render** (dashboard.render.com): New → Web Service, koble til repoet, region *Frankfurt*.
+**Vercel** (vercel.com): *Add New → Project* og importer repoet. Resten står i `vercel.json`:
 
-| Felt | Verdi |
-| --- | --- |
-| Language | Node |
-| Build Command | `npm ci && npm run db:migrate && npm run build` |
-| Start Command | `npm run start` |
+- Funksjonene kjører i Frankfurt (`fra1`), ved siden av databasen.
+- Hvert bygg kjører migreringene først (`npm run db:migrate && npm run build`).
+- Bare produksjonsgrenen (`main`) bygges. Andre grener får ingen forhåndsvisning, så kode fra
+  en gren kan aldri migrere eller skrive til produksjonsdatabasen.
 
-Miljøvariabler: `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, `BETTER_AUTH_SECRET`,
-`BETTER_AUTH_URL` (Render-adressen, f.eks. `https://vis.onrender.com`), `NODE_VERSION=22`,
-og valgfritt `BREVO_API_KEY` + `EMAIL_FROM`, GitHub-/Google-nøklene og `ADMIN_EMAILS`.
-Ikke sett `NODE_ENV`: da hopper `npm ci` over devDependencies som bygget trenger.
+Miljøvariabler (*Settings → Environment Variables*): `DATABASE_URL`, `DATABASE_URL_UNPOOLED`,
+`BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` (f.eks. `https://visplatform.no`), og valgfritt resten
+fra `.env.example`. Ikke sett `TRUSTED_IP_HEADER` (Vercel setter `x-real-ip` selv) eller `NODE_ENV`.
 
-Migreringene kjøres automatisk i hvert bygg. Uten `BLOB_READ_WRITE_TOKEN` lagres bilder og
-CV-er i Neon-databasen (Render sin disk tømmes ved hver omstart). Bildene krympes til maks
-2400 px WebP, så de tar lite plass. Neon sitt gratisnivå har 0,5 GB; blir det trangt, sett
-`BLOB_READ_WRITE_TOKEN` fra en Blob-store på vercel.com, så havner nye filer der.
+Vercel Hobby kjører bare cron én gang i døgnet, så de planlagte jobbene kalles fra
+cron-job.org (se «Planlagte jobber»). Uten `BLOB_READ_WRITE_TOKEN` lagres bilder og CV-er i
+Neon, som har 0,5 GB gratis. Blir det trangt, lag en Blob-store under *Storage* hos Vercel, så
+settes `BLOB_READ_WRITE_TOKEN` og nye filer havner der.
 
-### Eget domene for appen (visplatform.no)
+### Flytte fra Render (samme domene, uten nedetid)
 
-Domenet er registrert hos Norgesdomene, og DNS ligger hos dem (`ns1/ns2.norgesdns.no`).
-Gjør stegene i denne rekkefølgen, så siden aldri er nede underveis:
-
-1. **Render** → tjenesten → *Settings* → *Custom Domains* → *Add Custom Domain*:
-   `visplatform.no`. Render legger selv til `www.visplatform.no` og sender den til rotdomenet.
-2. **Norgesdomene** → domenet → DNS: fjern eventuelle standardposter (parkeringsside,
-   videresending, AAAA-poster), og legg inn:
-
-   | Type | Navn | Verdi |
-   | --- | --- | --- |
-   | A | `@` (visplatform.no) | `216.24.57.1` |
-   | CNAME | `www` | `<tjenesten>.onrender.com` (adressen Render-tjenesten har nå) |
-
-3. Vent til begge domenene er *Verified* og har sertifikat hos Render (som regel minutter,
-   noen ganger opptil et par timer). Sjekk at `https://visplatform.no` viser appen.
-4. Oppdater innloggingen, fordi tilbakekallsadressen flyttes til domenet:
-   - GitHub OAuth-appen: *Authorization callback URL* =
-     `https://visplatform.no/api/auth/callback/github` og *Homepage URL* = `https://visplatform.no`.
-   - Google: legg til `https://visplatform.no/api/auth/callback/google` under *Authorized
-     redirect URIs*, `https://visplatform.no` under *Authorized JavaScript origins* og
-     `visplatform.no` under *Authorized domains* på OAuth-samtykkeskjermen.
-5. **Render** → *Environment*: `BETTER_AUTH_URL=https://visplatform.no` (uten / på slutten).
-   Lagre og deploy. Fra nå sender `proxy.ts` sider på onrender.com-adressen og
-   `www.visplatform.no` videre til `https://visplatform.no`. API-et (`/api/...`) svarer
-   fortsatt på onrender.com-adressen, så webhooks og cron virker mens du flytter dem.
-6. Flytt det som peker på den gamle adressen: Stripe-webhooken
-   (`https://visplatform.no/api/stripe/webhook`), cron-jobben for ukesoppsummeringen og
-   `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` hvis det brukes. Send gjerne inn
-   `https://visplatform.no/sitemap.xml` i Google Search Console.
-
-Innlogginger på den gamle adressen gjelder ikke på domenet (informasjonskapsler følger
-adressen), så brukerne må logge inn på nytt én gang.
+1. **Render** → tjenesten → *Settings*: slå av *Auto-Deploy*, så ikke begge kjører
+   migreringer på samme push.
+2. **Vercel**: lag prosjektet som over, med de samme miljøvariablene som hos Render (kopier fra
+   *Environment*). Ikke lag en ny database under *Storage*: den er tom. Hopp over `NODE_VERSION`,
+   `TRUSTED_IP_HEADER` og `RENDER_*`.
+3. Når bygget er grønt: `curl https://<prosjektet>.vercel.app/api/v1` skal svare med JSON.
+   Sidene der sendes videre til `BETTER_AUTH_URL`, så de kan ikke testes før domenet er flyttet.
+4. **Vercel** → prosjektet → *Settings → Domains*: legg til `visplatform.no` og
+   `www.visplatform.no` (la www sende videre til `visplatform.no`). Vercel viser DNS-postene.
+5. **Norgesdomene** → domenet → DNS: bytt A-posten for `@` (i dag `216.24.57.1`) og CNAME-en for
+   `www` (i dag `<tjenesten>.onrender.com`) til verdiene Vercel viste. Mens endringen sprer seg,
+   svarer både Render og Vercel mot samme database, så brukerne merker ingenting og forblir
+   innlogget. OAuth-adressene, Stripe-webhooken og cron-jobbene bruker domenet og trenger ingen
+   endring.
+6. Sjekk at `curl -sI https://visplatform.no | grep -i server` sier `Vercel`, og at
+   `/admin?fane=system` ikke viser nye feil. Etter et døgn: Render → *Settings* → *Suspend*.
 
 ### E-post (bekreftelse og glemt passord)
 
-Render sin gratisversjon blokkerer SMTP, så e-post sendes via HTTP-API-et til Brevo:
+E-post sendes via HTTP-API-et til Brevo:
 
 1. Lag en gratis konto på brevo.com (300 e-poster/dag).
 2. *Senders, Domains & Dedicated IPs* → *Senders* → legg til og bekreft avsenderadressen.
 3. *SMTP & API* → *API Keys* → lag en nøkkel.
-4. På Render: `BREVO_API_KEY=<nøkkelen>` og `EMAIL_FROM=Vis <adressen du bekreftet>`.
+4. Hos Vercel: `BREVO_API_KEY=<nøkkelen>` og `EMAIL_FROM=Vis <adressen du bekreftet>`.
 
 Når dette er satt, må nye brukere bekrefte e-posten med en 6-sifret kode før de kan logge
 inn, og «Glemt passordet?» vises på innloggingen (også med kode). Eksisterende brukere som

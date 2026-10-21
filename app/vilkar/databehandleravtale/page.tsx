@@ -86,7 +86,7 @@ function DpaNb({ blob, emailService, stripe, contact }: Setup) {
       <h2 id="underleverandorer">6. Underleverandører</h2>
       <p>Bedriften godkjenner at Vis bruker disse underleverandørene:</p>
       <ul>
-        <li>Render (drift av nettsiden) og Neon (database), begge på servere i EU (Frankfurt).</li>
+        <li>Vercel (drift av nettsiden) og Neon (database), begge på servere i EU (Frankfurt).</li>
         {blob && <li>Vercel Blob (bilder og CV-filer).</li>}
         {emailService && <li>{emailService} (e-post).</li>}
         {stripe && <li>Stripe (betaling; behandler ikke kandidatdata).</li>}
@@ -209,7 +209,7 @@ function DpaEn({ blob, emailService, stripe, contact }: Setup) {
       <h2 id="underleverandorer">6. Sub-processors</h2>
       <p>The company approves that Vis uses these sub-processors:</p>
       <ul>
-        <li>Render (hosting the website) and Neon (database), both on servers in the EU (Frankfurt).</li>
+        <li>Vercel (hosting the website) and Neon (database), both on servers in the EU (Frankfurt).</li>
         {blob && <li>Vercel Blob (images and CV files).</li>}
         {emailService && <li>{emailService} (email).</li>}
         {stripe && <li>Stripe (payment; doesn&apos;t process candidate data).</li>}
