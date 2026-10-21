@@ -232,7 +232,7 @@ function PrivacyNb({ blob, emailService, github, google, contact, stripe, analyt
 
       <h2 id="underleverandorer">Hvor dataene ligger</h2>
       <ul>
-        <li>Nettsiden kjører hos Render, og databasen ligger hos Neon, begge på servere i EU (Frankfurt).</li>
+        <li>Nettsiden kjører hos Vercel, og databasen ligger hos Neon, begge på servere i EU (Frankfurt).</li>
         <li>{blob ? "Bilder lagres hos Vercel Blob. CV-filer lagres alltid i databasen, så en skjult CV ikke kan åpnes med en lenke." : "Bilder og CV-filer lagres i den samme databasen."}</li>
         {emailService && <li>E-poster sendes gjennom {emailService}.</li>}
         {stripe && <li>Betalinger håndteres av Stripe, som behandler kortopplysningene etter sine egne vilkår.</li>}
@@ -500,7 +500,7 @@ function PrivacyEn({ blob, emailService, github, google, contact, stripe, analyt
 
       <h2 id="underleverandorer">Where the data is</h2>
       <ul>
-        <li>The website runs at Render, and the database is at Neon, both on servers in the EU (Frankfurt).</li>
+        <li>The website runs at Vercel, and the database is at Neon, both on servers in the EU (Frankfurt).</li>
         <li>{blob ? "Images are stored at Vercel Blob. CV files are always stored in the database, so a hidden CV can't be opened with a link." : "Images and CV files are stored in the same database."}</li>
         {emailService && <li>Emails are sent through {emailService}.</li>}
         {stripe && <li>Payments are handled by Stripe, which processes card details under its own terms.</li>}

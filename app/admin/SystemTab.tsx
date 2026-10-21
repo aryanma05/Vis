@@ -24,11 +24,11 @@ function GithubStatusCard({ status }: { status: GithubStatus | null }) {
           text: `GITHUB_TOKEN virker. ${status.remaining?.toLocaleString("nb-NO")} av ${status.limit?.toLocaleString("nb-NO")} forespørsler igjen denne timen (nullstilles ${reset(status.resetAt)}).`,
         }
       : status.token === "invalid"
-        ? { status: "error", text: "GITHUB_TOKEN er ugyldig eller utløpt. Import fra GitHub bruker da den anonyme grensen. Lag en ny token og bytt den hos Render." }
+        ? { status: "error", text: "GITHUB_TOKEN er ugyldig eller utløpt. Import fra GitHub bruker da den anonyme grensen. Lag en ny token og bytt den hos Vercel." }
         : status.token === "missing"
           ? {
               status: "error",
-              text: `GITHUB_TOKEN mangler. Da deler appen 60 forespørsler i timen med alle andre på samme IP-adresse hos Render${status.anonRemaining !== null ? ` (${status.anonRemaining} igjen nå)` : ""}. Import fra GitHub feiler derfor for de som ikke har koblet til GitHub.`,
+              text: `GITHUB_TOKEN mangler. Da deler appen 60 forespørsler i timen med alle andre på samme IP-adresse hos Vercel${status.anonRemaining !== null ? ` (${status.anonRemaining} igjen nå)` : ""}. Import fra GitHub feiler derfor for de som ikke har koblet til GitHub.`,
             }
           : { status: "warn", text: "Fikk ikke svar fra GitHub akkurat nå." };
   const { Icon, className, label } = STATUS[state.status];
@@ -42,7 +42,7 @@ function GithubStatusCard({ status }: { status: GithubStatus | null }) {
           {status.token !== "ok" && (
             <p className="mt-2 text-mist">
               Lag en «fine-grained» token på github.com/settings/personal-access-tokens med «Public repositories (read-only)» og lang utløpstid, og legg den inn
-              som GITHUB_TOKEN under Environment hos Render.
+              som GITHUB_TOKEN under Environment Variables hos Vercel.
             </p>
           )}
           {status.lastRateLimit && (
@@ -106,7 +106,7 @@ export default function SystemTab({
         <h2 className="text-lg font-semibold">Klar for lansering?</h2>
         <p className="mt-1 text-sm text-mist">
           {problems === 0 ? "Oppsettet ser komplett ut." : `${problems} ting i oppsettet bør ses på.`} Verdiene vises aldri,
-          bare om de er satt. Endres under Environment hos Render.
+          bare om de er satt. Endres under Environment Variables hos Vercel.
         </p>
         <div className="mt-4 grid gap-4 lg:grid-cols-2">
           {groups.map((group) => (

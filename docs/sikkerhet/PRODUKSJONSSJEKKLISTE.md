@@ -3,7 +3,7 @@
 Det som må gjøres utenfor koden før (og rett etter) offentlig lansering. Hvert punkt har en måte å sjekke
 at det er gjort. Kryss av her eller i en issue.
 
-Status per 2026-10-08: punktene er **ikke** verifisert mot produksjonsoppsettet hos Render og Neon. Bare
+Status per 2026-10-08: punktene er **ikke** verifisert mot produksjonsoppsettet hos Vercel og Neon. Bare
 koden og bygget er sjekket.
 
 ## Blokkerer lansering
@@ -16,29 +16,26 @@ en migrering fra en gren tok ned siden 2026-10-08.
 - [ ] Neon → prosjektet → *Branches* → lag en branch `utvikling` fra `main`. Bruk dens tilkoblingsstreng i
       `.env.local` (eller installer Postgres lokalt).
 - [ ] Lag en **ny** `BETTER_AUTH_SECRET` for utvikling (`openssl rand -base64 32`). Produksjonens hemmelighet
-      skal bare ligge hos Render.
+      skal bare ligge hos Vercel.
 - [ ] Bytt passordet til databasebrukeren i produksjon hos Neon (*Roles* → *Reset password*) og oppdater
-      `DATABASE_URL`/`DATABASE_URL_UNPOOLED` hos Render, siden den har ligget på en utviklermaskin.
+      `DATABASE_URL`/`DATABASE_URL_UNPOOLED` hos Vercel, siden den har ligget på en utviklermaskin.
 - **Sjekk:** `.env.local` inneholder ikke produksjonsverten. `npm test` kan da kjøres trygt.
 
 ### 2. E-post er satt opp
 
 Uten e-post er e-postbekreftelse og «Glemt passord» av, og registreringen avslører hvem som har konto.
 
-- [ ] `BREVO_API_KEY` (eller `RESEND_API_KEY`) og `EMAIL_FROM` hos Render, med bekreftet avsender.
+- [ ] `BREVO_API_KEY` (eller `RESEND_API_KEY`) og `EMAIL_FROM` hos Vercel, med bekreftet avsender.
 - [ ] SPF, DKIM og DMARC for avsenderdomenet (Brevo → *Domains*), så kodene ikke havner i søppelpost.
 - **Sjekk:** `/admin?fane=system` viser «E-post kan sendes». Registrer en testkonto og få koden.
 
 ### 3. Klientens IP-adresse
 
-Grensene per IP (innlogging, registrering, API) bruker første verdi i `X-Forwarded-For` hvis ikke
-`TRUSTED_IP_HEADER` er satt. Render ligger bak Cloudflare, som *legger til* i den headeren, så første
-verdi kan trolig styres av klienten.
+Grensene per IP (innlogging, registrering, API) bruker `x-real-ip` på Vercel. Den setter Vercel selv, og
+klienten kan ikke endre den. Står `TRUSTED_IP_HEADER` satt, går den foran, og en header som
+`cf-connecting-ip` sendes uendret gjennom Vercel, så den kan forfalskes.
 
-- [ ] Logg inn som admin, åpne `/admin?fane=system` og se på «Klientens IP-adresse». Finn headeren som
-      inneholder bare din egen IP (sammenlign med f.eks. whatismyip.com). Vanlige kandidater er
-      `cf-connecting-ip` og `true-client-ip`.
-- [ ] Sett `TRUSTED_IP_HEADER` til navnet på den headeren hos Render, og deploy.
+- [ ] `TRUSTED_IP_HEADER` er **ikke** satt hos Vercel (ikke ta den med fra Render).
 - **Sjekk** (fra din egen maskin, to kall mot det offentlige API-et, med en tilfeldig parameter så ingenting
   mellomlagres):
 
@@ -68,7 +65,7 @@ Dette er ikke tekniske kontroller, og koden kan ikke avgjøre dem.
 
 - [ ] Gå gjennom `/personvern` og `/vilkar` mot det appen faktisk gjør (se
       [SIKKERHETSMODELL.md](SIKKERHETSMODELL.md#personvern)).
-- [ ] Databehandleravtaler (DPA) med Render, Neon, Brevo/Resend, Stripe og eventuelt Vercel og Microlink.
+- [ ] Databehandleravtaler (DPA) med Vercel, Neon, Brevo/Resend, Stripe og Microlink.
 - [ ] Overføring til land utenfor EØS: flere av leverandørene er amerikanske selskaper selv om dataene ligger
       i Frankfurt. Sjekk at avtalene har standard personvernbestemmelser (SCC) eller EU–US Data Privacy Framework.
 - [ ] Protokoll over behandlingsaktiviteter (GDPR art. 30) og behandlingsgrunnlag for hver del.
@@ -91,8 +88,8 @@ Dette er ikke tekniske kontroller, og koden kan ikke avgjøre dem.
 
 - [ ] Oppetidsmåler (f.eks. UptimeRobot eller Better Stack, gratis) mot `https://visplatform.no` og
       `https://visplatform.no/api/v1`, med varsel på e-post eller SMS.
-- [ ] Render → *Notifications*: varsel når en deploy feiler eller tjenesten krasjer.
-- [ ] Se på feilloggen under `/admin?fane=system` jevnlig. Søk i Render-loggen etter `auth.throttled`
+- [ ] Vercel → *Account Settings* → *Notifications*: varsel når en deploy feiler eller tjenesten krasjer.
+- [ ] Se på feilloggen under `/admin?fane=system` jevnlig. Søk i Vercel-loggen (*Logs*, gratisnivået tar vare på den i én time) etter `auth.throttled`
       (mange treff = noen prøver å gjette passord).
 
 ### 8. GitHub
@@ -104,7 +101,7 @@ Dette er ikke tekniske kontroller, og koden kan ikke avgjøre dem.
 
 ### 9. Leverandører
 
-- [ ] Render: to-trinns innlogging på kontoen, og bare de som trenger det har tilgang.
+- [ ] Vercel: to-trinns innlogging på kontoen, og bare de som trenger det har tilgang.
 - [ ] Neon, Brevo, Stripe, GitHub, Google Cloud: to-trinns innlogging overalt.
 - [ ] Stripe: bruk en *restricted key* med bare de tilgangene `lib/stripe.ts` trenger, og `sk_live_` først
       når alt er testet. Webhooken peker til `https://visplatform.no/api/stripe/webhook`.
